@@ -17,9 +17,15 @@ dependencies:
   '@fontsource-variable/jost':
     specifier: ^5.0.17
     version: 5.0.17
+  '@fontsource/jost':
+    specifier: ^5.0.16
+    version: 5.0.16
   astro:
     specifier: ^4.4.4
     version: 4.4.4(typescript@5.3.3)
+  gsap:
+    specifier: ^3.12.5
+    version: 3.12.5
   tailwindcss:
     specifier: ^3.4.1
     version: 3.4.1
@@ -925,6 +931,13 @@ packages:
     resolution:
       {
         integrity: sha512-QIF83vqKVCG5BqzIiEn2ZI6iOG4UjAEsrQ4k+6NUdO/lLWcFOEhBRgmaD7etmxB2r3v5fG/34xI2Jciv4lFnYg==
+      }
+    dev: false
+
+  /@fontsource/jost@5.0.16:
+    resolution:
+      {
+        integrity: sha512-3eyBs4pMxRnrLhTPrhSgeeRP3B9XC1b8NXhI7VPzUuvDoqviqdUl7nOpih0dwDGkS+hUCVD35LWMNp0uSyNHDQ==
       }
     dev: false
 
@@ -3864,6 +3877,13 @@ packages:
       kind-of: 6.0.3
       section-matter: 1.0.0
       strip-bom-string: 1.0.0
+    dev: false
+
+  /gsap@3.12.5:
+    resolution:
+      {
+        integrity: sha512-srBfnk4n+Oe/ZnMIOXt3gT605BX9x5+rh/prT2F1SsNJsU1XuMiP0E2aptW481OnonOGACZWBqseH5Z7csHxhQ==
+      }
     dev: false
 
   /has-bigints@1.0.2:

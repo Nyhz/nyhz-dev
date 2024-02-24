@@ -1,7 +1,6 @@
 ---
 import '@fontsource-variable/jost'
 import '../styles/index.css'
-import { ViewTransitions } from 'astro:transitions'
 
 interface Props {
 	title: string
@@ -18,57 +17,111 @@ const { title } = Astro.props
 		<meta name='viewport' content='width=device-width' />
 		<link rel='icon' type='image/svg+xml' href='/favicon.svg' />
 		<title>{title}</title>
-		<ViewTransitions />
 	</head>
-	<body class='hidden bg-primary-bg transition-all'>
+	<body class='hidden bg-primary-bg px-4 transition-all'>
 		<slot />
-
-		<style is:global>
-			body {
-				font-family: 'Jost-variable', sans-serif;
-			}
-		</style>
-
-		<script>
-			const html = document.documentElement
-			if (html.getAttribute('theme')) {
-				const body = document.body
-				body.classList.remove('hidden')
-			}
-		</script>
-
-		<script>
-			if (localStorage.getItem('theme') !== null) {
-				if (localStorage.getItem('theme') === 'dark') {
-					const lightIcon = document.getElementById('light-icon')
-					if (lightIcon) {
-						lightIcon.classList.remove('hidden')
-					}
-					document.documentElement.setAttribute('theme', 'dark')
-				} else {
-					const darkIcon = document.getElementById('dark-icon')
-					if (darkIcon) {
-						darkIcon.classList.remove('hidden')
-					}
-					document.documentElement.setAttribute('theme', 'light')
-				}
-			} else {
-				const userPrefersDark =
-					window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-				if (userPrefersDark) {
-					const lightIcon = document.getElementById('light-icon')
-					if (lightIcon) {
-						lightIcon.classList.remove('hidden')
-					}
-					document.documentElement.setAttribute('theme', 'dark')
-				} else {
-					const darkIcon = document.getElementById('dark-icon')
-					if (darkIcon) {
-						darkIcon.classList.remove('hidden')
-					}
-					document.documentElement.setAttribute('theme', 'light')
-				}
-			}
-		</script>
+		<div class='cursor hidden sm:block'>
+			<div class='cursor__ball cursor__ball--big'>
+				<svg height='30' width='30'>
+					<circle cx='15' cy='15' r='12' stroke-width='0'></circle>
+				</svg>
+			</div>
+		</div>
 	</body>
+
+	<script>
+		import { gsap } from 'gsap'
+
+		const mouseBall = document.querySelector('.cursor__ball--big')
+		const hoverables = document.querySelectorAll('.hoverable')
+
+		document.body.addEventListener('mousemove', onMouseMove)
+		for (let i = 0; i < hoverables.length; i++) {
+			hoverables[i].addEventListener('mouseenter', onMouseHover)
+			hoverables[i].addEventListener('mouseleave', onMouseHoverOut)
+		}
+
+		document.body.addEventListener('mouseleave', onMouseLeave)
+		document.body.addEventListener('mouseenter', onMouseEnter)
+
+		function onMouseLeave() {
+			gsap.to(mouseBall, {
+				duration: 0.3,
+				scale: 1,
+				opacity: 0
+			})
+		}
+
+		function onMouseEnter() {
+			gsap.to(mouseBall, {
+				duration: 0.3,
+				scale: 1,
+				opacity: 1
+			})
+		}
+
+		function onMouseMove(e: MouseEvent) {
+			gsap.to(mouseBall, {
+				duration: 0.5,
+				x: e.clientX - 15,
+				y: e.clientY - 17
+			})
+		}
+
+		function onMouseHover() {
+			gsap.to(mouseBall, {
+				duration: 0.3,
+				scale: 4
+			})
+		}
+
+		function onMouseHoverOut() {
+			gsap.to(mouseBall, {
+				duration: 0.3,
+				scale: 1
+			})
+		}
+	</script>
+
+	<script>
+		const html = document.documentElement
+		if (html.getAttribute('theme')) {
+			const body = document.body
+			body.classList.remove('hidden')
+		}
+	</script>
+
+	<script>
+		if (localStorage.getItem('theme') !== null) {
+			if (localStorage.getItem('theme') === 'dark') {
+				const lightIcon = document.getElementById('light-icon')
+				if (lightIcon) {
+					lightIcon.classList.remove('hidden')
+				}
+				document.documentElement.setAttribute('theme', 'dark')
+			} else {
+				const darkIcon = document.getElementById('dark-icon')
+				if (darkIcon) {
+					darkIcon.classList.remove('hidden')
+				}
+				document.documentElement.setAttribute('theme', 'light')
+			}
+		} else {
+			const userPrefersDark =
+				window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+			if (userPrefersDark) {
+				const lightIcon = document.getElementById('light-icon')
+				if (lightIcon) {
+					lightIcon.classList.remove('hidden')
+				}
+				document.documentElement.setAttribute('theme', 'dark')
+			} else {
+				const darkIcon = document.getElementById('dark-icon')
+				if (darkIcon) {
+					darkIcon.classList.remove('hidden')
+				}
+				document.documentElement.setAttribute('theme', 'light')
+			}
+		}
+	</script>
 </html>
