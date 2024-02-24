@@ -1,21 +1,31 @@
+---
+import TypeWriter from './TypeWriter.astro'
+---
+
 <section
-	class='relative mx-auto mt-12 flex h-[calc(100vh-96px)] max-w-6xl justify-center sm:mt-0 sm:items-center'
+	class='relative mx-auto flex h-[calc(100vh-96px)] max-w-6xl animate-fade justify-center pt-12 animate-duration-1000 sm:items-center sm:pt-0'
 >
 	<div class='flex'>
 		<div class='flex-col'>
-			<span class='font-medium text-accent lg:text-lg'>Hi my name is</span>
+			<span class='animate-fade font-medium text-accent animate-duration-1000 lg:text-lg'
+				>Hi my name is</span
+			>
 			<h1
-				class='my-2 w-fit text-4xl font-semibold text-primary-text md:my-4 md:text-5xl lg:text-7xl'
+				class='my-2 w-fit animate-flip-up text-4xl font-semibold text-primary-text animate-delay-500 animate-duration-1000 md:my-4 md:text-5xl lg:text-7xl'
 			>
 				Nyhz
 			</h1>
-			<span class='text-2xl font-medium text-accent md:my-3 md:text-3xl lg:text-5xl'
-				>A Full-stack Developer</span
+			<span
+				class='animate-fade text-2xl font-medium text-primary-text animate-delay-1000 md:my-3 md:text-3xl lg:text-5xl'
 			>
-			<p class='mt-4 text-primary-text'>
+				<span class='text-accent'>{'< '}</span><TypeWriter client:load /><span class='text-accent'
+					>{'/>'}</span
+				>
+			</span>
+			<p class='mt-4 animate-fade text-primary-text animate-delay-[1500ms] animate-duration-1000'>
 				I am a full-stack developer with a passion for creating beautiful and functional websites.
 			</p>
-			<p class='mt-2 text-primary-text'>
+			<p class='mt-2 animate-fade text-primary-text animate-delay-[1500ms] animate-duration-1000'>
 				I have experience in both front-end and back-end development, and I am always looking for
 				new challenges to tackle. I am a quick learner and a problem solver, and I am always looking
 				for ways to improve my skills and expand my knowledge. I am excited to work with you and
@@ -24,4 +34,21 @@
 		</div>
 		<div></div>
 	</div>
+	<a
+		href='#about'
+		class='hoverable link-outline absolute left-1/2 hidden -translate-x-1/2 transform animate-bounce flex-col items-center text-primary-text md:bottom-14 md:flex lg:bottom-16'
+		><span class='font-regular text-primary-text'>Scroll</span><svg
+			xmlns='http://www.w3.org/2000/svg'
+			width='24'
+			height='24'
+			class='fill-primary-text'
+			><path
+				d='M11.975 22H12c3.859 0 7-3.14 7-7V9c0-3.841-3.127-6.974-6.981-7h-.06C8.119 2.022 5 5.157 5 9v6c0 3.86 3.129 7 6.975 7zM7 9a5.007 5.007 0 0 1 4.985-5C14.75 4.006 17 6.249 17 9v6c0 2.757-2.243 5-5 5h-.025C9.186 20 7 17.804 7 15V9z'
+			></path>
+			<path d='M11 6h2v6h-2z'></path>
+		</svg><svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' class='fill-primary-text'
+			><path d='M16.293 9.293 12 13.586 7.707 9.293l-1.414 1.414L12 16.414l5.707-5.707z'
+			></path></svg
+		></a
+	>
 </section>

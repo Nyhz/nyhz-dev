@@ -1,0 +1,65 @@
+---
+
+---
+
+<span id='typewriter'></span>
+
+<script>
+	import Typewriter from 'typewriter-effect/dist/core'
+	const array = [
+		'Emoji syntax master',
+		'Occasional code ninja',
+		'Professional googler',
+		'Chat GPTs best friend',
+		'Command line comedian',
+		'Website whisperer',
+		'Console log enthusiast',
+		'Keyboard warrior',
+		'Professional procrastinator'
+	]
+
+	const shuffledArray = array.sort(() => Math.random() - 0.5)
+	shuffledArray.unshift('Full-Stack Developer')
+	shuffledArray.push('Full-Stack Developer')
+
+	const typeWriter = new Typewriter('#typewriter', {
+		delay: 50
+	})
+
+	setTimeout(() => {
+		typeWriter
+			.typeString(shuffledArray[0])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[1])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[2])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[3])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[4])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[5])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[6])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[7])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[8])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[9])
+			.pauseFor(1500)
+			.deleteAll('natural')
+			.typeString(shuffledArray[10])
+			.pauseFor(1500)
+			.start()
+	}, 1500)
+</script>

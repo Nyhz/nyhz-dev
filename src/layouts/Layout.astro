@@ -31,7 +31,20 @@ import '../styles/index.css'
 		<meta name='twitter:image:alt' content='Website preview image' />
 		<link rel='icon' type='image/x-icon' href='/images/favicon.png' />
 		<title>Welcome to nyhz.dev ~</title>
+		<script
+			type='text/partytown'
+			async
+			src='https://www.googletagmanager.com/gtag/js?id=G-L31Z2CVNGN'></script>
+		<script type='text/partytown'>
+			window.dataLayer = window.dataLayer || []
+			function gtag() {
+				dataLayer.push(arguments)
+			}
+			gtag('js', new Date())
+			gtag('config', 'G-L31Z2CVNGN')
+		</script>
 	</head>
+
 	<body class='hidden bg-primary-bg px-4 transition-all'>
 		<slot />
 		<div class='cursor hidden sm:block'>
