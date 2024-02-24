@@ -1,4 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../.astro/types.d.ts" />
 /// <reference types="astro/client" />
-declare module 'typewriter-effect/dist/core'
+declare module 'typewriter-effect/dist/core' {
+	const Typewriter: typeof import('typewriter-effect').TypewriterClass
+	export default Typewriter
+}
