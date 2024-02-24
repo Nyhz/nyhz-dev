@@ -1,12 +1,6 @@
 ---
 import '@fontsource-variable/jost'
 import '../styles/index.css'
-
-interface Props {
-	title: string
-}
-
-const { title } = Astro.props
 ---
 
 <!doctype html>
@@ -30,7 +24,7 @@ const { title } = Astro.props
 		<meta name='twitter:image' content='/og-image.jpg' />
 		<meta name='twitter:image:alt' content='Website preview image' />
 		<link rel='icon' type='image/svg+xml' href='/favicon.svg' />
-		<title>{title}</title>
+		<title>Welcome to Nyhz.dev ~</title>
 	</head>
 	<body class='hidden bg-primary-bg px-4 transition-all'>
 		<slot />
@@ -123,6 +117,8 @@ const { title } = Astro.props
 		} else {
 			const userPrefersDark =
 				window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+
+			console.log('prefer dark? ', window.matchMedia('(prefers-color-scheme: dark)').matches)
 			if (userPrefersDark) {
 				const lightIcon = document.getElementById('light-icon')
 				if (lightIcon) {
