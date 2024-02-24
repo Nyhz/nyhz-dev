@@ -1,4 +1,8 @@
 ---
+import '@fontsource-variable/jost'
+import '../styles/index.css'
+import { ViewTransitions } from 'astro:transitions'
+
 interface Props {
 	title: string
 }
@@ -7,17 +11,64 @@ const { title } = Astro.props
 ---
 
 <!doctype html>
-<html lang='en'>
+<html lang='en' class='scroll-smooth'>
 	<head>
 		<meta charset='UTF-8' />
 		<meta name='description' content='Astro description' />
 		<meta name='viewport' content='width=device-width' />
 		<link rel='icon' type='image/svg+xml' href='/favicon.svg' />
-		<meta name='generator' content={Astro.generator} />
 		<title>{title}</title>
+		<ViewTransitions />
 	</head>
-	<body>
+	<body class='hidden bg-primary-bg transition-all'>
 		<slot />
+
+		<style is:global>
+			body {
+				font-family: 'Jost-variable', sans-serif;
+			}
+		</style>
+
+		<script>
+			const html = document.documentElement
+			if (html.getAttribute('theme')) {
+				const body = document.body
+				body.classList.remove('hidden')
+			}
+		</script>
+
+		<script>
+			if (localStorage.getItem('theme') !== null) {
+				if (localStorage.getItem('theme') === 'dark') {
+					const lightIcon = document.getElementById('light-icon')
+					if (lightIcon) {
+						lightIcon.classList.remove('hidden')
+					}
+					document.documentElement.setAttribute('theme', 'dark')
+				} else {
+					const darkIcon = document.getElementById('dark-icon')
+					if (darkIcon) {
+						darkIcon.classList.remove('hidden')
+					}
+					document.documentElement.setAttribute('theme', 'light')
+				}
+			} else {
+				const userPrefersDark =
+					window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+				if (userPrefersDark) {
+					const lightIcon = document.getElementById('light-icon')
+					if (lightIcon) {
+						lightIcon.classList.remove('hidden')
+					}
+					document.documentElement.setAttribute('theme', 'dark')
+				} else {
+					const darkIcon = document.getElementById('dark-icon')
+					if (darkIcon) {
+						darkIcon.classList.remove('hidden')
+					}
+					document.documentElement.setAttribute('theme', 'light')
+				}
+			}
+		</script>
 	</body>
 </html>
-<style is:global></style>
