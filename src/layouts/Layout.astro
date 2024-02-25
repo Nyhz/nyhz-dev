@@ -45,7 +45,7 @@ import '../styles/index.css'
 		</script>
 	</head>
 
-	<body class='hidden bg-primary-bg px-4 transition-all'>
+	<body class='hidden bg-primary-bg transition-all'>
 		<slot />
 		<div class='cursor hidden sm:block'>
 			<div class='cursor__ball cursor__ball--big'>
@@ -55,6 +55,19 @@ import '../styles/index.css'
 			</div>
 		</div>
 	</body>
+
+	<script>
+		import Lenis from '@studio-freight/lenis'
+
+		const lenis = new Lenis()
+
+		function raf(time: number) {
+			lenis.raf(time)
+			requestAnimationFrame(raf)
+		}
+
+		requestAnimationFrame(raf)
+	</script>
 
 	<script>
 		import { gsap } from 'gsap'

@@ -3,11 +3,12 @@ import TypeWriter from './TypeWriter.astro'
 ---
 
 <section
-	class='relative mx-auto flex h-[calc(100vh-96px)] max-w-6xl animate-fade justify-center pt-12 animate-duration-1000 sm:items-center sm:pt-0'
+	class='sticky top-[96px] mx-auto flex h-[calc(100vh-96px)] max-w-6xl justify-center px-4 pt-12 sm:items-center sm:pt-0'
 >
 	<div class='flex'>
 		<div class='flex-col'>
-			<span class='animate-fade font-medium text-accent animate-duration-1000 lg:text-lg'
+			<span
+				class='animate-fade font-medium text-primary-accent animate-delay-500 animate-duration-1000 lg:text-lg'
 				>Hi my name is</span
 			>
 			<h1
@@ -18,7 +19,9 @@ import TypeWriter from './TypeWriter.astro'
 			<span
 				class='animate-fade text-2xl font-medium text-primary-text animate-delay-1000 md:my-3 md:text-3xl lg:text-5xl'
 			>
-				<span class='text-accent'>{'< '}</span><TypeWriter /><span class='text-accent'>{'/>'}</span>
+				<span class='text-primary-accent'>{'< '}</span><TypeWriter /><span
+					class='text-primary-accent'>{'/>'}</span
+				>
 			</span>
 			<p class='mt-4 animate-fade text-primary-text animate-delay-[1500ms] animate-duration-1000'>
 				I am a full-stack developer with a passion for creating beautiful and functional websites.
