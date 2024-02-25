@@ -9,6 +9,7 @@ export default {
 			colors: {
 				primary: {
 					bg: 'rgb(var(--primary-bg) / <alpha-value>)',
+					'back-bg': 'rgb(var(--primary-back-bg) / <alpha-value>)',
 					text: 'rgb(var(--primary-text) / <alpha-value>)',
 					accent: 'rgb(var(--primary-accent) / <alpha-value>)'
 				},
