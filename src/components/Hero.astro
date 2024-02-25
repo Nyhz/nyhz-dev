@@ -3,7 +3,7 @@ import TypeWriter from './TypeWriter.astro'
 ---
 
 <section
-	class='sticky top-[64px] mx-auto flex min-h-[calc(100dvh-64px)] max-w-6xl justify-center px-4 pt-12 sm:min-h-[680px] sm:items-center sm:pt-0'
+	class='relative mx-auto flex min-h-[calc(100dvh-64px)] max-w-6xl justify-center px-4 pt-12 sm:min-h-[780px] sm:items-center sm:pt-0'
 >
 	<div class='flex'>
 		<div class='flex-col'>
@@ -14,7 +14,7 @@ import TypeWriter from './TypeWriter.astro'
 			<h1
 				class='my-2 w-fit animate-flip-up text-4xl font-semibold text-primary-text animate-delay-500 animate-duration-1000 md:my-4 md:text-5xl lg:text-7xl'
 			>
-				Nyhz
+				nyhz
 			</h1>
 			<span
 				class='animate-fade text-2xl font-medium text-primary-text animate-delay-1000 md:my-3 md:text-3xl lg:text-5xl'
@@ -35,8 +35,8 @@ import TypeWriter from './TypeWriter.astro'
 		</div>
 		<div></div>
 	</div>
-	<a
-		href='#about'
+	<button
+		id='scroll-button'
 		class='hoverable link-outline absolute left-1/2 hidden -translate-x-1/2 transform animate-bounce flex-col items-center text-primary-text md:bottom-14 md:flex lg:bottom-16'
 		><span class='font-regular text-primary-text'>Scroll</span><svg
 			xmlns='http://www.w3.org/2000/svg'
@@ -50,6 +50,11 @@ import TypeWriter from './TypeWriter.astro'
 		</svg><svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' class='fill-primary-text'
 			><path d='M16.293 9.293 12 13.586 7.707 9.293l-1.414 1.414L12 16.414l5.707-5.707z'
 			></path></svg
-		></a
+		></button
 	>
 </section>
+<script>
+	document.getElementById('scroll-button')?.addEventListener('click', () => {
+		document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
+	})
+</script>

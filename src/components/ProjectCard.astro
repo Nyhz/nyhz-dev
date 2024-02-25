@@ -1,0 +1,58 @@
+---
+import GithubIcon from './icons/GithubIcon.astro'
+import OpenWebIcon from './icons/OpenWebIcon.astro'
+import TechnologyLabel from './TechnologyLabel.astro'
+
+interface Project {
+	name: string
+	image: string
+	githubUrl: string
+	deployUrl: string
+	description: string
+	technologies: string[]
+}
+
+interface Props {
+	project: Project
+	index: number
+}
+
+const { project, index } = Astro.props
+---
+
+<div id=`project-card-${index + 1}` class='hidden-clip-path-top'>
+	<div class='overflow-hidden rounded object-cover'>
+		<img
+			id='project-img'
+			class='transition duration-500 hover:scale-110'
+			src={project.image}
+			alt='project-image'
+			loading='lazy'
+		/>
+	</div>
+	<div id='project-info' class='mt-4'>
+		<div class='flex justify-between'>
+			<span class='text-xl text-primary-accent'>{project.name}</span>
+			<div class='flex gap-x-2'>
+				<span class='hoverable scale-125 hover:rotate-12'>
+					<a href={project.githubUrl} target='_blank' rel='noopener noreferrer'>
+						<GithubIcon />
+					</a>
+				</span>
+				<span class='hoverable hover:scale-125'>
+					<a href={project.deployUrl} target='_blank' rel='noopener noreferrer'>
+						<OpenWebIcon />
+					</a>
+				</span>
+			</div>
+		</div>
+		<div class='mt-2'>
+			<p class='text-primary-text'>
+				{project.description}
+			</p>
+		</div>
+		<ul class='mt-2 flex gap-x-2'>
+			{project.technologies.map((technology) => <TechnologyLabel technology={technology} />)}
+		</ul>
+	</div>
+</div>

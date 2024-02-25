@@ -1,1 +1,71 @@
-<section class='relative z-20 h-screen w-full bg-secondary-bg'></section>
+---
+import ProjectCard from '../components/ProjectCard.astro'
+
+const projects = [
+	{
+		name: 'Dev Portfolio',
+		image: '/images/web-dev.webp',
+		description:
+			'My own web portfolio (you are here right now 😉), displaying info about me, my projects and my experience working as as a web dev.',
+		githubUrl: 'https://github.com/Nyhz/nyhz-dev',
+		deployUrl: 'https://nyhz.dev',
+		technologies: ['Astro', 'TypeScript', 'TailwindCSS']
+	},
+	{
+		name: 'Galactic WTF',
+		image: '/images/galactic-wtf.webp',
+		description:
+			'A simple javascript space shooting game I made with canvas and vanilla js. It was a fun project to work on while I was learning the basics.',
+		githubUrl: 'https://github.com/Nyhz/galactic-wtf',
+		deployUrl: 'https://nyhz.github.io/galactic-wtf/',
+		technologies: ['JavaScript', 'HTML', 'CSS']
+	}
+]
+---
+
+<section id='projects' class='relative h-screen w-full bg-secondary-bg px-4 py-20'>
+	<div class='mx-auto max-w-6xl'>
+		<h2 class='text-3xl text-primary-text'>
+			<span class='text-primary-accent'>{'< '}</span>Projects<span class='text-primary-accent'
+				>{' />'}</span
+			>
+		</h2>
+		<div class='mt-12 grid w-full grid-cols-1 gap-24 sm:grid-cols-2'>
+			{projects.map((project, index) => <ProjectCard project={project} index={index} />)}
+		</div>
+	</div>
+</section>
+
+<script>
+	import { gsap } from 'gsap'
+	import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+	gsap.registerPlugin(ScrollTrigger)
+
+	let tl1 = gsap.timeline({
+		scrollTrigger: {
+			trigger: '#project-card-1',
+			start: 'center bottom',
+			end: 'bottom top',
+			scrub: false
+		}
+	})
+	let tl2 = gsap.timeline({
+		scrollTrigger: {
+			trigger: '#project-card-2',
+			start: 'center bottom',
+			end: 'bottom top',
+			scrub: false
+		}
+	})
+
+	tl1.to('#project-card-1', {
+		clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+		duration: 0.5
+	})
+
+	tl2.to('#project-card-2', {
+		clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+		duration: 0.5
+	})
+</script>
