@@ -9,13 +9,18 @@ export default {
 			colors: {
 				primary: {
 					bg: 'rgb(var(--primary-bg) / <alpha-value>)',
-					text: 'rgb(var(--primary-text) / <alpha-value>)'
+					text: 'rgb(var(--primary-text) / <alpha-value>)',
+					accent: 'rgb(var(--primary-accent) / <alpha-value>)'
 				},
-				accent: 'rgb(var(--accent) / <alpha-value>)'
+				secondary: {
+					bg: 'rgb(var(--secondary-bg) / <alpha-value>)'
+				}
 			},
 			fontFamily: {
 				sans: ['Jost Variable', ...defaultTheme.fontFamily.sans]
-			}
+			},
+			keyframes: {},
+			animation: {}
 		}
 	},
 	plugins: [require('tailwindcss-animated')]
