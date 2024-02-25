@@ -15,6 +15,9 @@ export default {
 				},
 				secondary: {
 					bg: 'rgb(var(--secondary-bg) / <alpha-value>)'
+				},
+				label: {
+					bg: 'rgb(var(--label-bg) / <alpha-value>)'
 				}
 			},
 			fontFamily: {
