@@ -3,8 +3,14 @@ import TypeWriter from './TypeWriter.astro'
 ---
 
 <section
-	class='sticky top-[96px] mx-auto flex h-[calc(100dvh-96px)] max-w-6xl justify-center px-4 pt-12 sm:items-center sm:pt-0'
+	class='relative mx-auto flex min-h-[calc(100dvh-96px)] max-w-6xl justify-center px-4 pt-12 sm:min-h-[680px] sm:items-center sm:pt-0'
 >
+	<span
+		aria-hidden='true'
+		class='bg-text pointer-events-none absolute -top-64 z-0 rotate-12 select-none text-center text-9xl font-bold tracking-wide text-primary-back-bg'
+		style='translate: none; rotate: none; scale: none; transform: translate3d(0px, 336.649px, 0px) rotate(12.0001deg) scale(1.5, 1.5);'
+		>PASSIONATE PROGRAMMER FULL-STACK DEVELOPER</span
+	>
 	<div class='flex'>
 		<div class='flex-col'>
 			<span
