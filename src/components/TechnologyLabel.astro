@@ -1,7 +1,22 @@
 ---
 const { technology } = Astro.props
+const letterArr: string[] = technology.split('')
 ---
 
-<li class='w-fit rounded bg-label-bg px-2 py-1 text-sm text-primary-text'>
-	{technology}
+<li class='group relative w-fit rounded bg-label-bg px-2 py-1 text-sm text-primary-text'>
+	<span class='relative inline-flex'>
+		{
+			letterArr.map((letter, idx) => {
+				const delay = (idx + 1) * 0.02
+				return (
+					<span
+						style={`transition-delay: ${delay}s`}
+						class='font-medium text-primary-text duration-700 group-hover:[transform:rotateX(360deg)]'
+					>
+						{letter}
+					</span>
+				)
+			})
+		}
+	</span>
 </li>

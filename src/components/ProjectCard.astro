@@ -24,7 +24,7 @@ const { project, index } = Astro.props
 	<div class='overflow-hidden rounded object-cover'>
 		<img
 			id='project-img'
-			class='transition duration-500 hover:scale-110'
+			class='rounded transition duration-500 hover:scale-110'
 			src={project.image}
 			alt='project-image'
 			loading='lazy'
@@ -34,12 +34,12 @@ const { project, index } = Astro.props
 		<div class='flex justify-between'>
 			<span class='text-xl text-primary-accent'>{project.name}</span>
 			<div class='flex gap-x-2'>
-				<span class='hoverable scale-125 hover:rotate-12'>
+				<span class='hoverable'>
 					<a href={project.githubUrl} target='_blank' rel='noopener noreferrer'>
 						<GithubIcon />
 					</a>
 				</span>
-				<span class='hoverable hover:scale-125'>
+				<span class='hoverable duration-300 hover:scale-125'>
 					<a href={project.deployUrl} target='_blank' rel='noopener noreferrer'>
 						<OpenWebIcon />
 					</a>
