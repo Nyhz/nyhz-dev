@@ -1,4 +1,7 @@
 ---
+import Header from '../components/Header.astro'
+import CursorBall from '../components/CursorBall.astro'
+import Socials from '../components/Socials.astro'
 import '@fontsource-variable/jost'
 import '../styles/index.css'
 ---
@@ -30,140 +33,34 @@ import '../styles/index.css'
 		<meta name='twitter:image' content='/images/og-image.jpg' />
 		<meta name='twitter:image:alt' content='Website preview image' />
 		<link rel='icon' type='image/x-icon' href='/images/favicon.png' />
-		<title>Welcome to nyhz.dev ~</title>
-		<script
-			type='text/partytown'
-			async
-			src='https://www.googletagmanager.com/gtag/js?id=G-L31Z2CVNGN'></script>
-		<script type='text/partytown'>
-			window.dataLayer = window.dataLayer || []
-			function gtag() {
-				dataLayer.push(arguments)
+		<script is:inline>
+			window.getThemePreference = () => {
+				const localItem = typeof localStorage !== 'undefined' && localStorage.getItem('theme')
+				if (localItem) return localItem
+				return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 			}
-			gtag('js', new Date())
-			gtag('config', 'G-L31Z2CVNGN')
 		</script>
+		<title>nyhz.dev</title>
 	</head>
 
 	<body class='hidden bg-primary-bg transition-all'>
-		<slot />
-		<div class='cursor hidden sm:block'>
-			<div class='cursor__ball cursor__ball--big'>
-				<svg height='30' width='30'>
-					<circle cx='15' cy='15' r='12' stroke-width='0'></circle>
-				</svg>
-			</div>
-		</div>
+		<Header />
+		<main>
+			<slot />
+		</main>
+		<Socials />
+		<CursorBall />
 	</body>
 
 	<script>
-		import Lenis from '@studio-freight/lenis'
+		import initLenis from '../lib/lenis-init'
+		import initCursorBall from '../lib/cursorball-init'
+		import initTheme from '../lib/theme-init'
+		import initPreference from '../lib/theme-preference-init'
 
-		const lenis = new Lenis()
-
-		function raf(time: number) {
-			lenis.raf(time)
-			requestAnimationFrame(raf)
-		}
-
-		requestAnimationFrame(raf)
-	</script>
-
-	<script>
-		import { gsap } from 'gsap'
-
-		const mouseBall = document.querySelector('.cursor__ball--big')
-		const hoverables = document.querySelectorAll('.hoverable')
-
-		document.body.addEventListener('mousemove', onMouseMove)
-		for (let i = 0; i < hoverables.length; i++) {
-			hoverables[i].addEventListener('mouseenter', onMouseHover)
-			hoverables[i].addEventListener('mouseleave', onMouseHoverOut)
-		}
-
-		document.body.addEventListener('mouseleave', onMouseLeave)
-		document.body.addEventListener('mouseenter', onMouseEnter)
-
-		function onMouseLeave() {
-			gsap.to(mouseBall, {
-				duration: 0.3,
-				scale: 1,
-				opacity: 0
-			})
-		}
-
-		function onMouseEnter() {
-			gsap.to(mouseBall, {
-				duration: 0.3,
-				scale: 1,
-				opacity: 1
-			})
-		}
-
-		function onMouseMove(e: MouseEvent) {
-			gsap.to(mouseBall, {
-				duration: 0.5,
-				x: e.clientX - 15,
-				y: e.clientY - 17
-			})
-		}
-
-		function onMouseHover() {
-			gsap.to(mouseBall, {
-				duration: 0.3,
-				scale: 4
-			})
-		}
-
-		function onMouseHoverOut() {
-			gsap.to(mouseBall, {
-				duration: 0.3,
-				scale: 1
-			})
-		}
-	</script>
-
-	<script>
-		const html = document.documentElement
-		if (html.getAttribute('theme')) {
-			const body = document.body
-			body.classList.remove('hidden')
-		}
-	</script>
-
-	<script>
-		if (localStorage.getItem('theme') !== null) {
-			if (localStorage.getItem('theme') === 'dark') {
-				const lightIcon = document.getElementById('light-icon')
-				if (lightIcon) {
-					lightIcon.classList.remove('hidden')
-				}
-				document.documentElement.setAttribute('theme', 'dark')
-			} else {
-				const darkIcon = document.getElementById('dark-icon')
-				if (darkIcon) {
-					darkIcon.classList.remove('hidden')
-				}
-				document.documentElement.setAttribute('theme', 'light')
-			}
-		} else {
-			const userPrefersDark =
-				window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-
-			console.log('prefer dark? ', window.matchMedia('(prefers-color-scheme: dark)').matches)
-			if (userPrefersDark) {
-				const lightIcon = document.getElementById('light-icon')
-				if (lightIcon) {
-					lightIcon.classList.remove('hidden')
-				}
-				document.documentElement.setAttribute('theme', 'dark')
-			} else {
-				const darkIcon = document.getElementById('dark-icon')
-				if (darkIcon) {
-					darkIcon.classList.remove('hidden')
-				}
-				document.documentElement.setAttribute('theme', 'light')
-			}
-		}
+		initLenis()
+		initCursorBall()
+		initPreference()
+		initTheme()
 	</script>
 </html>
