@@ -32,6 +32,7 @@ const initCursorBall = () => {
 	function onMouseMove(e: MouseEvent) {
 		gsap.to(mouseBall, {
 			duration: 0.5,
+			opacity: 1,
 			x: e.clientX - 15,
 			y: e.clientY - 17
 		})
