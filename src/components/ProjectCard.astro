@@ -6,7 +6,7 @@ import TechnologyLabel from './TechnologyLabel.astro'
 interface Project {
 	name: string
 	image: string
-	githubUrl: string
+	githubUrl?: string
 	deployUrl: string
 	description: string
 	technologies: string[]
@@ -34,11 +34,15 @@ const { project, index } = Astro.props
 		<div class='flex justify-between'>
 			<span class='text-xl text-primary-accent'>{project.name}</span>
 			<div class='flex gap-x-2'>
-				<span class='hoverable'>
-					<a href={project.githubUrl} target='_blank' rel='noopener noreferrer'>
-						<GithubIcon />
-					</a>
-				</span>
+				{
+					project.githubUrl && (
+						<span class='hoverable'>
+							<a href={project.githubUrl} target='_blank' rel='noopener noreferrer'>
+								<GithubIcon />
+							</a>
+						</span>
+					)
+				}
 				<span class='hoverable duration-300 hover:scale-125'>
 					<a href={project.deployUrl} target='_blank' rel='noopener noreferrer'>
 						<OpenWebIcon />
