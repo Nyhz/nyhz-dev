@@ -3,6 +3,13 @@ import ProjectCard from '../components/ProjectCard.astro'
 
 const projects = [
 	{
+		name: 'Trasteros Box03',
+		image: '/images/trasteros-box03.webp',
+		description: 'A small freelance project - Landing page for a self-storage rental business.',
+		deployUrl: 'https://trasterosbox03.com/',
+		technologies: ['Astro', 'TypeScript', 'TailwindCSS']
+	},
+	{
 		name: 'Dev Portfolio',
 		image: '/images/web-dev.webp',
 		description:
@@ -68,6 +75,15 @@ const projects = [
 		}
 	})
 
+	let tl4 = gsap.timeline({
+		scrollTrigger: {
+			trigger: '#project-card-3',
+			start: 'center 85%',
+			end: 'bottom top',
+			scrub: false
+		}
+	})
+
 	tl1.to('#section-title', {
 		x: 0,
 		opacity: 1,
@@ -81,6 +97,12 @@ const projects = [
 	})
 
 	tl3.to('#project-card-2', {
+		clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+		duration: 0.5,
+		ease: 'circ.in'
+	})
+
+	tl4.to('#project-card-3', {
 		clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
 		duration: 0.5,
 		ease: 'circ.in'
