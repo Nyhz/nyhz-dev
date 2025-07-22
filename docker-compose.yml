@@ -1,0 +1,11 @@
+version: '3.9'
+
+services:
+  miapp:
+    build: .
+    container_name: nyhz-dev
+    restart: always
+    ports:
+      - '4321:4321'
+    environment:
+      NODE_ENV: production
