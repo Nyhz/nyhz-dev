@@ -15,7 +15,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
       <div>› shaders <span class="hx">0x3a2e</span><span class="ok"> ok</span></div>
       <div>› field·grain <span class="hx">0x9c4</span><span class="ok"> ok</span></div>
       <div>› hydrate <span class="hx">0x04</span> islands<span class="ok"> ok</span></div>
-      <div>› ./nyhz —mount<span class="cur"></span></div>
+      <div>› ./nyhz —mount</div>
     </div>
 
     <!-- climax: the name is typed out, with a blinking cursor + chromatic glitch -->
@@ -63,12 +63,14 @@ const { name, tagline = 'creative developer' } = Astro.props;
   .loader__log { position: absolute; left: clamp(26px, 5vw, 64px); top: clamp(64px, 12vh, 130px);
     font: 500 clamp(12px, 1.2vw, 14.5px) var(--mono); letter-spacing: 0.04em; color: #76766f;
     transition: opacity 0.35s ease; line-height: 1.7; }
-  .loader__log div { opacity: 0; transform: translateY(3px); transition: opacity 0.25s ease, transform 0.25s ease; }
-  .loader__log div.in { opacity: 1; transform: none; }
+  /* each line is typed out (width clipped char-by-char); the typing line shows a caret */
+  /* content-box so the typed width is the text width — the caret border sits
+     OUTSIDE it (border-box would eat the last glyph) */
+  .loader__log div { width: 0; box-sizing: content-box; overflow: hidden; white-space: nowrap;
+    border-right: 0.5em solid transparent; }
+  .loader__log div.typing { animation: lblink 0.8s steps(1) infinite; }
   .loader__log .hx { color: #4a4a44; }
   .loader__log .ok { color: var(--accent); }
-  .loader__log .cur { display: inline-block; width: 7px; height: 1em; background: var(--accent);
-    margin-left: 3px; vertical-align: -2px; animation: lblink 0.85s steps(1) infinite; }
   .loader__log.out { opacity: 0; }
   /* micro-glitch flicker on the log while loading */
   .loader.flick .loader__log { transform: translateX(-2px); text-shadow: -1px 0 #ff2e63, 1px 0 #2ee6ff; }
@@ -167,7 +169,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
   }
 
   if (reduce) {
-    logLines.forEach((l) => l.classList.add('in'));
+    gsap.set(logLines, { width: 'auto' });
     countEl.textContent = '100';
     barEl.style.transform = 'scaleX(1)';
     typeEl.style.width = NAME.length + 'ch';
@@ -176,11 +178,18 @@ const { name, tagline = 'creative developer' } = Astro.props;
     loader.style.display = 'none';
     revealSite();
   } else {
-    // Micro-glitch flicker while loading.
-    const flick = setInterval(() => {
+    // Irregular glitch flicker — bursty, not a steady metronome. Mostly long
+    // gaps with the occasional rapid burst, so it reads as a glitch, not a pulse.
+    let flickTimer = 0;
+    const scheduleFlick = () => {
       loader.classList.add('flick');
-      setTimeout(() => loader.classList.remove('flick'), 60);
-    }, 260 + Math.random() * 220);
+      flickTimer = window.setTimeout(() => {
+        loader.classList.remove('flick');
+        const burst = Math.random() < 0.28;
+        flickTimer = window.setTimeout(scheduleFlick, burst ? 70 + Math.random() * 90 : 450 + Math.random() * 950);
+      }, 35 + Math.random() * 55);
+    };
+    scheduleFlick();
 
     const state = { p: 0 };
     const typer = { c: 0 };
@@ -189,24 +198,35 @@ const { name, tagline = 'creative developer' } = Astro.props;
       barEl.style.transform = `scaleX(${state.p / 100})`;
     };
 
-    gsap.set(logLines, { opacity: 0, y: 4 });
+    gsap.set(logLines, { width: 0 });
+
+    // Type each log line out char-by-char, in sequence (terminal typewriter).
+    const PER = 0.024; // seconds per character
+    const logTl = gsap.timeline();
+    logLines.forEach((line, i) => {
+      const n = (line.textContent || '').length || 1;
+      const full = line.scrollWidth; // true width — glyphs like › · — aren't exactly 1ch
+      logTl.add(() => line.classList.add('typing'));
+      logTl.to(line, { width: full, duration: Math.max(0.18, n * PER), ease: `steps(${n})` });
+      // keep the caret blinking on the last line (live prompt); clear it on the rest
+      if (i < logLines.length - 1) logTl.add(() => line.classList.remove('typing'), '+=0.09');
+      else logTl.to({}, { duration: 0.15 });
+    });
 
     const tl = gsap.timeline();
-    // Log lines reveal slowly + evenly, independent of the eased counter.
-    tl.to(logLines, { opacity: 1, y: 0, duration: 0.4, stagger: 0.42, ease: 'power2.out' }, 0);
-    // Counter runs concurrently: slow start → acceleration → ease off.
-    tl.to(state, { p: 85, duration: 1.7, ease: 'power3.in', onUpdate: tick }, 0);
-    tl.to(state, { p: 100, duration: 0.9, ease: 'power2.out', onUpdate: tick }, 1.7);
+    tl.add(logTl, 0);
+    // counter fills over the same span as the typing
+    tl.to(state, { p: 100, duration: logTl.duration(), ease: 'power2.inOut', onUpdate: tick }, 0);
 
     // finale: fade the log, type the name, then let it glitch + hold
-    tl.add(() => { logEl.classList.add('out'); nameWrap.classList.add('in'); }, '>+0.05');
+    tl.add(() => { logEl.classList.add('out'); nameWrap.classList.add('in'); }, '>+0.1');
     tl.to(typer, { c: NAME.length, duration: 0.55, ease: `steps(${NAME.length})`,
       onUpdate() { typeEl.style.width = Math.round(typer.c) + 'ch'; } });
     tl.add(() => { typeEl.classList.add('typed'); nameWrap.classList.add('glitch'); });
-    tl.to({}, { duration: 0.5 }); // hold
+    tl.to({}, { duration: 1.5 }); // hold longer so more glitch bursts show
 
     // exit — fly the name to the hero
-    tl.call(() => clearInterval(flick));
+    tl.call(() => { clearTimeout(flickTimer); loader.classList.remove('flick'); });
     tl.add(flyToHero);
   }
 </script>
