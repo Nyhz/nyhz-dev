@@ -16,7 +16,6 @@
         </dl>
       </div>
       <div class="pv__foot" data-foot>
-        <span class="pv__status" data-status aria-live="off"></span>
         <nav class="pv__links">
           <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>github <span class="ar" aria-hidden="true">↗</span></a>
           <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
@@ -60,12 +59,8 @@
     text-transform: uppercase; color: var(--muted); }
   .pv__v { margin: 0; font: 0.8rem var(--mono); color: var(--fg); }
 
-  /* status + links footer (status carries an occasional glitch flicker) */
-  .pv__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
-    margin-top: 1rem; opacity: 0; }
-  .pv__status { font: 0.8rem var(--mono); letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
-  .pv__status[data-status="live"] { color: #3ad29f; }
-  .pv__status[data-status="download"] { color: var(--fg); }
+  /* links footer */
+  .pv__foot { display: flex; align-items: baseline; gap: 1.4rem; margin-top: 1rem; opacity: 0; }
   .pv__links { display: flex; gap: 1.4rem; }
   .pv__link { position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
     font: 0.8rem var(--mono); color: var(--muted); padding-bottom: 4px; transition: color 0.25s; }
@@ -99,7 +94,6 @@
   const metaEl = pv?.querySelector('[data-meta]') as HTMLElement | null;
   const stackV = pv?.querySelector('[data-stack]') as HTMLElement | null;
   const footEl = pv?.querySelector('[data-foot]') as HTMLElement | null;
-  const statusEl = pv?.querySelector('[data-status]') as HTMLElement | null;
   const repo = pv?.querySelector('[data-repo]') as HTMLAnchorElement | null;
   const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
   const download = pv?.querySelector('[data-download]') as HTMLAnchorElement | null;
@@ -109,46 +103,12 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = () => matchMedia('(max-width: 720px)').matches;
 
-  const statusOf = (d: DOMStringMap) => (d.live ? 'live' : d.download ? 'download' : 'personal');
-
-  // ---- status glitch: occasionally run one letter through a few glyphs, then settle ----
-  const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
-  let stIv = 0;
-  function scrambleStatus() {
-    const truth = statusEl?.dataset.value || '';
-    if (!statusEl || truth.length === 0) return;
-    const i = (Math.random() * truth.length) | 0;
-    if (truth[i] === ' ') return;
-    clearInterval(stIv);
-    let n = 0;
-    stIv = window.setInterval(() => {
-      const a = truth.split('');
-      a[i] = GLYPHS[(Math.random() * GLYPHS.length) | 0];
-      statusEl.textContent = a.join('');
-      if (++n >= 4) { clearInterval(stIv); stIv = 0; statusEl.textContent = truth; }
-    }, 55);
-  }
-  function setStatus(d: DOMStringMap) {
-    if (!statusEl) return;
-    clearInterval(stIv); stIv = 0;
-    const s = statusOf(d);
-    statusEl.textContent = s;
-    statusEl.dataset.value = s;
-    statusEl.dataset.status = s;
-  }
-  if (!reduce) {
-    window.setInterval(() => {
-      if (!document.hidden && statusEl?.dataset.value && Math.random() < 0.7) scrambleStatus();
-    }, 2400);
-  }
-
-  function setLinks(d: DOMStringMap) {
+  // Link state must NOT visibly change until the old card has left the screen.
+  function applyContent(d: DOMStringMap) {
     if (repo) { if (d.repo) { repo.href = d.repo; repo.hidden = false; } else repo.hidden = true; }
     if (live) { if (d.live) { live.href = d.live; live.hidden = false; } else live.hidden = true; }
     if (download) { if (d.download) { download.href = d.download; download.hidden = false; } else download.hidden = true; }
   }
-  // State that must NOT visibly change until the old card has left the screen.
-  function applyContent(d: DOMStringMap) { setLinks(d); setStatus(d); }
 
   function reset() {
     if (titleT) titleT.textContent = '';

@@ -2,6 +2,8 @@
 const { projects } = Astro.props;
 const HIGHLIGHT = 3;
 const MAX = 10;
+const statusOf = (p: { deployUrl: string; downloadUrl: string }) =>
+  (p.deployUrl ? 'live' : p.downloadUrl ? 'download' : 'personal');
 const shown = projects.slice(0, MAX);
 const total = String(shown.length).padStart(2, '0');
 const canExpand = shown.length > HIGHLIGHT;
@@ -20,7 +22,7 @@ const canExpand = shown.length > HIGHLIGHT;
               <span class="prj__idx">{String(i + 1).padStart(2, '0')}</span>
               <span class="prj__name">{p.title}</span>
             </span>
-            {p.description && <span class="prj__desc">{p.description}</span>}
+            <span class="prj__status" data-status={statusOf(p)}>{statusOf(p)}</span>
           </span>
         </div>
       </li>
@@ -55,9 +57,10 @@ const canExpand = shown.length > HIGHLIGHT;
   .prj__trigger:hover .prj__idx { color: var(--fg); }
   .prj__name { flex: 1; font-size: clamp(1.2rem, 2.1vw, 1.5rem); font-weight: 500; letter-spacing: -0.01em; }
 
-  .prj__desc { display: block; margin-top: 0.3rem; padding-left: calc(0.78rem + 0.9rem);
-    font-size: 0.82rem; color: var(--dim);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prj__status { display: block; margin-top: 0.35rem; padding-left: calc(0.78rem + 0.9rem);
+    font: 0.78rem var(--mono); letter-spacing: 0.06em; color: var(--muted); }
+  .prj__status[data-status="live"] { color: #3ad29f; }
+  .prj__status[data-status="download"] { color: var(--dim); }
 
   .prj-more { display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 1.2rem;
     background: none; border: none; cursor: pointer; padding: 0;
@@ -184,4 +187,32 @@ const canExpand = shown.length > HIGHLIGHT;
     if (!page?.classList.contains('projects-open')) return;
     if (!page.contains(e.target as Node)) setExpanded(false);
   });
+</script>
+
+<script>
+  // Occasionally run one letter of a random project's status through a few
+  // glyphs, then settle it back — a subtle terminal glitch on the subtitle.
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
+  const statuses = Array.from(document.querySelectorAll<HTMLElement>('.prj__status'));
+  statuses.forEach((el) => (el.dataset.value = el.textContent || ''));
+
+  if (!reduce && statuses.length) {
+    let scrambleIv = 0;
+    setInterval(() => {
+      if (document.hidden || Math.random() > 0.7) return;
+      const el = statuses[(Math.random() * statuses.length) | 0];
+      const truth = el.dataset.value || '';
+      if (!truth) return;
+      const i = (Math.random() * truth.length) | 0;
+      let n = 0;
+      clearInterval(scrambleIv);
+      scrambleIv = window.setInterval(() => {
+        const a = truth.split('');
+        a[i] = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+        el.textContent = a.join('');
+        if (++n >= 4) { clearInterval(scrambleIv); scrambleIv = 0; el.textContent = truth; }
+      }, 55);
+    }, 1500);
+  }
 </script>
