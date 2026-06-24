@@ -1,0 +1,30 @@
+---
+// Self-contained: clickable "available for work" chip. The expanding card and
+// submit logic are added in later tasks.
+---
+<button class="contact-chip" type="button" data-contact-open aria-haspopup="dialog" aria-expanded="false">
+  <i class="live" aria-hidden="true"></i>
+  <span class="lbl">available for work</span>
+  <span class="cue" aria-hidden="true">+</span>
+</button>
+
+<style>
+  .contact-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px;
+    background: transparent; cursor: pointer; color: var(--muted);
+    font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    transition: color 0.2s, border-color 0.2s, transform 0.2s;
+  }
+  .contact-chip:hover, .contact-chip:focus-visible { color: var(--fg); border-color: var(--fg); transform: translateY(-1px); }
+  .contact-chip:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; }
+  .live { width: 6px; height: 6px; border-radius: 50%; background: #3ad29f; box-shadow: 0 0 8px #3ad29f;
+    animation: live 1.6s ease-in-out infinite; }
+  .cue { font-size: 0.95em; opacity: 0.6; transition: transform 0.2s, opacity 0.2s; }
+  .contact-chip:hover .cue, .contact-chip:focus-visible .cue { opacity: 1; transform: rotate(90deg); }
+  @keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  @media (prefers-reduced-motion: reduce) {
+    .live { animation: none; }
+    .contact-chip, .cue { transition: none; }
+  }
+</style>
