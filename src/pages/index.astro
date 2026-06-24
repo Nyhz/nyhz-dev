@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Identity from '../components/Identity.astro';
+import Projects from '../components/Projects.astro';
 import Socials from '../components/Socials.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import { getContent } from '../scripts/content';
@@ -16,6 +17,7 @@ const { profile, projects } = await getContent();
   </div>
   <Fragment slot="left">
     <Identity name={profile.name} role={profile.role} location={profile.location} />
+    <Projects projects={projects} />
   </Fragment>
   <div slot="right"></div>
 </Base>
