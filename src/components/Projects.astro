@@ -151,31 +151,32 @@ const canExpand = shown.length > HIGHLIGHT;
 
     const finish = () => { projects?.classList.remove('is-busy'); animating = false; };
 
+    // the button stays hidden through the whole transition and only fades back in
+    // (opacity only, no movement) once everything has settled in its final place
+    const revealButton = () => gsap.to(btn, { opacity: 1, duration: 0.3, ease: 'power2.out', onComplete: finish });
+
     if (open) {
-      // button out → header collapses + list grows → button in → extras stagger in
-      gsap.to(btn, { opacity: 0, y: 6, duration: 0.2, ease: 'power2.in', onComplete: () => {
+      gsap.to(btn, { opacity: 0, duration: 0.15, ease: 'power2.in', onComplete: () => {
         apply();
         animateLayout(true, false);
-        gsap.to(btn, { opacity: 1, y: 0, duration: 0.35, delay: DUR, ease: 'power2.out', onComplete: () => {
+        gsap.delayedCall(DUR, () => {
           page.classList.add('projects-reveal');
           gsap.fromTo('.prj--extra', { opacity: 0, y: 14 },
-            { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out' });
-          finish();
-        } });
+            { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', onComplete: revealButton });
+        });
       } });
     } else {
-      // extras stagger OUT first → then button out → header returns + list shrinks
-      gsap.to('.prj--extra', {
-        opacity: 0, y: 14, duration: 0.32, ease: 'power2.in', stagger: { each: 0.05, from: 'end' },
-        onComplete: () => {
-          page.classList.remove('projects-reveal');
-          gsap.to(btn, { opacity: 0, y: 6, duration: 0.2, ease: 'power2.in', onComplete: () => {
+      gsap.to(btn, { opacity: 0, duration: 0.15, ease: 'power2.in', onComplete: () => {
+        gsap.to('.prj--extra', {
+          opacity: 0, y: 14, duration: 0.32, ease: 'power2.in', stagger: { each: 0.05, from: 'end' },
+          onComplete: () => {
+            page.classList.remove('projects-reveal');
             apply();
             animateLayout(false, false);
-            gsap.to(btn, { opacity: 1, y: 0, duration: 0.35, delay: DUR, ease: 'power2.out', onComplete: finish });
-          } });
-        },
-      });
+            gsap.delayedCall(DUR, revealButton);
+          },
+        });
+      } });
     }
   }
 

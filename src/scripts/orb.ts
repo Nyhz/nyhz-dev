@@ -17,20 +17,32 @@ const FRAG = `
   void main() {
     vec2 p = (vUv - 0.5) * 2.0;
     float r = length(p);
-    float R = 0.56;
-    float e = 0.025;
-    float disk = smoothstep(R + e, R - e, r);
+    float R = 0.42;
+    float aa = 0.018;
+    float disk = smoothstep(R + aa, R - aa, r);
     float z = sqrt(max(0.0, R * R - r * r));
-    vec3 n = normalize(vec3(p, z + 0.001));
-    // moon: hard terminator → crescent, light rotates with uRot
-    vec3 L = normalize(vec3(cos(uRot) * 0.95, 0.16, sin(uRot) * 0.5 + 0.5));
-    float lit = smoothstep(0.02, 0.18, dot(n, L));
-    float moon = disk * lit;
-    // sun: full disk + animated corona rays
+    vec3 n = normalize(vec3(p, z + 0.0001));
+
+    // light dir (rotates with the morph + a gentle idle sway → feels alive/3D)
+    float a = uRot + sin(uTime * 0.4) * 0.15;
+    vec3 L = normalize(vec3(cos(a) * 0.7, 0.45, 0.55));
+    float diff = clamp(dot(n, L), 0.0, 1.0);
+
+    // MOON: smoothly shaded ball (curved terminator) + specular sheen + soft halo
+    float shade = smoothstep(0.04, 0.9, diff);
+    vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+    float spec = pow(clamp(dot(n, H), 0.0, 1.0), 30.0) * 0.95;
+    float halo = smoothstep(R + 0.16, R, r) * (1.0 - disk) * 0.22;
+    float moon = disk * (shade * 0.92 + spec) + halo;
+
+    // SUN: bright core + animated corona rays + bloom
     float ang = atan(p.y, p.x);
-    float ray = 0.5 + 0.5 * sin(ang * 11.0 - uTime * 0.8);
-    float corona = smoothstep(R + 0.36, R + 0.02, r) * (1.0 - disk) * (0.28 + 0.45 * ray);
-    float sun = disk + corona;
+    float core = disk * (0.72 + 0.28 * z / R);
+    float ray = pow(0.5 + 0.5 * sin(ang * 12.0 + uTime * 0.9), 2.0);
+    float corona = smoothstep(R + 0.46, R, r) * (1.0 - disk) * (0.22 + 0.6 * ray);
+    float bloom = smoothstep(R + 0.5, R, r) * (1.0 - disk) * 0.3;
+    float sun = core + corona + bloom;
+
     float v = clamp(mix(moon, sun, uMix), 0.0, 1.0);
     gl_FragColor = vec4(uColor, v);
   }
