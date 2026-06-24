@@ -5,5 +5,6 @@ tags:
   - three.js
 repoUrl: https://github.com/nyhz
 deployUrl: https://example.com
+downloadUrl: https://example.com/download.zip
 coverUrl: ''
 order: 1

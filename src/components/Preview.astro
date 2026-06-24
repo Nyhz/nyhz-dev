@@ -15,8 +15,9 @@
       <div class="pv__info">
         <span class="pv__tags" data-tags></span>
         <nav class="pv__links">
-          <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>repo <span class="ar" aria-hidden="true">↗</span></a>
+          <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>github <span class="ar" aria-hidden="true">↗</span></a>
           <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
+          <a class="pv__link" data-download target="_blank" rel="noopener noreferrer" hidden>download <span class="ar" aria-hidden="true">↓</span></a>
         </nav>
       </div>
     </div>
@@ -80,6 +81,7 @@
   const tags = pv?.querySelector('[data-tags]') as HTMLElement | null;
   const repo = pv?.querySelector('[data-repo]') as HTMLAnchorElement | null;
   const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
+  const download = pv?.querySelector('[data-download]') as HTMLAnchorElement | null;
   const track = document.querySelector('[data-track]') as HTMLElement | null;
   const back = document.querySelector('[data-back]');
   const rows = Array.from(document.querySelectorAll<HTMLElement>('.prj[data-proj]'));
@@ -93,6 +95,7 @@
     if (tags) tags.textContent = d.tags || '';
     if (repo) { if (d.repo) { repo.href = d.repo; repo.hidden = false; } else repo.hidden = true; }
     if (live) { if (d.live) { live.href = d.live; live.hidden = false; } else live.hidden = true; }
+    if (download) { if (d.download) { download.href = d.download; download.hidden = false; } else download.hidden = true; }
   }
 
   let current: string | null = null;
@@ -135,8 +138,8 @@
     const slug = r.dataset.proj!;
     r.addEventListener('mouseenter', () => { if (!isMobile()) show(slug, r.dataset); });
     r.addEventListener('focusin', () => { if (!isMobile()) show(slug, r.dataset); });
-    r.querySelector('a')?.addEventListener('click', (e) => {
-      if (isMobile()) { e.preventDefault(); show(slug, r.dataset); track?.classList.add('is-preview'); setHeight(); }
+    r.querySelector('.prj__trigger')?.addEventListener('click', () => {
+      if (isMobile()) { show(slug, r.dataset); track?.classList.add('is-preview'); setHeight(); }
     });
   });
   back?.addEventListener('click', () => { track?.classList.remove('is-preview'); setHeight(); });

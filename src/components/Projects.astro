@@ -12,8 +12,8 @@ const canExpand = shown.length > HIGHLIGHT;
     {shown.map((p, i) => (
       <li class:list={['prj', i >= HIGHLIGHT && 'prj--extra']} data-proj={p.slug}
         data-title={p.title} data-cover={p.coverUrl} data-repo={p.repoUrl}
-        data-live={p.deployUrl} data-tags={p.tags.join(' · ')}>
-        <a href={p.repoUrl} target="_blank" rel="noopener noreferrer">
+        data-live={p.deployUrl} data-download={p.downloadUrl} data-tags={p.tags.join(' · ')}>
+        <div class="prj__trigger" tabindex="0" role="button" aria-label={`Preview ${p.title}`}>
           <span class="prj__bar"></span>
           <span class="prj__inner">
             <span class="prj__head">
@@ -23,7 +23,7 @@ const canExpand = shown.length > HIGHLIGHT;
             </span>
             {p.description && <span class="prj__desc">{p.description}</span>}
           </span>
-        </a>
+        </div>
       </li>
     ))}
   </ul>
@@ -37,23 +37,25 @@ const canExpand = shown.length > HIGHLIGHT;
 
 <style>
   .projects ul { list-style: none; border-bottom: 1px solid var(--line); }
-  .prj a { position: relative; display: block; padding: 1rem 0; border-top: 1px solid var(--line); }
+  .prj__trigger { position: relative; display: block; padding: 1rem 0; cursor: pointer;
+    border-top: 1px solid var(--line); outline: none; }
+  .prj__trigger:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
 
   /* shift via transform only → never reflows, no layout shift on hover */
   .prj__inner { display: block; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
-  .prj a:hover .prj__inner { transform: translateX(1.1rem); }
+  .prj__trigger:hover .prj__inner, .prj__trigger:focus-visible .prj__inner { transform: translateX(1.1rem); }
 
   .prj__bar { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--fg);
     transform: scaleY(0); transform-origin: top; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
-  .prj a:hover .prj__bar { transform: scaleY(1); }
+  .prj__trigger:hover .prj__bar, .prj__trigger:focus-visible .prj__bar { transform: scaleY(1); }
 
   .prj__head { display: flex; align-items: baseline; gap: 0.9rem; }
   .prj__idx { font: 0.78rem var(--mono); color: var(--muted); transition: color 0.25s; }
-  .prj a:hover .prj__idx { color: var(--fg); }
+  .prj__trigger:hover .prj__idx { color: var(--fg); }
   .prj__name { flex: 1; font-size: clamp(1.2rem, 2.1vw, 1.5rem); font-weight: 500; letter-spacing: -0.01em; }
   .prj__ar { font-size: 1.05rem; color: var(--muted); opacity: 0; transform: translate(-6px, 6px);
     transition: all 0.3s ease; }
-  .prj a:hover .prj__ar { opacity: 1; transform: translate(0, 0); color: var(--fg); }
+  .prj__trigger:hover .prj__ar, .prj__trigger:focus-visible .prj__ar { opacity: 1; transform: translate(0, 0); color: var(--fg); }
 
   .prj__desc { display: block; margin-top: 0.3rem; padding-left: calc(0.78rem + 0.9rem);
     font-size: 0.82rem; color: var(--dim);
