@@ -1,0 +1,48 @@
+// src/scripts/content.ts
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../keystatic.config';
+
+export type ProfileProps = {
+  name: string; role: string; location: string;
+  socials: { label: string; url: string }[];
+};
+export type ProjectProps = {
+  slug: string; title: string; description: string;
+  tags: string[]; repoUrl: string; order: number;
+};
+
+const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+
+export function mapProfile(raw: any): ProfileProps {
+  return {
+    name: str(raw?.name),
+    role: str(raw?.role),
+    location: str(raw?.location),
+    socials: arr<any>(raw?.socials).map((s) => ({ label: str(s?.label), url: str(s?.url) })),
+  };
+}
+
+export function mapProjects(items: { slug: string; entry: any }[]): ProjectProps[] {
+  return items
+    .map(({ slug, entry }) => ({
+      slug,
+      title: str(entry?.title),
+      description: str(entry?.description),
+      tags: arr<string>(entry?.tags).map(str),
+      repoUrl: str(entry?.repoUrl),
+      order: num(entry?.order),
+    }))
+    .sort((a, b) => a.order - b.order);
+}
+
+export async function getContent(): Promise<{ profile: ProfileProps; projects: ProjectProps[] }> {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  const profileRaw = await reader.singletons.profile.read();
+  const projectRaw = await reader.collections.projects.all();
+  return {
+    profile: mapProfile(profileRaw),
+    projects: mapProjects(projectRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
+  };
+}
