@@ -15,7 +15,7 @@ a { color: inherit; text-decoration: none; }
     "mid mid"
     "bl br";
   width: 100%;
-  max-width: 1400px;
+  max-width: 900px;
   height: 100vh;
   margin: 0 auto;
   padding: clamp(1.5rem, 4vh, 3.5rem) var(--space);
