@@ -133,16 +133,16 @@ const { name, tagline = 'creative developer' } = Astro.props;
     const amt = { v: 0.15 };
     const tl = gsap.timeline();
 
-    tl.to(state, {
-      p: 100, duration: 2.0, ease: 'power1.inOut',
-      onUpdate() {
-        const v = Math.round(state.p);
-        countEl.textContent = String(v).padStart(3, '0');
-        statusEl.textContent = scramble(state.p / 100);
-        barEl.style.transform = `scaleX(${state.p / 100})`;
-      },
-      onComplete() { statusEl.textContent = target; },
-    });
+    const tick = () => {
+      const v = Math.round(state.p);
+      countEl.textContent = String(v).padStart(3, '0');
+      statusEl.textContent = scramble(state.p / 100);
+      barEl.style.transform = `scaleX(${state.p / 100})`;
+    };
+    // slow start → strong acceleration, then ease off over the last 10
+    tl.to(state, { p: 90, duration: 1.55, ease: 'power3.in', onUpdate: tick });
+    tl.to(state, { p: 100, duration: 0.75, ease: 'power2.out', onUpdate: tick,
+      onComplete() { statusEl.textContent = target; } });
 
     // Exit — shatter the name, fade the readout, then fade the whole loader
     // out. The page carries its own identical frame underneath, so the frame
