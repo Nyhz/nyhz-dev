@@ -130,14 +130,6 @@
     }
   }
 
-  // auto-close: hide the preview 3s after the cursor leaves the projects + preview
-  let hideTimer = 0;
-  function cancelHide() { clearTimeout(hideTimer); }
-  function scheduleHide() {
-    if (current === null || isMobile() || reduce) return;
-    clearTimeout(hideTimer);
-    hideTimer = window.setTimeout(hide, 3000);
-  }
   function hide() {
     if (!card || current === null) return;
     current = null;
@@ -146,16 +138,14 @@
     leaveOut(tl);
   }
 
+  // Preview opens on CLICK (not hover). Desktop: click a project to reveal it,
+  // click the same one again to close. Mobile: click slides to the preview panel.
   rows.forEach((r) => {
     const slug = r.dataset.proj!;
-    r.addEventListener('mouseenter', () => { if (!isMobile()) { cancelHide(); show(slug, r.dataset); } });
-    r.addEventListener('mouseleave', () => { if (!isMobile()) scheduleHide(); });
-    r.addEventListener('focusin', () => { if (!isMobile()) { cancelHide(); show(slug, r.dataset); } });
     r.querySelector('.prj__trigger')?.addEventListener('click', () => {
-      if (isMobile()) { show(slug, r.dataset); track?.classList.add('is-preview'); }
+      if (isMobile()) { show(slug, r.dataset); track?.classList.add('is-preview'); return; }
+      if (slug === current) hide(); else show(slug, r.dataset);
     });
   });
-  pv?.addEventListener('mouseenter', () => { if (!isMobile()) cancelHide(); });
-  pv?.addEventListener('mouseleave', () => { if (!isMobile()) scheduleHide(); });
   back?.addEventListener('click', () => { track?.classList.remove('is-preview'); });
 </script>

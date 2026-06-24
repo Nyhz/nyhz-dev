@@ -1,60 +1,66 @@
 <button class="theme-toggle" aria-label="Toggle theme" data-theme-toggle>
   <span class="tt-ring" aria-hidden="true"></span>
-  <svg class="ti ti--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M20.5 14.2A8 8 0 1 1 9.8 3.5a6.2 6.2 0 0 0 10.7 10.7z"/>
-  </svg>
-  <svg class="ti ti--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="4.2"/>
-    <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6"/>
-  </svg>
+  <canvas class="tt-orb" aria-hidden="true"></canvas>
 </button>
 <style>
   .theme-toggle {
-    position: fixed; z-index: 6; top: clamp(16px, 2vw, 30px); right: clamp(24px, 2.6vw, 40px);
-    width: 48px; height: 48px; padding: 0; cursor: pointer; color: var(--muted);
+    position: fixed; z-index: 6;
+    top: clamp(24px, 2.8vw, 42px); right: clamp(24px, 2.8vw, 42px);
+    width: 48px; height: 48px; padding: 0; cursor: pointer; color: var(--fg);
     background: color-mix(in srgb, var(--bg) 70%, transparent);
     border: 1px solid var(--line); border-radius: 50%; display: grid; place-items: center;
     backdrop-filter: blur(4px);
-    transition: color 0.25s, border-color 0.3s, transform 0.4s cubic-bezier(.2,.7,.2,1);
+    transition: border-color 0.3s, transform 0.4s cubic-bezier(.2,.7,.2,1);
   }
-  .theme-toggle:hover { color: var(--fg); border-color: var(--fg); transform: rotate(18deg); }
-  .theme-toggle:active { transform: rotate(18deg) scale(0.9); }
+  .theme-toggle:hover { border-color: var(--fg); transform: scale(1.07); }
+  .theme-toggle:active { transform: scale(0.92); }
+  .tt-orb { width: 32px; height: 32px; display: block; }
 
-  .ti { position: absolute; width: 23px; height: 23px;
-    transition: opacity 0.45s ease, transform 0.6s cubic-bezier(.5,1.7,.4,1); }
-  .ti--moon { opacity: 1; transform: rotate(0) scale(1); }
-  .ti--sun  { opacity: 0; transform: rotate(-90deg) scale(0.3); }
-  :root[data-theme='light'] .ti--moon { opacity: 0; transform: rotate(90deg) scale(0.3); }
-  :root[data-theme='light'] .ti--sun  { opacity: 1; transform: rotate(0) scale(1); }
-
-  /* ring pulse on click */
   .tt-ring { position: absolute; inset: -1px; border-radius: 50%; border: 1px solid var(--fg);
     opacity: 0; pointer-events: none; }
   .theme-toggle.pulsing .tt-ring { animation: ttPulse 0.65s ease-out; }
   @keyframes ttPulse { from { opacity: 0.6; transform: scale(1); } to { opacity: 0; transform: scale(1.7); } }
 
-  @media (prefers-reduced-motion: reduce) {
-    .theme-toggle, .ti, .tt-ring { transition: none; animation: none; }
-  }
+  @media (prefers-reduced-motion: reduce) { .theme-toggle, .tt-ring { transition: none; animation: none; } }
 </style>
 <script>
-  import { applyTheme, nextTheme, readStoredTheme, resolveInitialTheme } from '../scripts/theme';
+  import { gsap } from 'gsap';
+  import { createOrb } from '../scripts/orb';
+  import { applyTheme, nextTheme, readStoredTheme, resolveInitialTheme, THEME_EVENT } from '../scripts/theme';
+
   const btn = document.querySelector('[data-theme-toggle]') as HTMLElement | null;
+  const canvas = document.querySelector('.tt-orb') as HTMLCanvasElement | null;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const current = () => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
+  const fg = () => getComputedStyle(document.documentElement).getPropertyValue('--fg').trim() || '#f1efe9';
 
   const resolved = resolveInitialTheme(readStoredTheme(), current() === 'dark');
   if (resolved !== current()) applyTheme(resolved);
 
-  const swap = () => applyTheme(nextTheme(current()));
+  let orb: ReturnType<typeof createOrb> | null = null;
+  const webglOk = (() => { try { return !!document.createElement('canvas').getContext('webgl'); } catch { return false; } })();
+  if (canvas && webglOk) {
+    orb = createOrb(canvas);
+    orb.setColor(fg());
+    orb.uniforms.uMix.value = current() === 'light' ? 1 : 0;
+    orb.start();
+  }
 
+  // the orb morphs (moon ↔ sun) + spins when the theme changes
+  window.addEventListener(THEME_EVENT, () => {
+    if (!orb) return;
+    orb.setColor(fg());
+    const target = current() === 'light' ? 1 : 0;
+    if (reduce) { orb.uniforms.uMix.value = target; return; }
+    gsap.to(orb.uniforms.uMix, { value: target, duration: 0.7, ease: 'power2.inOut' });
+    gsap.to(orb.uniforms.uRot, { value: orb.uniforms.uRot.value + Math.PI, duration: 0.9, ease: 'power2.inOut' });
+  });
+
+  const swap = () => applyTheme(nextTheme(current()));
   btn?.addEventListener('click', (e) => {
     btn.classList.remove('pulsing'); void btn.offsetWidth; btn.classList.add('pulsing');
-
     const start = (document as any).startViewTransition?.bind(document);
     if (reduce || !start) { swap(); return; }
-
-    // circular reveal of the new theme, expanding from the button
     const x = e.clientX, y = e.clientY;
     const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
     start(swap).ready.then(() => {
