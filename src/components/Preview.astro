@@ -1,0 +1,94 @@
+---
+const { projects } = Astro.props;
+const shown = projects.slice(0, 4);
+---
+<div class="preview" data-anim>
+  <p class="sec-label sec-label--r">— preview</p>
+  <div class="pv__frame">
+    <div class="pv__panel is-active" data-idle>
+      <span class="pv__hint">hover a project<span class="pv__caret">↗</span></span>
+    </div>
+
+    {shown.map((p) => (
+      <div class="pv__panel" data-proj={p.slug}>
+        <div class="pv__media">
+          {p.coverUrl
+            ? <img src={p.coverUrl} alt={p.title} loading="lazy" />
+            : <div class="pv__ph" aria-hidden="true"><span>{p.title}</span></div>}
+        </div>
+        <div class="pv__foot">
+          <span class="pv__title">{p.title}</span>
+          <span class="pv__links">
+            {p.repoUrl && <a href={p.repoUrl} target="_blank" rel="noopener noreferrer">repo<span>↗</span></a>}
+            {p.deployUrl && <a href={p.deployUrl} target="_blank" rel="noopener noreferrer">live<span>↗</span></a>}
+          </span>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .preview { width: 100%; }
+  .pv__frame { position: relative; width: 100%; aspect-ratio: 5 / 4; border: 1px solid var(--line); overflow: hidden; }
+
+  .pv__panel { position: absolute; inset: 0; display: flex; flex-direction: column;
+    opacity: 0; visibility: hidden; transition: opacity 0.45s ease; }
+  .pv__panel.is-active { opacity: 1; visibility: visible; }
+
+  .pv__idle, [data-idle] { align-items: center; justify-content: center; }
+  .pv__hint { font: 500 0.72rem var(--mono); letter-spacing: 0.26em; text-transform: uppercase;
+    color: var(--muted); display: inline-flex; align-items: center; gap: 0.5rem; }
+  .pv__caret { font-size: 0.9em; }
+
+  .pv__media { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+  .pv__media img { width: 100%; height: 100%; object-fit: cover; display: block;
+    transform: scale(1.04); transition: transform 0.6s cubic-bezier(.2,.7,.2,1); }
+  .pv__panel.is-active .pv__media img { transform: scale(1); }
+  .pv__ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    background:
+      repeating-linear-gradient(135deg, var(--line) 0 1px, transparent 1px 12px); }
+  .pv__ph span { font-size: clamp(1.1rem, 2.4vw, 1.6rem); font-weight: 600; letter-spacing: -0.02em;
+    color: var(--fg); background: var(--bg); padding: 0.2rem 0.7rem; }
+
+  .pv__foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.85rem 0.95rem; border-top: 1px solid var(--line); background: var(--bg); }
+  .pv__title { font-size: 0.95rem; font-weight: 500; }
+  .pv__links { display: flex; gap: 1rem; }
+  .pv__links a { font: 0.72rem var(--mono); letter-spacing: 0.04em; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 0.2rem; transition: color 0.2s; }
+  .pv__links a span { font-size: 0.85em; transition: transform 0.2s; }
+  .pv__links a:hover { color: var(--fg); }
+  .pv__links a:hover span { transform: translate(2px, -2px); }
+
+  @media (max-width: 720px) { .sec-label--r { text-align: left; } }
+  @media (prefers-reduced-motion: reduce) {
+    .pv__panel, .pv__media img, .pv__links a, .pv__links a span { transition: none; }
+  }
+</style>
+
+<script>
+  const idle = document.querySelector('[data-idle]') as HTMLElement | null;
+  const panels = new Map<string, HTMLElement>();
+  document.querySelectorAll<HTMLElement>('.pv__panel[data-proj]').forEach((p) => {
+    if (p.dataset.proj) panels.set(p.dataset.proj, p);
+  });
+  const rows = document.querySelectorAll<HTMLElement>('.prj[data-proj]');
+  const list = document.querySelector('.projects');
+
+  function show(slug: string) {
+    panels.forEach((el, key) => el.classList.toggle('is-active', key === slug));
+    idle?.classList.remove('is-active');
+  }
+  function reset() {
+    panels.forEach((el) => el.classList.remove('is-active'));
+    idle?.classList.add('is-active');
+  }
+
+  rows.forEach((r) => {
+    const slug = r.dataset.proj!;
+    r.addEventListener('mouseenter', () => show(slug));
+    r.addEventListener('focusin', () => show(slug));
+  });
+  list?.addEventListener('mouseleave', reset);
+</script>

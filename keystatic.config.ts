@@ -34,6 +34,8 @@ export default config({
           label: 'Tags', itemLabel: (p) => p.value,
         }),
         repoUrl: fields.url({ label: 'GitHub URL' }),
+        deployUrl: fields.url({ label: 'Live / deploy URL' }),
+        coverUrl: fields.text({ label: 'Cover image URL or /public path' }),
         order: fields.integer({ label: 'Order', defaultValue: 0 }),
       },
     }),

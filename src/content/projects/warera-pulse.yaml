@@ -1,0 +1,10 @@
+title: Warera Pulse
+description: Real-time stats dashboard with live websocket feeds.
+tags:
+  - react
+  - ws
+  - charts
+repoUrl: https://github.com/nyhz
+deployUrl: https://example.com
+coverUrl: ''
+order: 2
