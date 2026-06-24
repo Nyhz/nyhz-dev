@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 const FOV = 45;
 const FOV_T = Math.tan((FOV * Math.PI) / 180 / 2);
-const CAM_Z = 4;
+const CAM_Z = 5.5;
 // Cursor influence: RADIUS is the reach around the pointer (in normalized-device
 // units); PUSH is the max nudge in world units — kept small so particles react
 // subtly rather than evacuating a hole.
@@ -24,7 +24,7 @@ export function createScene(canvas: HTMLCanvasElement) {
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const material = new THREE.PointsMaterial({ size: 0.02, sizeAttenuation: true });
+  const material = new THREE.PointsMaterial({ size: 0.024, sizeAttenuation: true });
   const points = new THREE.Points(geo, material);
   scene.add(points);
 
