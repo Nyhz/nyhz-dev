@@ -21,7 +21,7 @@ a { color: inherit; text-decoration: none; }
 .hero { display: flex; flex-direction: column; justify-content: center; gap: 1.2rem; }
 .eyebrow { font: 500 0.72rem var(--mono); letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); }
 
-.lower { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
+.lower__track { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
 
 .sec-label { font: 500 0.66rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase;
   color: var(--muted); margin-bottom: 1.3rem; display: block; }
@@ -30,7 +30,12 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 720px) {
   body { overflow: auto; }
   .page { height: auto; min-height: 100vh; grid-template-rows: auto auto; }
-  .lower { grid-template-columns: 1fr; gap: 2.5rem; }
+  /* Two-panel slider: projects list → swipe right to the preview. */
+  .lower { overflow: hidden; }
+  .lower__track { display: flex; width: 200%; gap: 0;
+    transform: translateX(0); transition: transform 0.5s cubic-bezier(.4,0,.2,1), height 0.4s ease; }
+  .lower__track > * { flex: 0 0 50%; width: 50%; align-self: flex-start; }
+  .lower__track.is-preview { transform: translateX(-50%); }
 }
 @media (prefers-reduced-motion: reduce) {
   html { transition: none; }

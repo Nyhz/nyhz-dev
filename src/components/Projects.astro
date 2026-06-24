@@ -7,7 +7,9 @@ const count = String(shown.length).padStart(2, '0');
   <p class="sec-label">— selected work <span class="sec-count">[{count}]</span></p>
   <ul>
     {shown.map((p, i) => (
-      <li class="prj" data-proj={p.slug}>
+      <li class="prj" data-proj={p.slug}
+        data-title={p.title} data-cover={p.coverUrl} data-repo={p.repoUrl}
+        data-live={p.deployUrl} data-tags={p.tags.join(' · ')}>
         <a href={p.repoUrl} target="_blank" rel="noopener noreferrer">
           <span class="prj__bar"></span>
           <span class="prj__inner">

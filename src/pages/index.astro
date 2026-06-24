@@ -25,7 +25,9 @@ const { profile, projects } = await getContent();
     />
   </section>
   <section class="lower">
-    <Projects projects={projects} />
-    <Preview projects={projects} />
+    <div class="lower__track" data-track>
+      <Projects projects={projects} />
+      <Preview projects={projects} />
+    </div>
   </section>
 </Base>
