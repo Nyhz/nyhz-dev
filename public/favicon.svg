@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- terminal prompt  >_  with the site's chromatic glitch + green cursor -->
   <rect width="32" height="32" rx="7" fill="#0b0b0b"/>
-  <g font-family="ui-monospace, 'SF Mono', Menlo, monospace" font-weight="700" font-size="21" text-anchor="middle">
-    <text x="15.1" y="23" fill="#ff2e63">n</text>
-    <text x="16.9" y="23" fill="#2ee6ff">n</text>
-    <text x="16" y="23" fill="#f1efe9">n</text>
+  <g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.4 9 L15.4 16 L9.4 23" stroke="#ff2e63" transform="translate(-0.8 0)"/>
+    <path d="M9.4 9 L15.4 16 L9.4 23" stroke="#2ee6ff" transform="translate(0.8 0)"/>
+    <path d="M9.4 9 L15.4 16 L9.4 23" stroke="#f1efe9"/>
   </g>
-  <circle cx="24.5" cy="8" r="2.4" fill="#3ad29f"/>
+  <rect x="17.5" y="20.4" width="6.4" height="2.8" fill="#3ad29f"/>
 </svg>
