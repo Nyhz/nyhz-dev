@@ -139,9 +139,9 @@ const { name, tagline = 'creative developer' } = Astro.props;
       statusEl.textContent = scramble(state.p / 100);
       barEl.style.transform = `scaleX(${state.p / 100})`;
     };
-    // slow start → strong acceleration, then ease off over the last 10
-    tl.to(state, { p: 90, duration: 1.55, ease: 'power3.in', onUpdate: tick });
-    tl.to(state, { p: 100, duration: 0.75, ease: 'power2.out', onUpdate: tick,
+    // slow start → strong acceleration, then ease off over the last 15
+    tl.to(state, { p: 85, duration: 1.5, ease: 'power3.in', onUpdate: tick });
+    tl.to(state, { p: 100, duration: 0.85, ease: 'power2.out', onUpdate: tick,
       onComplete() { statusEl.textContent = target; } });
 
     // Exit — shatter the name, fade the readout, then fade the whole loader

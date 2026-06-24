@@ -6,8 +6,8 @@ const { coords = '37.98°N / 23.72°E' } = Astro.props;
     <span class="tick tl"></span><span class="tick tr"></span>
     <span class="tick bl"></span><span class="tick br"></span>
   </div>
-  <span class="meta c"><span data-clock>--:--:--</span> — index</span>
-  <span class="meta d"><i class="live"></i>available for work</span>
+  <span class="meta c"><i class="live"></i>available for work</span>
+  <span class="meta d"><span data-clock>--:--:--</span> · © 2026</span>
 </div>
 
 <style>
@@ -24,9 +24,9 @@ const { coords = '37.98°N / 23.72°E' } = Astro.props;
   .meta.a { left: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px); color: var(--fg); }
   .meta.b { right: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px); font-variant-numeric: tabular-nums; }
   .meta.c { left: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
-    font-variant-numeric: tabular-nums; }
-  .meta.d { right: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
     display: flex; align-items: center; gap: 7px; }
+  .meta.d { right: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
+    font-variant-numeric: tabular-nums; }
   .live { width: 6px; height: 6px; border-radius: 50%; background: #3ad29f; box-shadow: 0 0 8px #3ad29f;
     animation: live 1.6s ease-in-out infinite; }
   @keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
