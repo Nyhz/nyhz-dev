@@ -60,11 +60,12 @@ a { color: inherit; text-decoration: none; }
   .lower__track > * { flex: 0 0 50%; width: 50%; align-self: flex-start; }
   .lower__track.is-preview { transform: translateX(-50%); }
 
-  /* expanded: header collapsed (GSAP), full-width scrollable list */
-  .page.projects-open .preview { display: none; }
+  /* expanded: header collapsed (GSAP), list fills + scrolls. The preview panel
+     stays offscreen in the slider (not display:none) so removing it can't jump
+     the lower's height the instant the class is applied. */
   .page.projects-open .lower { min-height: 0; }
-  .page.projects-open .lower__track { display: block; width: 100%; height: 100%; transform: none; }
-  .page.projects-open .lower__track > * { width: 100%; }
+  .page.projects-open .lower__track { height: 100%; }
+  .page.projects-open .lower__track > * { height: 100%; }
   .page.projects-open .projects { display: flex; flex-direction: column; height: 100%; min-height: 0; }
   .page.projects-open .projects ul { flex: 1; min-height: 0; overflow-y: auto;
     -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
