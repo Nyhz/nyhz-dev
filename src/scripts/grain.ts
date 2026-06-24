@@ -8,21 +8,35 @@ const VERT = `
 // Film grain + a breathing vignette in one pass. Doing it together means the
 // per-pixel grain dithers the smooth gradient → no colour banding. Luminance
 // based (white/black) so it adapts to both themes automatically.
+//
+// Time inputs are WRAPPED before they reach sin()/the hash. uTime grows without
+// bound, and a real GPU's hardware sin() loses precision badly for large
+// arguments — so the classic fract(sin(dot())) hash collapsed to a flat value
+// after ~15s (grain + glow vanished, vignette stayed). Fix: a sin-free hash
+// that stays well-conditioned, fed a bounded frame counter; and a breath clock
+// wrapped to its exact period so it never drifts into the imprecise range.
 const FRAG = `
   precision highp float;
   varying vec2 vUv;
   uniform float uTime;
   uniform float uAspect;
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+  // sin-free hash — well-conditioned for large coords (unlike fract(sin(dot())))
+  float hash(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
   void main() {
-    float breathe = 0.7 + 0.3 * sin(uTime * 0.7);
+    float bt = mod(uTime, 8.975979);  // 2*PI/0.7 — wrap the breath, sin() stays precise
+    float breathe = 0.7 + 0.3 * sin(bt * 0.7);
     vec2 q = vUv; q.x = (q.x - 0.5) * uAspect + 0.5;  // keep the pools circular
     // faint light pool (upper-centre) — shows on dark themes
     float glow = smoothstep(0.62, 0.0, distance(q, vec2(0.5, 0.42))) * 0.05 * breathe;
     // edge darkening — shows on light themes
     float edge = smoothstep(0.5, 1.05, distance(q, vec2(0.5))) * 0.32 * breathe;
-    // film grain (dithers the gradient)
-    float t = floor(uTime * 24.0);
+    // film grain (dithers the gradient) — frame counter wrapped so the hash
+    // input never grows large (cycles every 64/24 ≈ 2.7s, invisible for noise)
+    float t = mod(floor(uTime * 24.0), 64.0);
     float g = (hash(gl_FragCoord.xy + t * vec2(31.7, 13.1)) - 0.5) * 0.09;
     float v = glow - edge + g;
     vec3 col = v > 0.0 ? vec3(1.0) : vec3(0.0);
