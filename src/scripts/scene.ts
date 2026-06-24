@@ -7,7 +7,7 @@ const CAM_Z = 5.5;
 // units); PUSH is the max nudge in world units — kept small so particles react
 // subtly rather than evacuating a hole.
 const RADIUS = 1.2;
-const PUSH = 0.05;
+const PUSH = 0.08;
 
 export function createScene(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
