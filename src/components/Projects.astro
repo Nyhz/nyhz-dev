@@ -99,8 +99,10 @@ const canExpand = shown.length > HIGHLIGHT;
     const lower = document.querySelector('.lower');
     const mobile = matchMedia('(max-width: 720px)').matches;
     if (open && hero) storedMb = getComputedStyle(hero).marginBottom;
+    // Mobile keeps both spacers at flex:1 (they distribute space automatically);
+    // only the hero collapses on expand. Desktop grows the list to fill.
     const growers: [Element | null, number][] = mobile
-      ? [[hero, open ? 0 : 1], [lower, open ? 1 : 0]]
+      ? []
       : [[document.querySelector('[data-spacer-top]'), open ? 0 : 1],
          [document.querySelector('[data-spacer-bottom]'), open ? 0 : 1],
          [lower, open ? 1 : 0]];
