@@ -5,19 +5,28 @@ const VERT = `
   void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 `;
 
-// Fine film grain: per-pixel hash noise reseeded ~24×/sec so it flickers like
-// film. Light AND dark specks (over the page bg), very faint. Theme-tinted.
+// Film grain + a breathing vignette in one pass. Doing it together means the
+// per-pixel grain dithers the smooth gradient → no colour banding. Luminance
+// based (white/black) so it adapts to both themes automatically.
 const FRAG = `
   precision highp float;
   varying vec2 vUv;
   uniform float uTime;
-  uniform vec3 uColor;
+  uniform float uAspect;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
   void main() {
+    float breathe = 0.7 + 0.3 * sin(uTime * 0.7);
+    vec2 q = vUv; q.x = (q.x - 0.5) * uAspect + 0.5;  // keep the pools circular
+    // faint light pool (upper-centre) — shows on dark themes
+    float glow = smoothstep(0.62, 0.0, distance(q, vec2(0.5, 0.42))) * 0.05 * breathe;
+    // edge darkening — shows on light themes
+    float edge = smoothstep(0.5, 1.05, distance(q, vec2(0.5))) * 0.32 * breathe;
+    // film grain (dithers the gradient)
     float t = floor(uTime * 24.0);
-    float n = hash(gl_FragCoord.xy + t * vec2(31.7, 13.1));
-    vec3 col = n > 0.5 ? uColor : vec3(0.0);
-    gl_FragColor = vec4(col, abs(n - 0.5) * 0.10);
+    float g = (hash(gl_FragCoord.xy + t * vec2(31.7, 13.1)) - 0.5) * 0.09;
+    float v = glow - edge + g;
+    vec3 col = v > 0.0 ? vec3(1.0) : vec3(0.0);
+    gl_FragColor = vec4(col, clamp(abs(v), 0.0, 0.55));
   }
 `;
 
@@ -26,13 +35,16 @@ export function createGrain(canvas: HTMLCanvasElement) {
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 
   const scene = new THREE.Scene();
-  const uniforms = { uTime: { value: 0 }, uColor: { value: new THREE.Color('#f1efe9') } };
+  const uniforms = { uTime: { value: 0 }, uAspect: { value: 1 } };
   const material = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, transparent: true });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
   scene.add(mesh);
   const camera = new THREE.Camera();
 
-  function resize() { renderer.setSize(innerWidth, innerHeight, false); }
+  function resize() {
+    renderer.setSize(innerWidth, innerHeight, false);
+    uniforms.uAspect.value = innerWidth / Math.max(innerHeight, 1);
+  }
   resize();
   addEventListener('resize', resize);
 
@@ -51,7 +63,7 @@ export function createGrain(canvas: HTMLCanvasElement) {
 
   return {
     start() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } },
-    setTheme(c: string) { uniforms.uColor.value.set(c); },
+    setTheme(_c: string) { /* luminance-based, theme-agnostic */ },
     dispose() {
       cancelAnimationFrame(raf);
       removeEventListener('resize', resize);
