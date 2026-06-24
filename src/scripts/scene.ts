@@ -3,11 +3,56 @@ import * as THREE from 'three';
 const FOV = 45;
 const FOV_T = Math.tan((FOV * Math.PI) / 180 / 2);
 const CAM_Z = 5.5;
-// Cursor influence: RADIUS is the reach around the pointer (in normalized-device
-// units); PUSH is the max nudge in world units — kept small so particles react
-// subtly rather than evacuating a hole.
-const RADIUS = 1.2;
-const PUSH = 0.08;
+
+// Particle text-morph: the same point cloud rearranges between words.
+const WORDS = ['nyhz', 'creative', 'developer'];
+const N = 2400;            // particle count
+const HOLD = 2.2;          // seconds a word rests
+const MORPH = 1.5;         // seconds to morph between words
+const SPAN = 2.8;          // world width the text fits into
+const ARC = 0.5;           // depth swirl during a morph
+const CANVAS_FONT = (fs: number) =>
+  `700 ${fs}px ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif`;
+
+// Subtle cursor reaction (kept gentle so the words stay legible).
+const RADIUS = 0.45;
+const PUSH = 0.05;
+
+const easeInOut = (x: number) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+// Sample N points from a word rendered to an offscreen canvas.
+function sampleWord(word: string): Float32Array {
+  const W = 512, H = 256;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  let fs = 190;
+  ctx.font = CANVAS_FONT(fs);
+  while (ctx.measureText(word).width > W * 0.88 && fs > 20) { fs -= 6; ctx.font = CANVAS_FONT(fs); }
+  ctx.fillText(word, W / 2, H / 2);
+
+  const data = ctx.getImageData(0, 0, W, H).data;
+  const pts: number[] = [];
+  for (let y = 0; y < H; y += 3) {
+    for (let x = 0; x < W; x += 3) {
+      if (data[(y * W + x) * 4] > 128) pts.push(x, y);
+    }
+  }
+  const count = pts.length / 2 || 1;
+  const scale = SPAN / W;
+  const out = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    const s = Math.floor((i * count) / N) % count;
+    const px = pts[s * 2], py = pts[s * 2 + 1];
+    out[i * 3] = (px - W / 2) * scale + (Math.random() - 0.5) * 0.012;
+    out[i * 3 + 1] = -(py - H / 2) * scale + (Math.random() - 0.5) * 0.012;
+    out[i * 3 + 2] = (Math.random() - 0.5) * 0.14;
+  }
+  return out;
+}
 
 export function createScene(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -17,19 +62,31 @@ export function createScene(canvas: HTMLCanvasElement) {
   const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
   camera.position.z = CAM_Z;
 
-  // Particles distributed on an icosahedron surface.
-  const geo = new THREE.IcosahedronGeometry(1.3, 12);
-  const base = geo.attributes.position.array.slice() as unknown as Float32Array;
-  const positions = new Float32Array(base);
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const material = new THREE.PointsMaterial({ size: 0.024, sizeAttenuation: true });
+
+  const targets = WORDS.map(sampleWord);
+  const hash = new Float32Array(N);
+  for (let i = 0; i < N; i++) hash[i] = Math.random();
+
+  const positions = new Float32Array(N * 3);
+  const from = new Float32Array(N * 3);
+  const to = new Float32Array(targets[0]);
+  // Intro: start scattered in a ball, then morph into the first word.
+  for (let i = 0; i < N; i++) {
+    const r = 1.2 + Math.random() * 0.6, a = Math.random() * 6.283, b = Math.random() * 6.283;
+    from[i * 3] = Math.cos(a) * Math.sin(b) * r;
+    from[i * 3 + 1] = Math.sin(a) * Math.sin(b) * r;
+    from[i * 3 + 2] = Math.cos(b) * r;
+  }
+  positions.set(reduceMotion ? to : from);
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const material = new THREE.PointsMaterial({ size: 0.03, sizeAttenuation: true });
   const points = new THREE.Points(geo, material);
   scene.add(points);
 
-  // Pointer in normalized-device coords (-1..1), plus an active flag so the
-  // form rests when the cursor leaves the canvas.
+  // Pointer in normalized-device coords.
   let px = 0, py = 0, active = false;
   function onMove(e: PointerEvent) {
     const r = canvas.getBoundingClientRect();
@@ -53,45 +110,69 @@ export function createScene(canvas: HTMLCanvasElement) {
 
   function setColor(color: string) { material.color.set(color); }
 
+  // Morph state machine.
+  let cur = 0;
+  let phase: 'morph' | 'hold' = 'morph';
+  let morphT = 0;
+  let timer = 0;
+  let last = performance.now();
+  let time = 0;
+
   let raf = 0;
-  let t = 0;
   function frame() {
-    t += 0.01;
-    const theta = reduceMotion ? 0 : t * 0.12;
-    points.rotation.y = theta;
-    const cosT = Math.cos(theta), sinT = Math.sin(theta);
+    const now = performance.now();
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    time += dt;
     const aspect = camera.aspect;
 
-    for (let i = 0; i < positions.length; i += 3) {
-      const bx = base[i], by = base[i + 1], bz = base[i + 2];
-      const breathe = reduceMotion ? 1 : 1 + Math.sin(t + bx * 2 + by * 2) * 0.03;
+    let e = 1;
+    if (!reduceMotion) {
+      if (phase === 'morph') {
+        morphT += dt / MORPH;
+        if (morphT >= 1) { morphT = 1; phase = 'hold'; timer = 0; from.set(to); }
+        e = easeInOut(morphT);
+      } else {
+        timer += dt;
+        if (timer >= HOLD) {
+          cur = (cur + 1) % WORDS.length;
+          from.set(to);
+          to.set(targets[cur]);
+          phase = 'morph'; morphT = 0;
+        }
+      }
+    }
 
-      let ox = 0, oy = 0, oz = 0;
-      if (active) {
-        // Where this particle sits on screen (project its rotated world pos).
-        const wx = bx * cosT + bz * sinT;
-        const wy = by;
-        const wz = -bx * sinT + bz * cosT;
-        const halfH = FOV_T * (CAM_Z - wz);
-        const sx = wx / (halfH * aspect);
-        const sy = wy / halfH;
+    for (let i = 0; i < N; i++) {
+      const j = i * 3;
+      let x: number, y: number, z: number;
+      if (reduceMotion) {
+        x = to[j]; y = to[j + 1]; z = to[j + 2];
+      } else {
+        x = from[j] + (to[j] - from[j]) * e;
+        y = from[j + 1] + (to[j + 1] - from[j + 1]) * e;
+        z = from[j + 2] + (to[j + 2] - from[j + 2]) * e;
+        // Swirl out and back through depth while morphing.
+        z += Math.sin(e * Math.PI) * ARC * (hash[i] - 0.5) * 2 * (phase === 'morph' ? 1 : 0);
+        // Gentle idle float.
+        z += Math.sin(time * 0.8 + hash[i] * 6.283) * 0.025;
+      }
+
+      // Subtle cursor push in screen space.
+      if (active && !reduceMotion) {
+        const halfH = FOV_T * (CAM_Z - z);
+        const sx = x / (halfH * aspect), sy = y / halfH;
         const ddx = sx - px, ddy = sy - py;
         const d = Math.hypot(ddx, ddy);
         if (d < RADIUS && d > 1e-4) {
-          // Smooth falloff (eased) so the nudge fades gently toward the edge.
           const fall = 1 - d / RADIUS;
           const f = fall * fall * PUSH;
-          const wdx = (ddx / d) * f, wdy = (ddy / d) * f;
-          // Push outward in the screen plane, converted back to local space.
-          ox = wdx * cosT;
-          oy = wdy;
-          oz = wdx * sinT;
+          x += (ddx / d) * f;
+          y += (ddy / d) * f;
         }
       }
 
-      positions[i] = bx * breathe + ox;
-      positions[i + 1] = by * breathe + oy;
-      positions[i + 2] = bz * breathe + oz;
+      positions[j] = x; positions[j + 1] = y; positions[j + 2] = z;
     }
     geo.attributes.position.needsUpdate = true;
     renderer.render(scene, camera);
@@ -99,13 +180,13 @@ export function createScene(canvas: HTMLCanvasElement) {
   }
 
   function onVisibility() {
-    if (document.hidden) cancelAnimationFrame(raf);
-    else raf = requestAnimationFrame(frame);
+    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+    else if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
   }
   document.addEventListener('visibilitychange', onVisibility);
 
   return {
-    start() { if (!raf) raf = requestAnimationFrame(frame); },
+    start() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } },
     setTheme(color: string) { setColor(color); },
     dispose() {
       cancelAnimationFrame(raf);

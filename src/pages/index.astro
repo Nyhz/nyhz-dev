@@ -11,7 +11,7 @@ import { getContent } from '../scripts/content';
 const { profile, projects, skills } = await getContent();
 ---
 <Base title={`${profile.name} — ${profile.role}`}>
-  <Loader name={profile.name} slot="overlay" />
+  <Loader name={profile.name} tagline={profile.role} slot="overlay" />
   <ThemeToggle slot="corner" />
   <Identity slot="tl" name={profile.name} role={profile.role} location={profile.location} />
   <Scene slot="tr" />

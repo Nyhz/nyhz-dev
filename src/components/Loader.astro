@@ -1,12 +1,13 @@
 ---
-const { name } = Astro.props;
+const { name, tagline = 'creative developer' } = Astro.props;
 const chars = [...name];
-const PANELS = 7;
+const PANELS = 8;
 ---
-<div class="loader" data-loader>
+<div class="loader" data-loader data-tagline={tagline}>
   <div class="loader__panels" aria-hidden="true">
     {Array.from({ length: PANELS }).map(() => <span class="panel"></span>)}
   </div>
+  <div class="loader__scan" aria-hidden="true"></div>
 
   <div class="loader__content">
     <h1 class="loader__name" aria-label={name}>
@@ -14,7 +15,7 @@ const PANELS = 7;
         <span class="char"><span class="char-inner">{ch === ' ' ? ' ' : ch}</span></span>
       ))}
     </h1>
-    <p class="loader__status"><span data-status>initializing</span></p>
+    <p class="loader__status"><span data-status></span></p>
   </div>
 
   <div class="loader__counter"><span data-count>000</span><i>%</i></div>
@@ -25,36 +26,48 @@ const PANELS = 7;
 
 <style>
   .loader {
-    position: fixed; inset: 0; z-index: 100;
+    position: fixed; inset: 0; z-index: 100; overflow: hidden;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
     color: var(--fg);
   }
   .loader__panels { position: absolute; inset: 0; display: flex; z-index: 1; }
   .panel { flex: 1 1 0; background: var(--bg); will-change: transform; }
 
+  /* Scanlines + faint vignette for a CRT-ish texture. */
+  .loader__scan {
+    position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0.5;
+    background:
+      repeating-linear-gradient(0deg,
+        rgba(127,127,127,0.08) 0, rgba(127,127,127,0.08) 1px,
+        transparent 1px, transparent 3px),
+      radial-gradient(circle at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%);
+    mix-blend-mode: overlay;
+  }
+
   .loader__content {
     position: absolute; inset: 0; z-index: 2;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 1.5rem; pointer-events: none;
+    gap: 1.6rem; pointer-events: none;
   }
   .loader__name {
     display: flex; font-weight: 600; line-height: 0.9;
-    font-size: clamp(3rem, 13vw, 9rem); letter-spacing: -0.05em;
+    font-size: clamp(3.2rem, 15vw, 11rem); letter-spacing: -0.05em;
+    animation: glitch 3.2s infinite;
   }
   .char { display: inline-block; overflow: hidden; }
   .char-inner { display: inline-block; will-change: transform; }
 
   .loader__status {
-    font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.32em;
-    text-transform: uppercase; color: var(--muted);
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.3em;
+    text-transform: lowercase; color: var(--muted); min-height: 1em;
   }
 
   .loader__counter {
     position: absolute; left: var(--space); bottom: calc(var(--space) - 0.4rem); z-index: 2;
-    font-family: var(--mono); font-size: clamp(2.2rem, 7vw, 4.5rem);
+    font-family: var(--mono); font-size: clamp(2.4rem, 8vw, 5rem);
     font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1;
   }
-  .loader__counter i { font-style: normal; font-size: 0.4em; color: var(--muted); margin-left: 0.25em; }
+  .loader__counter i { font-style: normal; font-size: 0.38em; color: var(--muted); margin-left: 0.25em; }
 
   .loader__bar-wrap {
     position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; z-index: 2;
@@ -64,13 +77,27 @@ const PANELS = 7;
     display: block; width: 100%; height: 100%; background: var(--fg);
     transform: scaleX(0); transform-origin: left center; will-change: transform;
   }
+
+  /* Periodic chromatic-aberration glitch on the name (loader only). */
+  @keyframes glitch {
+    0%, 88%, 100% { text-shadow: none; transform: translate(0, 0); }
+    89% { text-shadow: -2px 0 #ff2e63, 2px 0 #2ee6ff; transform: translate(1px, -1px); }
+    91% { text-shadow: 2px 0 #ff2e63, -2px 0 #2ee6ff; transform: translate(-2px, 1px); }
+    93% { text-shadow: -1px 0 #ff2e63, 1px 0 #2ee6ff; transform: translate(1px, 0); }
+    95% { text-shadow: none; transform: translate(0, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .loader__name { animation: none; }
+  }
 </style>
 
 <script>
   import { gsap } from 'gsap';
 
+  const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const loader = document.querySelector('[data-loader]') as HTMLElement;
+  const target = (loader.dataset.tagline || '').toLowerCase();
   const countEl = document.querySelector('[data-count]') as HTMLElement;
   const barEl = document.querySelector('[data-bar]') as HTMLElement;
   const statusEl = document.querySelector('[data-status]') as HTMLElement;
@@ -78,15 +105,18 @@ const PANELS = 7;
   const panels = gsap.utils.toArray<HTMLElement>('[data-loader] .panel');
   const anims = gsap.utils.toArray<HTMLElement>('[data-anim]');
 
-  // Site content starts hidden in JS (so it stays visible if JS never runs).
   gsap.set(anims, { opacity: 0, y: 14 });
 
-  function statusFor(p: number): string {
-    if (p < 25) return 'initializing';
-    if (p < 55) return 'compiling shaders';
-    if (p < 80) return 'warming particles';
-    if (p < 100) return 'almost there';
-    return 'ready';
+  // Scramble that locks into `target` from left to right as progress climbs.
+  function scramble(progress: number): string {
+    let out = '';
+    for (let k = 0; k < target.length; k++) {
+      const ch = target[k];
+      if (ch === ' ') { out += ' '; continue; }
+      if (progress >= (k + 1) / target.length) out += ch;
+      else out += GLYPHS[(Math.random() * GLYPHS.length) | 0];
+    }
+    return out;
   }
 
   function revealSite() {
@@ -99,6 +129,7 @@ const PANELS = 7;
   }
 
   if (reduce) {
+    statusEl.textContent = target;
     loader.style.display = 'none';
     revealSite();
   } else {
@@ -109,24 +140,34 @@ const PANELS = 7;
     // Intro — name rises in by character.
     tl.to(charInners, { yPercent: 0, duration: 0.75, stagger: 0.06, ease: 'power3.out' }, 0.1);
 
-    // Progress — counter, status, and bar driven by one tween.
+    // Progress — counter, scramble readout, and bar from one tween.
     tl.to(state, {
-      p: 100, duration: 1.6, ease: 'power1.inOut',
+      p: 100, duration: 1.9, ease: 'power1.inOut',
       onUpdate() {
         const v = Math.round(state.p);
         countEl.textContent = String(v).padStart(3, '0');
-        statusEl.textContent = statusFor(v);
+        statusEl.textContent = scramble(state.p / 100);
         barEl.style.transform = `scaleX(${state.p / 100})`;
       },
+      onComplete() { statusEl.textContent = target; },
     }, 0.25);
 
-    // Outro — fade the readout, stop blocking clicks, then lift the blinds.
+    // Outro — fade the readout, then a glitchy slice exit.
     tl.to('[data-loader] .loader__content, [data-loader] .loader__counter, [data-loader] .loader__bar-wrap',
-      { opacity: 0, duration: 0.4, ease: 'power2.in' }, '+=0.2');
+      { opacity: 0, duration: 0.35, ease: 'power2.in' }, '+=0.25');
     tl.set(loader, { pointerEvents: 'none' });
-    tl.to(panels, { yPercent: -100, duration: 0.85, stagger: 0.05, ease: 'power4.inOut' }, '-=0.05');
+    // Panels shudder sideways...
+    tl.to(panels, {
+      x: () => (Math.random() - 0.5) * 36, duration: 0.05, repeat: 4, yoyo: true, ease: 'none',
+    }, '<');
+    tl.set(panels, { x: 0 });
+    // ...then lift away in random order.
+    tl.to(panels, {
+      yPercent: -100, duration: 0.85, ease: 'power4.inOut',
+      stagger: { each: 0.05, from: 'random' },
+    });
+    tl.to('.loader__scan', { opacity: 0, duration: 0.4 }, '<');
 
-    // Reveal the site as the blinds open.
     tl.add(revealSite, '-=0.55');
     tl.set(loader, { display: 'none' });
   }
