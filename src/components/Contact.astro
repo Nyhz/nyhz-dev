@@ -30,7 +30,7 @@
   /* ---- collapsed: the pill chip (border lives here, it's what expands) ---- */
   .contact {
     display: inline-flex; flex-direction: column; align-items: stretch;
-    border: 1px solid var(--line); border-radius: 999px; background: transparent;
+    border: 1px solid var(--line); border-radius: 12px; background: transparent;
     color: var(--muted); transition: color 0.2s, border-color 0.2s;
   }
   .contact-trigger {
@@ -39,7 +39,7 @@
     font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
   }
   .contact:not(.contact--open):hover { color: var(--fg); border-color: var(--fg); }
-  .contact-trigger:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; border-radius: 999px; }
+  .contact-trigger:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; border-radius: 12px; }
   .live { width: 6px; height: 6px; border-radius: 50%; background: #3ad29f; box-shadow: 0 0 8px #3ad29f;
     animation: live 1.6s ease-in-out infinite; flex: none; }
   .cue { font-size: 0.95em; opacity: 0.6; transition: transform 0.2s, opacity 0.2s; }
@@ -136,17 +136,19 @@
       const { targetW, targetH } = liftAndMeasure();
 
       if (reduce) {
-        gsap.set(contact, { width: targetW, height: targetH, borderRadius: 12 });
+        gsap.set(contact, { width: targetW, height: targetH });
         gsap.set(backdrop, { opacity: 1 });
         gsap.set(fields, { opacity: 1, y: 0 });
       } else {
+        // Two-phase: widen first, THEN grow tall + reveal the fields. Border-radius
+        // stays constant (12px, set in CSS) so the box never looks like a capsule.
+        gsap.set(contact, { width: firstRect!.width, height: firstRect!.height });
         gsap.timeline()
           .fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' }, 0)
-          .fromTo(contact,
-            { width: firstRect!.width, height: firstRect!.height, borderRadius: 999 },
-            { width: targetW, height: targetH, borderRadius: 12, duration: 0.5, ease: 'power3.out' }, 0)
+          .to(contact, { width: targetW, duration: 0.38, ease: 'power3.out' }, 0)
+          .to(contact, { height: targetH, duration: 0.42, ease: 'power3.out' }, 0.32)
           .fromTo(fields, { opacity: 0, y: 8 },
-            { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, 0.22);
+            { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, 0.5);
       }
       panel.querySelector<HTMLElement>('input, textarea')?.focus();
     };
@@ -170,11 +172,12 @@
         finishClose();
         return;
       }
+      // Reverse order: fade fields, collapse height, THEN narrow back to the chip.
       gsap.timeline({ onComplete: finishClose })
         .to(fields, { opacity: 0, y: 6, duration: 0.15, ease: 'power1.in' }, 0)
-        .to(contact, { width: firstRect.width, height: firstRect.height, borderRadius: 999,
-          duration: 0.4, ease: 'power3.in' }, 0.05)
-        .to(backdrop, { opacity: 0, duration: 0.25 }, 0.12);
+        .to(contact, { height: firstRect.height, duration: 0.34, ease: 'power3.in' }, 0.08)
+        .to(contact, { width: firstRect.width, duration: 0.3, ease: 'power3.in' }, 0.4)
+        .to(backdrop, { opacity: 0, duration: 0.28 }, 0.45);
     };
 
     trigger.addEventListener('click', () => (open ? closeCard() : openCard()));
