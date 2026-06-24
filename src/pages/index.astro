@@ -1,7 +1,14 @@
 ---
+import Base from '../layouts/Base.astro';
+import { getContent } from '../scripts/content';
+const { profile, projects } = await getContent();
 ---
-<!doctype html>
-<html lang="en">
-  <head><meta charset="utf-8" /><title>nyhz</title></head>
-  <body><main>scaffold ok</main></body>
-</html>
+<Base title={`${profile.name} — ${profile.role}`}>
+  <span slot="topbar">{profile.name}</span>
+  <div slot="left">
+    <p>{profile.role}</p>
+    <p>{profile.location}</p>
+    <ul>{projects.map((p) => <li>{p.title}</li>)}</ul>
+  </div>
+  <div slot="right"></div>
+</Base>
