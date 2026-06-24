@@ -37,6 +37,8 @@ const canExpand = shown.length > HIGHLIGHT;
 
 <style>
   .projects ul { list-style: none; border-bottom: 1px solid var(--line); }
+  /* no hover while the list is animating (rows sliding under the cursor) */
+  .projects.is-busy ul { pointer-events: none; }
   .prj__trigger { position: relative; display: block; padding: 1rem 0; cursor: pointer;
     border-top: 1px solid var(--line); outline: none; }
   .prj__trigger:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
@@ -89,6 +91,12 @@ const canExpand = shown.length > HIGHLIGHT;
 
     // reset the mobile preview slider so expand starts/ends on the projects panel
     document.querySelector('.lower__track')?.classList.remove('is-preview');
+
+    // Block hover while the list reflows, otherwise a row sliding under a still
+    // cursor fires mouseenter and pops a preview open mid-animation.
+    const projects = document.querySelector('.projects');
+    projects?.classList.add('is-busy');
+    setTimeout(() => projects?.classList.remove('is-busy'), 750);
 
     // The compaction (header up + list grows) is pure CSS transition; we only
     // toggle the class and fade the extra projects in.
