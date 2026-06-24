@@ -4,10 +4,13 @@
   .vignette {
     position: fixed; inset: 0; z-index: 0; pointer-events: none;
     clip-path: inset(clamp(14px, 1.6vw, 26px));
-    background: radial-gradient(ellipse 78% 78% at 50% 50%, transparent 38%, rgba(0,0,0,0.4) 100%);
+    /* faint light pool in the centre (shows on dark) + darker edges (shows on light) */
+    background:
+      radial-gradient(ellipse 70% 65% at 50% 42%, rgba(255,255,255,0.05), transparent 55%),
+      radial-gradient(ellipse 100% 100% at 50% 50%, transparent 50%, rgba(0,0,0,0.45) 100%);
     animation: vigBreathe 9s ease-in-out infinite;
   }
-  @keyframes vigBreathe { 0%, 100% { opacity: 0.72; } 50% { opacity: 1; } }
+  @keyframes vigBreathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .vignette { animation: none; } }
 </style>
 <script>
