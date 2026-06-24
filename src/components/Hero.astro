@@ -10,9 +10,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 ---
 <div class="hero-block" data-anim>
   <p class="eyebrow">{role}{location ? ` — ${location}` : ''}</p>
-  <h1 class="hero-name" aria-label={name}>
-    {[...name].map((ch) => <span class="hc">{ch === ' ' ? ' ' : ch}</span>)}
-  </h1>
+  <h1 class="hero-name" data-text={name}>{name}</h1>
   {socials.length > 0 && (
     <nav class="hero-socials">
       {socials.map((s: { label: string; url: string }) => (
@@ -29,20 +27,40 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 <style>
   .hero-block { display: flex; flex-direction: column; gap: 1.6rem; }
   .hero-name {
-    font-size: clamp(3.2rem, 9.5vw, 7rem); font-weight: 600; letter-spacing: -0.045em;
-    line-height: 0.88; display: flex; flex-wrap: wrap; width: max-content; max-width: 100%;
+    position: relative; font-size: clamp(3.2rem, 9.5vw, 7rem); font-weight: 600;
+    letter-spacing: -0.045em; line-height: 0.95; width: max-content; max-width: 100%;
+    padding-bottom: 0.06em;
   }
-  .hc { display: inline-block; transition: transform 0.3s cubic-bezier(.2,.7,.2,1); }
-  .hero-name:hover .hc { transform: translateY(-0.06em); }
-  .hero-name:hover .hc:nth-child(2n) { transform: translateY(0.06em); }
-  .hero-name.glitching { animation: heroGlitch 0.4s steps(2) 1; }
-  @keyframes heroGlitch {
-    0% { text-shadow: none; transform: translate(0,0); clip-path: inset(0 0 0 0); }
-    20% { text-shadow: -3px 0 #ff2e63, 3px 0 #2ee6ff; transform: translate(3px,-1px) skewX(-3deg); clip-path: inset(0 0 42% 0); }
-    40% { text-shadow: 3px 0 #ff2e63, -3px 0 #2ee6ff; transform: translate(-3px,1px); clip-path: inset(45% 0 0 0); }
-    60% { text-shadow: -2px 0 #ff2e63, 2px 0 #2ee6ff; transform: translate(2px,0); clip-path: inset(0 0 12% 0); }
-    80% { text-shadow: 2px 0 #ff2e63, -2px 0 #2ee6ff; transform: translate(-1px,0); }
-    100% { text-shadow: none; transform: translate(0,0); clip-path: inset(0 0 0 0); }
+  /* Chromatic glitch (same vibe as the loader) on duplicated colour layers,
+     so the real name is never clipped. */
+  .hero-name::before, .hero-name::after {
+    content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%;
+    padding-bottom: 0.06em; pointer-events: none; opacity: 0;
+  }
+  .hero-name::before { color: #ff2e63; }
+  .hero-name::after { color: #2ee6ff; }
+  .hero-name.glitching { animation: hgMain 0.42s steps(2) 1; }
+  .hero-name.glitching::before { animation: hgR 0.42s steps(2) 1; }
+  .hero-name.glitching::after { animation: hgC 0.42s steps(2) 1; }
+  @keyframes hgMain {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(2px); }
+    50% { transform: translateX(-2px); }
+    75% { transform: translateX(1px); }
+  }
+  @keyframes hgR {
+    0%, 100% { opacity: 0; transform: translate(0,0); clip-path: inset(0 0 0 0); }
+    20% { opacity: 0.9; transform: translate(-4px,0); clip-path: inset(0 0 62% 0); }
+    40% { opacity: 0.9; transform: translate(4px,0); clip-path: inset(58% 0 0 0); }
+    60% { opacity: 0.9; transform: translate(-3px,0); clip-path: inset(24% 0 44% 0); }
+    80% { opacity: 0.7; transform: translate(2px,0); clip-path: inset(0 0 72% 0); }
+  }
+  @keyframes hgC {
+    0%, 100% { opacity: 0; transform: translate(0,0); clip-path: inset(0 0 0 0); }
+    20% { opacity: 0.9; transform: translate(4px,0); clip-path: inset(0 0 58% 0); }
+    40% { opacity: 0.9; transform: translate(-4px,0); clip-path: inset(54% 0 0 0); }
+    60% { opacity: 0.9; transform: translate(3px,0); clip-path: inset(40% 0 24% 0); }
+    80% { opacity: 0.7; transform: translate(-2px,0); clip-path: inset(0 0 68% 0); }
   }
 
   .hero-socials { display: flex; gap: 1.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
@@ -56,9 +74,10 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
   .hero-socials a:hover .ar { transform: translate(3px, -3px); opacity: 1; }
 
   @media (prefers-reduced-motion: reduce) {
-    .hc, .hero-socials a, .hero-socials .ar { transition: none; }
-    .hero-name:hover .hc, .hero-name:hover .hc:nth-child(2n) { transform: none; }
-    .hero-name.glitching { animation: none; }
+    .hero-socials a, .hero-socials .ar { transition: none; }
+    .hero-name.glitching,
+    .hero-name.glitching::before,
+    .hero-name.glitching::after { animation: none; }
   }
 </style>
 
