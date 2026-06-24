@@ -1,61 +1,73 @@
 ---
-// Self-contained: clickable "available for work" chip. The expanding card and
-// submit logic are added in later tasks.
+// The "available for work" chip and the contact form are ONE element: on open
+// the chip's bordered pill is lifted out of flow (position:fixed, so the hero's
+// overflow:hidden can't clip it) and its own border grows from pill into a card
+// that reveals the form. Closing reverses it back into the pill.
 ---
-<button class="contact-chip" type="button" data-contact-open aria-haspopup="dialog" aria-expanded="false">
-  <i class="live" aria-hidden="true"></i>
-  <span class="lbl">available for work</span>
-  <span class="cue" aria-hidden="true">+</span>
-</button>
-
 <div class="contact-backdrop" data-contact-backdrop hidden></div>
-<div class="contact-card" data-contact-card role="dialog" aria-modal="true" aria-label="contact form" hidden>
-  <button class="contact-card__close" type="button" data-contact-close aria-label="close">✕</button>
-  <p class="contact-card__title" data-field>get in touch</p>
-  <form class="contact-form" data-contact-form novalidate>
-    <label data-field><span>name</span><input name="name" type="text" maxlength="100" autocomplete="name" required /></label>
-    <label data-field><span>email</span><input name="email" type="email" maxlength="200" autocomplete="email" required /></label>
-    <label data-field><span>message</span><textarea name="message" maxlength="5000" rows="4" required></textarea></label>
-    <input class="hp" name="company" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
-    <div class="contact-form__foot" data-field>
-      <span class="contact-status" data-contact-status role="status" aria-live="polite"></span>
-      <button class="contact-send" type="submit">send</button>
-    </div>
-  </form>
+<div class="contact" data-contact role="dialog" aria-modal="true" aria-label="contact form">
+  <button class="contact-trigger" type="button" data-contact-open aria-haspopup="dialog" aria-expanded="false">
+    <i class="live" aria-hidden="true"></i>
+    <span class="lbl">available for work</span>
+    <span class="cue" aria-hidden="true">+</span>
+  </button>
+  <button class="contact-close" type="button" data-contact-close aria-label="close">✕</button>
+  <div class="contact-panel" data-contact-panel>
+    <form class="contact-form" data-contact-form novalidate>
+      <label data-field><span>name</span><input name="name" type="text" maxlength="100" autocomplete="name" required /></label>
+      <label data-field><span>email</span><input name="email" type="email" maxlength="200" autocomplete="email" required /></label>
+      <label data-field><span>message</span><textarea name="message" maxlength="5000" rows="4" required></textarea></label>
+      <input class="hp" name="company" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <div class="contact-form__foot" data-field>
+        <span class="contact-status" data-contact-status role="status" aria-live="polite"></span>
+        <button class="contact-send" type="submit">send</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <style>
-  .contact-chip {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px;
-    background: transparent; cursor: pointer; color: var(--muted);
+  /* ---- collapsed: the pill chip (border lives here, it's what expands) ---- */
+  .contact {
+    display: inline-flex; flex-direction: column; align-items: stretch;
+    border: 1px solid var(--line); border-radius: 999px; background: transparent;
+    color: var(--muted); transition: color 0.2s, border-color 0.2s;
+  }
+  .contact-trigger {
+    display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px;
+    background: transparent; border: 0; color: inherit; cursor: pointer; white-space: nowrap;
     font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
-    transition: color 0.2s, border-color 0.2s, transform 0.2s;
   }
-  .contact-chip:hover, .contact-chip:focus-visible { color: var(--fg); border-color: var(--fg); transform: translateY(-1px); }
-  .contact-chip:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; }
+  .contact:not(.contact--open):hover { color: var(--fg); border-color: var(--fg); }
+  .contact-trigger:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; border-radius: 999px; }
   .live { width: 6px; height: 6px; border-radius: 50%; background: #3ad29f; box-shadow: 0 0 8px #3ad29f;
-    animation: live 1.6s ease-in-out infinite; }
+    animation: live 1.6s ease-in-out infinite; flex: none; }
   .cue { font-size: 0.95em; opacity: 0.6; transition: transform 0.2s, opacity 0.2s; }
-  .contact-chip:hover .cue, .contact-chip:focus-visible .cue { opacity: 1; transform: rotate(90deg); }
+  .contact:not(.contact--open):hover .cue { opacity: 1; transform: rotate(90deg); }
   @keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  @media (prefers-reduced-motion: reduce) {
-    .live { animation: none; }
-    .contact-chip, .cue { transition: none; }
+
+  .contact-close { display: none; position: absolute; top: 0.75rem; right: 0.9rem;
+    background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 0.85rem; z-index: 1; }
+  .contact-close:hover { color: var(--fg); }
+  .contact-panel { display: none; }
+
+  /* ---- backdrop ---- */
+  .contact-backdrop { position: fixed; inset: 0; z-index: 8; background: rgba(11,11,11,0.72);
+    backdrop-filter: blur(4px); opacity: 0; }
+
+  /* ---- open: same element, now a card. Geometry (position/size/radius) is
+         owned by GSAP inline styles; this rule only changes appearance. ---- */
+  .contact--open {
+    z-index: 9; overflow: hidden; background: var(--bg);
+    border-color: var(--fg); color: var(--fg);
   }
-  .contact-backdrop { position: fixed; inset: 0; z-index: 8; background: rgba(11,11,11,0.6);
-    backdrop-filter: blur(3px); opacity: 0; }
-  .contact-card {
-    position: fixed; z-index: 9; top: clamp(22px, 7vh, 64px); right: clamp(22px, 2.6vw, 42px);
-    width: min(92vw, 360px); transform-origin: top right; overflow: hidden;
-    background: var(--bg); border: 1px solid var(--fg); border-radius: 10px;
-    padding: 1.4rem; color: var(--fg);
-  }
-  .contact-card__close { position: absolute; top: 0.7rem; right: 0.8rem; background: transparent;
-    border: 0; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
-  .contact-card__close:hover { color: var(--fg); }
-  .contact-card__title { font: 500 0.66rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 1.1rem; }
+  .contact--open .contact-trigger { width: 100%; justify-content: flex-start; cursor: default;
+    padding: 1.15rem 1.3rem 0.85rem; color: var(--muted); }
+  .contact--open .cue { display: none; }
+  .contact--open .contact-close { display: block; }
+  .contact--open .contact-panel { display: block; flex: 1; min-height: 0; overflow-y: auto;
+    padding: 0 1.3rem 1.3rem; }
+
   .contact-form { display: flex; flex-direction: column; gap: 0.85rem; }
   .contact-form label { display: flex; flex-direction: column; gap: 0.35rem;
     font: 500 0.6rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
@@ -72,57 +84,108 @@
     padding: 0.5rem 1.1rem; cursor: pointer; font: 500 0.66rem var(--mono); letter-spacing: 0.16em;
     text-transform: uppercase; transition: opacity 0.2s; }
   .contact-send:disabled { opacity: 0.5; cursor: default; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live { animation: none; }
+    .contact, .cue { transition: none; }
+  }
 </style>
 
 <script>
   import { gsap } from 'gsap';
 
-  const chip = document.querySelector<HTMLButtonElement>('[data-contact-open]');
-  const card = document.querySelector<HTMLElement>('[data-contact-card]');
-  const backdrop = document.querySelector<HTMLElement>('[data-contact-backdrop]');
+  const contact = document.querySelector<HTMLElement>('[data-contact]');
+  const trigger = document.querySelector<HTMLButtonElement>('[data-contact-open]');
   const closeBtn = document.querySelector<HTMLButtonElement>('[data-contact-close]');
-  const fields = card ? Array.from(card.querySelectorAll<HTMLElement>('[data-field]')) : [];
+  const backdrop = document.querySelector<HTMLElement>('[data-contact-backdrop]');
+  const panel = document.querySelector<HTMLElement>('[data-contact-panel]');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (chip && card && backdrop && closeBtn) {
+  if (contact && trigger && closeBtn && backdrop && panel) {
+    const fields = Array.from(panel.querySelectorAll<HTMLElement>('[data-field]'));
+    const home = contact.parentElement!; // .hero-headline — restored here on close
     let open = false;
+    let firstRect: DOMRect | null = null;
 
-    const show = () => { card.hidden = false; backdrop.hidden = false; };
-    const hide = () => { card.hidden = true; backdrop.hidden = true; };
-
-    const tl = gsap.timeline({ paused: true, onReverseComplete: hide });
-    if (reduce) {
-      tl.fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.15 });
-    } else {
-      // The card already has `border: 1px solid var(--fg)`; the clip-path reveal makes that
-      // white border appear to draw in from the top. (Don't tween borderColor — GSAP can't
-      // interpolate a CSS `var()` and would just snap it.)
-      tl.fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' })
-        .fromTo(card,
-          { clipPath: 'inset(0 0 100% 0)', scale: 0.96 },
-          { clipPath: 'inset(0 0 0% 0)', scale: 1, duration: 0.45, ease: 'power3.out' }, '<')
-        .fromTo(fields, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, '-=0.15');
-    }
+    // Lift the (already portaled) chip out of flow, anchored to its original
+    // top-right corner, and measure the card size it should grow into.
+    const liftAndMeasure = () => {
+      const right = Math.round(window.innerWidth - firstRect!.right);
+      gsap.set(contact, {
+        position: 'fixed', top: Math.round(firstRect!.top), right, left: 'auto',
+        width: firstRect!.width, height: firstRect!.height, margin: 0,
+      });
+      contact.classList.add('contact--open');
+      const targetW = Math.min(window.innerWidth * 0.92, 400);
+      gsap.set(contact, { width: targetW, height: 'auto' });
+      const naturalH = contact.offsetHeight;
+      const targetH = Math.min(naturalH, window.innerHeight - firstRect!.top - 16);
+      return { targetW, targetH };
+    };
 
     const openCard = () => {
-      open = true; chip.setAttribute('aria-expanded', 'true'); show();
-      tl.play();
-      card.querySelector<HTMLElement>('input,textarea')?.focus();
-    };
-    const closeCard = () => {
-      open = false; chip.setAttribute('aria-expanded', 'false');
-      tl.reverse();
-      chip.focus();
+      if (open) return;
+      open = true;
+      trigger.setAttribute('aria-expanded', 'true');
+      // Measure in place, THEN portal to <body>. The hero subtree clips fixed
+      // descendants (.hero-block has a leftover entrance transform → containing
+      // block; .hero has overflow:hidden), so the card must live on <body>.
+      firstRect = contact.getBoundingClientRect();
+      document.body.append(backdrop, contact);
+      backdrop.hidden = false;
+      const { targetW, targetH } = liftAndMeasure();
+
+      if (reduce) {
+        gsap.set(contact, { width: targetW, height: targetH, borderRadius: 12 });
+        gsap.set(backdrop, { opacity: 1 });
+        gsap.set(fields, { opacity: 1, y: 0 });
+      } else {
+        gsap.timeline()
+          .fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' }, 0)
+          .fromTo(contact,
+            { width: firstRect!.width, height: firstRect!.height, borderRadius: 999 },
+            { width: targetW, height: targetH, borderRadius: 12, duration: 0.5, ease: 'power3.out' }, 0)
+          .fromTo(fields, { opacity: 0, y: 8 },
+            { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, 0.22);
+      }
+      panel.querySelector<HTMLElement>('input, textarea')?.focus();
     };
 
-    chip.addEventListener('click', () => (open ? closeCard() : openCard()));
+    const finishClose = () => {
+      contact.classList.remove('contact--open');
+      gsap.set(contact, { clearProps: 'all' });
+      gsap.set(fields, { clearProps: 'opacity,transform' });
+      backdrop.hidden = true;
+      // Restore into the hero (original order: backdrop, then the chip).
+      home.append(backdrop, contact);
+    };
+
+    const closeCard = () => {
+      if (!open || !firstRect) return;
+      open = false;
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.focus();
+
+      if (reduce) {
+        finishClose();
+        return;
+      }
+      gsap.timeline({ onComplete: finishClose })
+        .to(fields, { opacity: 0, y: 6, duration: 0.15, ease: 'power1.in' }, 0)
+        .to(contact, { width: firstRect.width, height: firstRect.height, borderRadius: 999,
+          duration: 0.4, ease: 'power3.in' }, 0.05)
+        .to(backdrop, { opacity: 0, duration: 0.25 }, 0.12);
+    };
+
+    trigger.addEventListener('click', () => (open ? closeCard() : openCard()));
     closeBtn.addEventListener('click', closeCard);
     backdrop.addEventListener('click', closeCard);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) closeCard(); });
 
-    const form = card.querySelector<HTMLFormElement>('[data-contact-form]');
-    const status = card.querySelector<HTMLElement>('[data-contact-status]');
-    const sendBtn = card.querySelector<HTMLButtonElement>('.contact-send');
+    // ---- form submit ----
+    const form = panel.querySelector<HTMLFormElement>('[data-contact-form]');
+    const status = panel.querySelector<HTMLElement>('[data-contact-status]');
+    const sendBtn = panel.querySelector<HTMLButtonElement>('.contact-send');
 
     if (form && status && sendBtn) {
       const setStatus = (msg: string, state: '' | 'ok' | 'error') => {
