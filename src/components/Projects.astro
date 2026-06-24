@@ -95,20 +95,22 @@ const canExpand = shown.length > HIGHLIGHT;
 
     if (reduce) { page.classList.toggle('projects-open'); return; }
 
+    // Flip only leaf/content elements — never a container together with its own
+    // children (.hero + .hero-name…), which makes Flip fight itself and snap.
     const targets = gsap.utils.toArray(
-      '.hero, .eyebrow, .hero-name, .hero-socials, .preview, .prj, .sec-label, .prj-more',
+      '.eyebrow, .hero-name, .hero-socials, .preview, .prj, .sec-label, .prj-more',
     );
-    const state = Flip.getState(targets, { props: 'fontSize,opacity' });
+    const state = Flip.getState(targets, { props: 'fontSize' });
     page.classList.toggle('projects-open');
 
     Flip.from(state, {
-      duration: 0.75,
+      duration: 0.7,
       ease: 'power3.inOut',
       absolute: true,
-      stagger: 0.025,
+      stagger: 0.02,
       onEnter: (els) => gsap.fromTo(els,
-        { opacity: 0, y: 26 },
-        { opacity: 1, y: 0, duration: 0.55, stagger: 0.045, ease: 'power2.out' }),
+        { opacity: 0, y: 24 },
+        { opacity: 1, y: 0, duration: 0.5, stagger: 0.04, ease: 'power2.out' }),
       onLeave: (els) => gsap.to(els, { opacity: 0, duration: 0.3, ease: 'power2.in' }),
     });
   });
