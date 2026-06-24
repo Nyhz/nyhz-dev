@@ -1,13 +1,16 @@
 ---
 const { projects } = Astro.props;
-const shown = projects.slice(0, 4);
-const count = String(shown.length).padStart(2, '0');
+const HIGHLIGHT = 3;
+const MAX = 10;
+const shown = projects.slice(0, MAX);
+const total = String(shown.length).padStart(2, '0');
+const canExpand = shown.length > HIGHLIGHT;
 ---
 <div class="projects" data-anim>
-  <p class="sec-label">— selected work <span class="sec-count">[{count}]</span></p>
+  <p class="sec-label">— selected work <span class="sec-count">[{total}]</span></p>
   <ul>
     {shown.map((p, i) => (
-      <li class="prj" data-proj={p.slug}
+      <li class:list={['prj', i >= HIGHLIGHT && 'prj--extra']} data-proj={p.slug}
         data-title={p.title} data-cover={p.coverUrl} data-repo={p.repoUrl}
         data-live={p.deployUrl} data-tags={p.tags.join(' · ')}>
         <a href={p.repoUrl} target="_blank" rel="noopener noreferrer">
@@ -18,26 +21,25 @@ const count = String(shown.length).padStart(2, '0');
               <span class="prj__name">{p.title}</span>
               <span class="prj__ar">↗</span>
             </span>
-            {(p.description || p.tags.length > 0) && (
-              <span class="prj__sub">
-                {p.description && <span class="prj__desc">{p.description}</span>}
-                {p.tags.length > 0 && <span class="prj__tags">{p.tags.join(' · ')}</span>}
-              </span>
-            )}
+            {p.description && <span class="prj__desc">{p.description}</span>}
           </span>
         </a>
       </li>
     ))}
   </ul>
+  {canExpand && (
+    <button class="prj-more" data-projects-toggle type="button">
+      <span data-more-label>show all</span>
+      <span class="prj-more__ar" aria-hidden="true">↓</span>
+    </button>
+  )}
 </div>
 
 <style>
-  .projects ul { list-style: none; }
-  .prj a { position: relative; display: block; padding: 1.05rem 0;
-    border-top: 1px solid var(--line); }
-  .prj:last-child a { border-bottom: 1px solid var(--line); }
+  .projects ul { list-style: none; border-bottom: 1px solid var(--line); }
+  .prj a { position: relative; display: block; padding: 1rem 0; border-top: 1px solid var(--line); }
 
-  /* shift via transform so the row width never changes (no desc reflow) */
+  /* shift via transform only → never reflows, no layout shift on hover */
   .prj__inner { display: block; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
   .prj a:hover .prj__inner { transform: translateX(1.1rem); }
 
@@ -48,17 +50,67 @@ const count = String(shown.length).padStart(2, '0');
   .prj__head { display: flex; align-items: baseline; gap: 0.9rem; }
   .prj__idx { font: 0.78rem var(--mono); color: var(--muted); transition: color 0.25s; }
   .prj a:hover .prj__idx { color: var(--fg); }
-  .prj__name { flex: 1; font-size: clamp(1.25rem, 2.2vw, 1.6rem); font-weight: 500; letter-spacing: -0.01em; }
-  .prj__ar { font-size: 1.1rem; color: var(--muted); opacity: 0; transform: translate(-6px, 6px);
+  .prj__name { flex: 1; font-size: clamp(1.2rem, 2.1vw, 1.5rem); font-weight: 500; letter-spacing: -0.01em; }
+  .prj__ar { font-size: 1.05rem; color: var(--muted); opacity: 0; transform: translate(-6px, 6px);
     transition: all 0.3s ease; }
   .prj a:hover .prj__ar { opacity: 1; transform: translate(0, 0); color: var(--fg); }
 
-  .prj__sub { display: flex; justify-content: space-between; align-items: baseline; gap: 1.2rem;
-    margin-top: 0.5rem; padding-left: calc(0.78rem + 0.9rem); }
-  .prj__desc { font-size: 0.9rem; color: var(--dim); line-height: 1.5; }
-  .prj__tags { font: 0.74rem var(--mono); color: var(--muted); white-space: nowrap; letter-spacing: 0.02em; }
+  .prj__desc { display: block; margin-top: 0.3rem; padding-left: calc(0.78rem + 0.9rem);
+    font-size: 0.82rem; color: var(--dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .prj-more { display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 1.2rem;
+    background: none; border: none; cursor: pointer; padding: 0;
+    font: 500 0.7rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+    transition: color 0.25s; }
+  .prj-more:hover { color: var(--fg); }
+  .prj-more__ar { transition: transform 0.3s ease; }
+  .page.projects-open .prj-more__ar { transform: rotate(180deg); }
 
   @media (prefers-reduced-motion: reduce) {
-    .prj__inner, .prj__ar, .prj__bar, .prj__idx { transition: none; }
+    .prj__inner, .prj__ar, .prj__bar, .prj__idx, .prj-more, .prj-more__ar { transition: none; }
   }
 </style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { Flip } from 'gsap/Flip';
+  gsap.registerPlugin(Flip);
+
+  const page = document.querySelector('.page');
+  const btn = document.querySelector('[data-projects-toggle]');
+  const label = document.querySelector('[data-more-label]');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isDesktop = () => matchMedia('(min-width: 721px)').matches;
+
+  btn?.addEventListener('click', () => {
+    if (!page) return;
+    const opening = !page.classList.contains('projects-open');
+    if (label) label.textContent = opening ? 'show less' : 'show all';
+
+    if (!isDesktop() || reduce) {
+      page.classList.toggle('projects-open');
+      if (opening && !reduce) {
+        gsap.from('.prj--extra', { opacity: 0, y: 16, duration: 0.5, stagger: 0.05, ease: 'power2.out' });
+      }
+      return;
+    }
+
+    const targets = gsap.utils.toArray(
+      '.hero, .eyebrow, .hero-name, .hero-socials, .preview, .prj, .sec-label, .prj-more',
+    );
+    const state = Flip.getState(targets, { props: 'fontSize,opacity' });
+    page.classList.toggle('projects-open');
+
+    Flip.from(state, {
+      duration: 0.75,
+      ease: 'power3.inOut',
+      absolute: true,
+      stagger: 0.025,
+      onEnter: (els) => gsap.fromTo(els,
+        { opacity: 0, y: 26 },
+        { opacity: 1, y: 0, duration: 0.55, stagger: 0.045, ease: 'power2.out' }),
+      onLeave: (els) => gsap.to(els, { opacity: 0, duration: 0.3, ease: 'power2.in' }),
+    });
+  });
+</script>
