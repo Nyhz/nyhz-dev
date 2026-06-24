@@ -102,6 +102,7 @@
   const backdrop = document.querySelector<HTMLElement>('[data-contact-backdrop]');
   const panel = document.querySelector<HTMLElement>('[data-contact-panel]');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = () => matchMedia('(max-width: 720px)').matches;
 
   if (contact && trigger && closeBtn && backdrop && panel) {
     const fields = Array.from(panel.querySelectorAll<HTMLElement>('[data-field]'));
@@ -125,6 +126,44 @@
       return { targetW, targetH, scroll: targetH < naturalH - 1 };
     };
 
+    // Mobile: open as a full-width sheet (viewport minus margins), natural height
+    // (centered, scrolls if it would exceed the screen), revealed top→down. The
+    // chip-anchored desktop morph doesn't fit a narrow screen.
+    const M = 16;
+    const openMobile = () => {
+      contact.classList.add('contact--open');
+      gsap.set(contact, { position: 'fixed', left: M, right: 'auto', top: 0,
+        width: window.innerWidth - M * 2, height: 'auto', margin: 0 });
+      const naturalH = contact.offsetHeight;
+      const maxH = window.innerHeight - M * 2;
+      const targetH = Math.min(naturalH, maxH);
+      const top = Math.max(M, Math.round((window.innerHeight - targetH) / 2));
+      if (targetH < naturalH) { gsap.set(contact, { height: targetH }); panel.style.overflowY = 'auto'; }
+      gsap.set(contact, { top });
+
+      if (reduce) {
+        gsap.set(backdrop, { opacity: 1 });
+        gsap.set([...fields, closeBtn], { opacity: 1, y: 0 });
+      } else {
+        gsap.set(closeBtn, { opacity: 0 });
+        gsap.timeline()
+          .fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' }, 0)
+          .fromTo(contact, { clipPath: 'inset(0 0 100% 0)' },
+            { clipPath: 'inset(0 0 0% 0)', duration: 0.42, ease: 'power3.out' }, 0)
+          .fromTo(fields, { opacity: 0, y: 8 },
+            { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, 0.18)
+          .to(closeBtn, { opacity: 1, duration: 0.25 }, 0.2);
+      }
+      panel.querySelector<HTMLElement>('input, textarea')?.focus();
+    };
+    const closeMobile = () => {
+      if (reduce) { finishClose(); return; }
+      gsap.timeline({ onComplete: finishClose })
+        .to([...fields, closeBtn], { opacity: 0, duration: 0.12, ease: 'power1.in' }, 0)
+        .to(contact, { clipPath: 'inset(0 0 100% 0)', duration: 0.3, ease: 'power3.in' }, 0.04)
+        .to(backdrop, { opacity: 0, duration: 0.26 }, 0.06);
+    };
+
     const openCard = () => {
       if (open) return;
       open = true;
@@ -135,6 +174,7 @@
       firstRect = contact.getBoundingClientRect();
       document.body.append(backdrop, contact);
       backdrop.hidden = false;
+      if (isMobile()) { openMobile(); return; }
       const { targetW, targetH, scroll } = liftAndMeasure();
       // Only allow scrolling once fully open, and only if the form was clamped
       // to the viewport — otherwise a scrollbar flashes mid-morph.
@@ -177,6 +217,7 @@
       trigger.focus();
       panel.style.overflowY = 'hidden'; // no scrollbar during collapse
 
+      if (isMobile()) { closeMobile(); return; }
       if (reduce) { finishClose(); return; }
       // Reverse order: fade fields + close, collapse height, THEN narrow to chip.
       gsap.timeline({ onComplete: finishClose })
