@@ -63,8 +63,8 @@ const { name, tagline = 'creative developer' } = Astro.props;
     letter-spacing: 0.16em; text-transform: uppercase; color: #76766f; }
   .lmeta.a { left: 34px; color: #f1efe9; }
   .lmeta.b { right: 34px; }
-  .loader__status { position: absolute; left: 0; right: 0; top: 60%; text-align: center;
-    font: 500 0.78rem var(--mono); letter-spacing: 0.3em; color: #76766f; }
+  .loader__status { position: absolute; left: 0; right: 0; top: 72%; text-align: center;
+    font: 500 0.72rem var(--mono); letter-spacing: 0.34em; color: #76766f; }
   .loader__counter { position: absolute; left: 32px; bottom: 26px;
     font: 700 clamp(2.4rem, 8vw, 5rem) var(--mono); font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em; line-height: 1; }
@@ -129,9 +129,9 @@ const { name, tagline = 'creative developer' } = Astro.props;
     revealSite();
   } else {
     // Constant glitch flicker while loading.
-    const burst = setInterval(() => gl?.setAmt(0.25 + Math.random() * 0.55), 110);
+    const burst = setInterval(() => gl?.setAmt(0.06 + Math.random() * 0.14), 180);
     const state = { p: 0 };
-    const amt = { v: 0.3 };
+    const amt = { v: 0.15 };
     const tl = gsap.timeline();
 
     tl.to(state, {
@@ -148,7 +148,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
     // Exit — shatter the name, implode the frame, fade out.
     tl.addLabel('out', '+=0.2');
     tl.call(() => clearInterval(burst), [], 'out');
-    tl.to(amt, { v: 1.6, duration: 0.55, ease: 'power2.in', onUpdate() { gl?.setAmt(amt.v); } }, 'out');
+    tl.to(amt, { v: 0.85, duration: 0.55, ease: 'power2.in', onUpdate() { gl?.setAmt(amt.v); } }, 'out');
     tl.to('[data-loader] .loader__ui', { opacity: 0, duration: 0.3, ease: 'power2.in' }, 'out+=0.1');
     tl.to('[data-loader] .loader__frame', { scale: 1.18, opacity: 0, duration: 0.55, ease: 'power3.in' }, 'out+=0.15');
     tl.set(loader, { pointerEvents: 'none' });

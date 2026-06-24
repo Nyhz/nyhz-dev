@@ -17,24 +17,24 @@ const FRAG = `
   float rand(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
   void main() {
     vec2 uv = vUv;
-    float t = floor(uTime * 18.0);
-    // horizontal slice jitter
-    float band = floor(uv.y * 26.0);
+    float t = floor(uTime * 14.0);
+    // subtle horizontal slice jitter (only a few bands, small shift)
+    float band = floor(uv.y * 22.0);
     float r1 = rand(vec2(band, t));
-    uv.x += (r1 - 0.5) * (0.04 + uAmt * 0.20) * step(0.5, r1);
-    // occasional block tear
+    uv.x += (r1 - 0.5) * (0.006 + uAmt * 0.05) * step(0.78, r1);
+    // rare block tear
     float r2 = rand(vec2(floor(uv.x * 10.0), t * 1.3));
-    if (r2 > 0.93) uv.y += (rand(vec2(t, band)) - 0.5) * 0.12 * (0.3 + uAmt);
-    // chromatic split
-    float s = 0.006 + uAmt * 0.03;
+    if (r2 > 0.99) uv.y += (rand(vec2(t, band)) - 0.5) * 0.04 * (0.3 + uAmt);
+    // gentle chromatic split — keeps the word legible
+    float s = 0.002 + uAmt * 0.012;
     float cr = texture2D(uTex, uv + vec2(s, 0.0)).r;
     float cg = texture2D(uTex, uv).r;
     float cb = texture2D(uTex, uv - vec2(s, 0.0)).r;
     vec3 col = vec3(cr, cg, cb);
     float a = max(cr, max(cg, cb));
-    // scanlines + flicker
-    col *= 0.82 + 0.18 * sin(uv.y * 240.0);
-    col *= 0.9 + 0.1 * rand(vec2(t, 1.0));
+    // soft scanlines + faint flicker
+    col *= 0.9 + 0.1 * sin(uv.y * 240.0);
+    col *= 0.96 + 0.04 * rand(vec2(t, 1.0));
     gl_FragColor = vec4(col, a);
   }
 `;
@@ -70,7 +70,7 @@ export function createGlitchName(canvas: HTMLCanvasElement, text: string) {
   const uniforms = {
     uTex: { value: tex },
     uTime: { value: 0 },
-    uAmt: { value: 0.3 },
+    uAmt: { value: 0.12 },
   };
   const material = new THREE.ShaderMaterial({
     uniforms, vertexShader: VERT, fragmentShader: FRAG, transparent: true,
