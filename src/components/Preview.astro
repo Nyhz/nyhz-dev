@@ -27,6 +27,9 @@
 <style>
   .preview { width: 100%; }
   .pv__head { display: flex; align-items: baseline; justify-content: flex-end; }
+  /* the "— preview" label only shows once a preview is active */
+  .preview .sec-label { opacity: 0; transition: opacity 0.35s ease; }
+  .preview.pv-active .sec-label { opacity: 1; }
   .pv__back { display: none; background: none; border: none; cursor: pointer; padding: 0;
     font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
     transition: color 0.2s; }
@@ -116,6 +119,7 @@
     if (!card || slug === current) return;
     const first = current === null;
     current = slug;
+    pv?.classList.add('pv-active');
     tl?.kill();
     // mobile: the slider's lateral slide is the transition — no card fade/animation
     if (reduce || isMobile()) { setContent(d); gsap.set(card, { opacity: 1, x: 0 }); return; }
@@ -133,6 +137,7 @@
   function hide() {
     if (!card || current === null) return;
     current = null;
+    pv?.classList.remove('pv-active');
     tl?.kill();
     tl = gsap.timeline();
     leaveOut(tl);
