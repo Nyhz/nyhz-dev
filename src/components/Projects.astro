@@ -83,20 +83,17 @@ const canExpand = shown.length > HIGHLIGHT;
   const btn = document.querySelector('[data-projects-toggle]');
   const label = document.querySelector('[data-more-label]');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const isDesktop = () => matchMedia('(min-width: 721px)').matches;
 
   btn?.addEventListener('click', () => {
     if (!page) return;
     const opening = !page.classList.contains('projects-open');
     if (label) label.textContent = opening ? 'show less' : 'show all';
 
-    if (!isDesktop() || reduce) {
-      page.classList.toggle('projects-open');
-      if (opening && !reduce) {
-        gsap.from('.prj--extra', { opacity: 0, y: 16, duration: 0.5, stagger: 0.05, ease: 'power2.out' });
-      }
-      return;
-    }
+    // reset the mobile preview slider so expand starts/ends on the projects panel
+    const track = document.querySelector('.lower__track') as HTMLElement | null;
+    track?.classList.remove('is-preview');
+
+    if (reduce) { page.classList.toggle('projects-open'); return; }
 
     const targets = gsap.utils.toArray(
       '.hero, .eyebrow, .hero-name, .hero-socials, .preview, .prj, .sec-label, .prj-more',

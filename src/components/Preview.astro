@@ -126,23 +126,13 @@
     }
   }
 
-  function setHeight() {
-    if (!track) return;
-    if (!isMobile()) { track.style.height = ''; return; }
-    const active = track.classList.contains('is-preview')
-      ? document.querySelector('.preview') : document.querySelector('.projects');
-    if (active) track.style.height = (active as HTMLElement).offsetHeight + 'px';
-  }
-
   rows.forEach((r) => {
     const slug = r.dataset.proj!;
     r.addEventListener('mouseenter', () => { if (!isMobile()) show(slug, r.dataset); });
     r.addEventListener('focusin', () => { if (!isMobile()) show(slug, r.dataset); });
     r.querySelector('.prj__trigger')?.addEventListener('click', () => {
-      if (isMobile()) { show(slug, r.dataset); track?.classList.add('is-preview'); setHeight(); }
+      if (isMobile()) { show(slug, r.dataset); track?.classList.add('is-preview'); }
     });
   });
-  back?.addEventListener('click', () => { track?.classList.remove('is-preview'); setHeight(); });
-  addEventListener('resize', setHeight);
-  setHeight();
+  back?.addEventListener('click', () => { track?.classList.remove('is-preview'); });
 </script>
