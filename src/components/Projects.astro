@@ -76,8 +76,6 @@ const canExpand = shown.length > HIGHLIGHT;
 
 <script>
   import { gsap } from 'gsap';
-  import { Flip } from 'gsap/Flip';
-  gsap.registerPlugin(Flip);
 
   const page = document.querySelector('.page');
   const btn = document.querySelector('[data-projects-toggle]');
@@ -90,34 +88,14 @@ const canExpand = shown.length > HIGHLIGHT;
     if (label) label.textContent = opening ? 'show less' : 'show all';
 
     // reset the mobile preview slider so expand starts/ends on the projects panel
-    const track = document.querySelector('.lower__track') as HTMLElement | null;
-    track?.classList.remove('is-preview');
+    document.querySelector('.lower__track')?.classList.remove('is-preview');
 
-    if (reduce) { page.classList.toggle('projects-open'); return; }
-
-    // Flip only leaf/content elements — never a container together with its own
-    // children (.hero + .hero-name…), which makes Flip fight itself and snap.
-    // The preview is excluded (its card has its own absolute/animated state).
-    const targets = gsap.utils.toArray(
-      '.eyebrow, .hero-name, .hero-socials, .prj, .sec-label, .prj-more',
-    );
-    const state = Flip.getState(targets, { props: 'fontSize' });
+    // The compaction (header up + list grows) is pure CSS transition; we only
+    // toggle the class and fade the extra projects in.
     page.classList.toggle('projects-open');
-
-    // keep the list from clipping the rows while they animate; restore scroll after
-    const ul = document.querySelector('.projects ul') as HTMLElement | null;
-    if (ul) ul.style.overflow = 'visible';
-
-    Flip.from(state, {
-      duration: 0.7,
-      ease: 'power3.inOut',
-      absolute: true,
-      stagger: 0.02,
-      onEnter: (els) => gsap.fromTo(els,
-        { opacity: 0, y: 24 },
-        { opacity: 1, y: 0, duration: 0.5, stagger: 0.04, ease: 'power2.out' }),
-      onLeave: (els) => gsap.to(els, { opacity: 0, duration: 0.3, ease: 'power2.in' }),
-      onComplete: () => { if (ul) ul.style.overflow = ''; },
-    });
+    if (opening && !reduce) {
+      gsap.fromTo('.prj--extra', { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.15 });
+    }
   });
 </script>
