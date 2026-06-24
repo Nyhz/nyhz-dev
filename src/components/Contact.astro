@@ -119,5 +119,41 @@
     closeBtn.addEventListener('click', closeCard);
     backdrop.addEventListener('click', closeCard);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) closeCard(); });
+
+    const form = card.querySelector<HTMLFormElement>('[data-contact-form]');
+    const status = card.querySelector<HTMLElement>('[data-contact-status]');
+    const sendBtn = card.querySelector<HTMLButtonElement>('.contact-send');
+
+    if (form && status && sendBtn) {
+      const setStatus = (msg: string, state: '' | 'ok' | 'error') => {
+        status.textContent = msg;
+        if (state) status.setAttribute('data-state', state); else status.removeAttribute('data-state');
+      };
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        sendBtn.disabled = true;
+        setStatus('sending…', '');
+        try {
+          const res = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+          const out = await res.json().catch(() => ({}));
+          if (res.ok) {
+            setStatus('sent — thanks!', 'ok');
+            form.reset();
+          } else {
+            setStatus(out.error || 'something went wrong', 'error');
+            sendBtn.disabled = false;
+          }
+        } catch {
+          setStatus('network error — try again', 'error');
+          sendBtn.disabled = false;
+        }
+      });
+    }
   }
 </script>
