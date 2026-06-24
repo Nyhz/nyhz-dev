@@ -10,7 +10,11 @@
     <div class="pv__card" data-card>
       <div class="pv__dossier">
         <p class="pv__d-title"><span data-title-t></span><i class="pv__caret" aria-hidden="true"></i></p>
-        <pre class="pv__d-body"><span data-body-t></span><i class="pv__caret" aria-hidden="true"></i></pre>
+        <p class="pv__d-desc"><span data-desc-t></span><i class="pv__caret" aria-hidden="true"></i></p>
+        <dl class="pv__meta" data-meta>
+          <div class="pv__meta-row"><dt class="pv__k">stack</dt><dd class="pv__v" data-stack></dd></div>
+          <div class="pv__meta-row"><dt class="pv__k">status</dt><dd class="pv__v" data-status></dd></div>
+        </dl>
       </div>
       <nav class="pv__links">
         <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>github <span class="ar" aria-hidden="true">↗</span></a>
@@ -34,20 +38,28 @@
   .pv__frame { width: 100%; }
   .pv__card { opacity: 0; will-change: transform, opacity; }
 
-  /* terminal dossier — typed out, teal caret marks position. A single faint
-     scanline keeps it on-brand without the loud loader glitch. */
+  /* terminal dossier — title + description type out (teal caret), then the meta
+     block fades in. A single faint scanline keeps it on-brand, not loud. */
   .pv__dossier { position: relative; min-height: 12rem; overflow: hidden;
     border: 1px solid var(--line); padding: 1.1rem 1.2rem; }
   .pv__dossier::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.4;
     background: repeating-linear-gradient(0deg, rgba(180,180,180,0.05) 0 1px, transparent 1px 3px); }
   .pv__d-title { font: 700 1.05rem var(--mono); letter-spacing: -0.01em; color: var(--fg);
-    margin: 0 0 0.75rem; min-height: 1.3em; }
-  .pv__d-body { font: 0.82rem/1.7 var(--mono); color: var(--dim); white-space: pre-wrap;
-    margin: 0; min-height: 6.5rem; }
+    margin: 0 0 0.7rem; min-height: 1.3em; }
+  .pv__d-desc { font: 0.82rem/1.7 var(--mono); color: var(--dim); margin: 0 0 1.1rem; min-height: 5rem; }
   .pv__caret { display: none; width: 0.5em; height: 1.05em; background: #3ad29f;
     vertical-align: -0.16em; margin-left: 2px; }
   .typing > .pv__caret { display: inline-block; animation: pvBlink 0.8s steps(1) infinite; }
   @keyframes pvBlink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+  /* meta — reads as labelled metadata, distinct from the body prose */
+  .pv__meta { margin: 0; display: grid; gap: 0.4rem; opacity: 0;
+    padding-top: 0.9rem; border-top: 1px solid var(--line); }
+  .pv__meta-row { display: flex; align-items: baseline; gap: 1rem; }
+  .pv__k { flex: none; width: 4.5rem; font: 500 0.62rem var(--mono); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); }
+  .pv__v { margin: 0; font: 0.8rem var(--mono); color: var(--fg); }
+  .pv__v[data-status="live"] { color: #3ad29f; }
 
   .pv__links { display: flex; gap: 1.4rem; margin-top: 1rem; }
   .pv__link { position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
@@ -76,9 +88,12 @@
   const pv = document.querySelector('.preview');
   const card = pv?.querySelector('[data-card]') as HTMLElement | null;
   const titleEl = pv?.querySelector('.pv__d-title') as HTMLElement | null;
-  const bodyEl = pv?.querySelector('.pv__d-body') as HTMLElement | null;
+  const descEl = pv?.querySelector('.pv__d-desc') as HTMLElement | null;
   const titleT = pv?.querySelector('[data-title-t]') as HTMLElement | null;
-  const bodyT = pv?.querySelector('[data-body-t]') as HTMLElement | null;
+  const descT = pv?.querySelector('[data-desc-t]') as HTMLElement | null;
+  const metaEl = pv?.querySelector('[data-meta]') as HTMLElement | null;
+  const stackV = pv?.querySelector('[data-stack]') as HTMLElement | null;
+  const statusV = pv?.querySelector('[data-status]') as HTMLElement | null;
   const linksEl = pv?.querySelector('.pv__links') as HTMLElement | null;
   const repo = pv?.querySelector('[data-repo]') as HTMLAnchorElement | null;
   const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
@@ -89,10 +104,12 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = () => matchMedia('(max-width: 720px)').matches;
 
-  const bodyOf = (d: DOMStringMap) => {
-    const status = d.live ? 'live' : d.download ? 'download' : 'personal · source';
-    return `${d.desc || ''}\n\nstack    ${d.tags || ''}\nstatus   ${status}`;
-  };
+  const statusOf = (d: DOMStringMap) => (d.live ? 'live' : d.download ? 'download' : 'personal · source');
+
+  function setMeta(d: DOMStringMap) {
+    if (stackV) stackV.textContent = d.tags || '';
+    if (statusV) { const s = statusOf(d); statusV.textContent = s; statusV.dataset.status = s; }
+  }
   function setLinks(d: DOMStringMap) {
     if (repo) { if (d.repo) { repo.href = d.repo; repo.hidden = false; } else repo.hidden = true; }
     if (live) { if (d.live) { live.href = d.live; live.hidden = false; } else live.hidden = true; }
@@ -100,9 +117,10 @@
   }
   function reset() {
     if (titleT) titleT.textContent = '';
-    if (bodyT) bodyT.textContent = '';
+    if (descT) descT.textContent = '';
     titleEl?.classList.remove('typing');
-    bodyEl?.classList.remove('typing');
+    descEl?.classList.remove('typing');
+    if (metaEl) gsap.set(metaEl, { opacity: 0 });
     if (linksEl) gsap.set(linksEl, { opacity: 0 });
   }
 
@@ -126,15 +144,15 @@
       onUpdate() { span.textContent = text.slice(0, Math.round(s.i)); } });
   }
 
-  // Type the dossier: title, then body (keeps the teal caret blinking at the end),
-  // then fade the links in.
   function typeDossier(t: gsap.core.Timeline, d: DOMStringMap) {
-    if (!titleEl || !bodyEl || !titleT || !bodyT || !linksEl) return;
+    if (!titleEl || !descEl || !titleT || !descT || !metaEl || !linksEl) return;
     setLinks(d);
     typeInto(t, titleEl, titleT, d.title || '', 0.03);
     t.add(() => titleEl.classList.remove('typing'));
-    typeInto(t, bodyEl, bodyT, bodyOf(d), 0.012);
-    t.to(linksEl, { opacity: 1, duration: 0.3, ease: 'power2.out' }, '>-0.05');
+    typeInto(t, descEl, descT, d.desc || '', 0.012);   // keeps the teal caret at the end
+    t.add(() => setMeta(d));
+    t.to(metaEl, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+    t.to(linksEl, { opacity: 1, duration: 0.3, ease: 'power2.out' }, '>-0.15');
   }
 
   function show(slug: string, d: DOMStringMap) {
@@ -147,9 +165,9 @@
     if (reduce || isMobile()) {
       reset();
       if (titleT) titleT.textContent = d.title || '';
-      if (bodyT) bodyT.textContent = bodyOf(d);
-      setLinks(d);
-      gsap.set([card, linksEl], { opacity: 1, x: 0 });
+      if (descT) descT.textContent = d.desc || '';
+      setMeta(d); setLinks(d);
+      gsap.set([card, metaEl, linksEl], { opacity: 1, x: 0 });
       return;
     }
 
@@ -175,8 +193,6 @@
     leaveOut(tl);
   }
 
-  // Desktop: click a project to reveal it, click it again to close.
-  // Mobile: click slides to the preview panel.
   rows.forEach((r) => {
     const slug = r.dataset.proj!;
     r.querySelector('.prj__trigger')?.addEventListener('click', () => {
