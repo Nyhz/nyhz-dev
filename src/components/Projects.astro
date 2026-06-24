@@ -10,17 +10,19 @@ const count = String(shown.length).padStart(2, '0');
       <li class="prj">
         <a href={p.repoUrl} target="_blank" rel="noopener noreferrer">
           <span class="prj__bar"></span>
-          <span class="prj__head">
-            <span class="prj__idx">{String(i + 1).padStart(2, '0')}</span>
-            <span class="prj__name">{p.title}</span>
-            <span class="prj__ar">↗</span>
-          </span>
-          {(p.description || p.tags.length > 0) && (
-            <span class="prj__sub">
-              {p.description && <span class="prj__desc">{p.description}</span>}
-              {p.tags.length > 0 && <span class="prj__tags">{p.tags.join(' · ')}</span>}
+          <span class="prj__inner">
+            <span class="prj__head">
+              <span class="prj__idx">{String(i + 1).padStart(2, '0')}</span>
+              <span class="prj__name">{p.title}</span>
+              <span class="prj__ar">↗</span>
             </span>
-          )}
+            {(p.description || p.tags.length > 0) && (
+              <span class="prj__sub">
+                {p.description && <span class="prj__desc">{p.description}</span>}
+                {p.tags.length > 0 && <span class="prj__tags">{p.tags.join(' · ')}</span>}
+              </span>
+            )}
+          </span>
         </a>
       </li>
     ))}
@@ -29,12 +31,14 @@ const count = String(shown.length).padStart(2, '0');
 
 <style>
   .projects ul { list-style: none; }
-  .prj a { position: relative; display: block; padding: 1.05rem 0 1.05rem 0;
-    border-top: 1px solid var(--line); transition: padding-left 0.35s cubic-bezier(.2,.7,.2,1); }
+  .prj a { position: relative; display: block; padding: 1.05rem 0;
+    border-top: 1px solid var(--line); }
   .prj:last-child a { border-bottom: 1px solid var(--line); }
-  .prj a:hover { padding-left: 1.1rem; }
 
-  /* magic: a marker line that grows from the left on hover */
+  /* shift via transform so the row width never changes (no desc reflow) */
+  .prj__inner { display: block; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
+  .prj a:hover .prj__inner { transform: translateX(1.1rem); }
+
   .prj__bar { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--fg);
     transform: scaleY(0); transform-origin: top; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
   .prj a:hover .prj__bar { transform: scaleY(1); }
@@ -53,6 +57,6 @@ const count = String(shown.length).padStart(2, '0');
   .prj__tags { font: 0.74rem var(--mono); color: var(--muted); white-space: nowrap; letter-spacing: 0.02em; }
 
   @media (prefers-reduced-motion: reduce) {
-    .prj a, .prj__ar, .prj__bar, .prj__idx { transition: none; }
+    .prj__inner, .prj__ar, .prj__bar, .prj__idx { transition: none; }
   }
 </style>

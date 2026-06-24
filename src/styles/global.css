@@ -5,8 +5,10 @@ html { background: var(--bg); color: var(--fg); font-family: var(--font);
 body { overflow: hidden; }
 a { color: inherit; text-decoration: none; }
 
-/* Reactive WebGL dot-field, full-viewport background. */
-.field-canvas { position: fixed; inset: 0; z-index: 0; display: block; }
+/* Reactive WebGL dot-field, full-viewport background — clipped to inside the
+   page frame so no dots spill into the passe-partout margins. */
+.field-canvas { position: fixed; inset: 0; z-index: 0; display: block;
+  clip-path: inset(clamp(14px, 1.6vw, 26px)); }
 
 /* Narrow content column. */
 .page {

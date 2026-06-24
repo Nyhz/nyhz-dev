@@ -11,7 +11,7 @@ export type ProjectProps = {
   tags: string[]; repoUrl: string; order: number;
 };
 export type SkillProps = {
-  slug: string; title: string; items: string[]; order: number;
+  slug: string; title: string; items: string[]; level: number; order: number;
 };
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
@@ -46,6 +46,7 @@ export function mapSkills(items: { slug: string; entry: any }[]): SkillProps[] {
       slug,
       title: str(entry?.title),
       items: arr<string>(entry?.items).map(str),
+      level: typeof entry?.level === 'number' ? entry.level : 80,
       order: num(entry?.order),
     }))
     .sort((a, b) => a.order - b.order);

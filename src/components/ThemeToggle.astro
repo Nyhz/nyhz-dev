@@ -1,20 +1,38 @@
 <button class="theme-toggle" aria-label="Toggle theme" data-theme-toggle>
-  <span class="dot"></span>
+  <svg class="ti ti--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M20.5 14.2A8 8 0 1 1 9.8 3.5a6.2 6.2 0 0 0 10.7 10.7z"/>
+  </svg>
+  <svg class="ti ti--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="4.2"/>
+    <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6"/>
+  </svg>
 </button>
 <style>
-  .theme-toggle { background: none; border: 1px solid var(--line); border-radius: 999px;
-    width: 2.4rem; height: 1.4rem; position: fixed; cursor: pointer; padding: 0; z-index: 4;
-    top: clamp(20px, 2.4vw, 36px); right: clamp(26px, 2.6vw, 42px); }
-  .dot { position: absolute; top: 50%; left: 0.2rem; width: 1rem; height: 1rem;
-    border-radius: 50%; background: var(--fg); transform: translateY(-50%); transition: left 0.25s ease; }
-  :root[data-theme='light'] .dot { left: calc(100% - 1.2rem); }
+  .theme-toggle {
+    position: fixed; z-index: 4; top: clamp(18px, 2.2vw, 34px); right: clamp(26px, 2.6vw, 42px);
+    width: 36px; height: 36px; padding: 0; background: none; border: none; cursor: pointer;
+    color: var(--muted); display: grid; place-items: center; transition: color 0.25s;
+  }
+  .theme-toggle:hover { color: var(--fg); }
+  .theme-toggle .ti {
+    position: absolute; width: 21px; height: 21px;
+    transition: opacity 0.4s ease, transform 0.55s cubic-bezier(.5,1.6,.4,1);
+  }
+  /* dark theme → moon shown */
+  .ti--moon { opacity: 1; transform: rotate(0) scale(1); }
+  .ti--sun { opacity: 0; transform: rotate(-90deg) scale(0.4); }
+  :root[data-theme='light'] .ti--moon { opacity: 0; transform: rotate(90deg) scale(0.4); }
+  :root[data-theme='light'] .ti--sun { opacity: 1; transform: rotate(0) scale(1); }
+  /* hover magic: nudge-rotate the visible icon */
+  .theme-toggle:hover .ti--moon { transform: rotate(-18deg) scale(1.08); }
+  :root[data-theme='light'] .theme-toggle:hover .ti--moon { transform: rotate(90deg) scale(0.4); }
+  :root[data-theme='light'] .theme-toggle:hover .ti--sun { transform: rotate(35deg) scale(1.08); }
+  @media (prefers-reduced-motion: reduce) { .theme-toggle, .theme-toggle .ti { transition: none; } }
 </style>
 <script>
   import { applyTheme, nextTheme, readStoredTheme, resolveInitialTheme } from '../scripts/theme';
   const btn = document.querySelector('[data-theme-toggle]');
   const current = () => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
-  // Reconcile localStorage with the already-applied (no-flash) theme, but avoid
-  // a spurious themechange event if they already match.
   const resolved = resolveInitialTheme(readStoredTheme(), current() === 'dark');
   if (resolved !== current()) applyTheme(resolved);
   btn?.addEventListener('click', () => applyTheme(nextTheme(current())));

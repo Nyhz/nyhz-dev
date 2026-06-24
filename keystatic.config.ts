@@ -47,6 +47,7 @@ export default config({
         items: fields.array(fields.text({ label: 'Item' }), {
           label: 'Items', itemLabel: (p) => p.value,
         }),
+        level: fields.integer({ label: 'Level (0–100)', defaultValue: 80 }),
         order: fields.integer({ label: 'Order', defaultValue: 0 }),
       },
     }),

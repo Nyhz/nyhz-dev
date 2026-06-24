@@ -7,10 +7,13 @@ const count = String(shown.length).padStart(2, '0');
   <p class="sec-label sec-label--r"><span class="sec-count">[{count}]</span> skills —</p>
   <ul>
     {shown.map((g) => (
-      <li class="skl">
-        <span class="skl__bar"></span>
-        <span class="skl__name">{g.title}</span>
+      <li class="skl" style={`--lvl:${Math.max(0, Math.min(100, g.level)) / 100}`}>
+        <span class="skl__row">
+          <span class="skl__name">{g.title}</span>
+          <span class="skl__pct" data-pct={g.level}>0</span>
+        </span>
         <span class="skl__items">{g.items.join(' · ')}</span>
+        <span class="skl__meter"><i></i></span>
       </li>
     ))}
   </ul>
@@ -19,22 +22,55 @@ const count = String(shown.length).padStart(2, '0');
 <style>
   .sec-label--r { text-align: right; }
   .skills ul { list-style: none; }
-  .skl { position: relative; display: flex; flex-direction: column; align-items: flex-end;
-    text-align: right; gap: 0.4rem; padding: 1.05rem 0; border-top: 1px solid var(--line);
-    transition: padding-right 0.35s cubic-bezier(.2,.7,.2,1); }
+  .skl { display: flex; flex-direction: column; align-items: flex-end; text-align: right;
+    gap: 0.45rem; padding: 1.1rem 0; border-top: 1px solid var(--line); }
   .skl:last-child { border-bottom: 1px solid var(--line); }
-  .skl:hover { padding-right: 1.1rem; }
-  .skl__bar { position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: var(--fg);
-    transform: scaleY(0); transform-origin: top; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
-  .skl:hover .skl__bar { transform: scaleY(1); }
+
+  .skl__row { display: flex; align-items: baseline; gap: 0.8rem; }
   .skl__name { font-size: clamp(1.25rem, 2.2vw, 1.6rem); font-weight: 500; letter-spacing: -0.01em; }
+  .skl__pct { font: 0.72rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 2.2em; }
   .skl__items { font: 0.74rem var(--mono); color: var(--muted); letter-spacing: 0.02em; }
+
+  .skl__meter { display: block; width: 100%; height: 2px; background: var(--line); margin-top: 0.3rem; }
+  .skl__meter i { display: block; height: 100%; background: var(--fg);
+    transform: scaleX(var(--lvl)); transform-origin: right; }
+  .skl.armed .skl__meter i { transform: scaleX(0); transition: none; }
+  .skl.fill .skl__meter i { transform: scaleX(var(--lvl));
+    transition: transform 1s cubic-bezier(.2,.7,.2,1); }
 
   @media (max-width: 720px) {
     .sec-label--r { text-align: left; }
-    .skl { align-items: flex-start; text-align: left; padding-right: 0; }
-    .skl:hover { padding-right: 0; padding-left: 1.1rem; }
-    .skl__bar { right: auto; left: 0; }
+    .skl { align-items: flex-start; text-align: left; }
+    .skl__meter i { transform-origin: left; }
   }
-  @media (prefers-reduced-motion: reduce) { .skl, .skl__bar { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .skl.fill .skl__meter i { transition: none; } }
 </style>
+
+<script>
+  const skls = Array.from(document.querySelectorAll<HTMLElement>('.skl'));
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Arm immediately (under the loader) so meters start empty without a flash.
+  skls.forEach((s) => s.classList.add('armed'));
+
+  function run() {
+    skls.forEach((s, i) => {
+      setTimeout(() => {
+        s.classList.remove('armed');
+        s.classList.add('fill');
+        const pctEl = s.querySelector<HTMLElement>('[data-pct]');
+        const target = Number(pctEl?.dataset.pct || '0');
+        if (!pctEl) return;
+        if (reduce) { pctEl.textContent = String(target); return; }
+        const t0 = performance.now();
+        const step = (now: number) => {
+          const k = Math.min((now - t0) / 1000, 1);
+          pctEl.textContent = String(Math.round(target * (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)));
+          if (k < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }, reduce ? 0 : i * 150);
+    });
+  }
+
+  window.addEventListener('loaderdone', run, { once: true });
+</script>

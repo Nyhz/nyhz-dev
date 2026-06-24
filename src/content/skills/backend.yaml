@@ -4,3 +4,4 @@ items:
   - postgres
   - redis
 order: 2
+level: 75
