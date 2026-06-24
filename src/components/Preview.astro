@@ -79,15 +79,18 @@
 </style>
 
 <script>
-  const frame = document.querySelector('[data-frame]') as HTMLElement | null;
-  const img = document.querySelector('[data-img]') as HTMLImageElement | null;
-  const ph = document.querySelector('[data-ph]') as HTMLElement | null;
-  const phTitle = document.querySelector('[data-ph-title]') as HTMLElement | null;
-  const tags = document.querySelector('[data-tags]') as HTMLElement | null;
-  const repo = document.querySelector('[data-repo]') as HTMLAnchorElement | null;
-  const live = document.querySelector('[data-live]') as HTMLAnchorElement | null;
-  const shot = document.querySelector('[data-shot]') as HTMLElement | null;
-  const info = document.querySelector('[data-info]') as HTMLElement | null;
+  // Scope all lookups to the preview — project rows also carry data-tags /
+  // data-repo / data-live, so a bare querySelector would hit a row instead.
+  const pv = document.querySelector('.preview');
+  const frame = pv?.querySelector('[data-frame]') as HTMLElement | null;
+  const img = pv?.querySelector('[data-img]') as HTMLImageElement | null;
+  const ph = pv?.querySelector('[data-ph]') as HTMLElement | null;
+  const phTitle = pv?.querySelector('[data-ph-title]') as HTMLElement | null;
+  const tags = pv?.querySelector('[data-tags]') as HTMLElement | null;
+  const repo = pv?.querySelector('[data-repo]') as HTMLAnchorElement | null;
+  const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
+  const shot = pv?.querySelector('[data-shot]') as HTMLElement | null;
+  const info = pv?.querySelector('[data-info]') as HTMLElement | null;
   const track = document.querySelector('[data-track]') as HTMLElement | null;
   const back = document.querySelector('[data-back]');
   const rows = Array.from(document.querySelectorAll<HTMLElement>('.prj[data-proj]'));
