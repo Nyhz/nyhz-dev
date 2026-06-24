@@ -26,12 +26,28 @@ export function createField(canvas: HTMLCanvasElement) {
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  // Round dot sprite so points aren't coarse squares.
+  const dotTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const ctx = c.getContext('2d')!;
+    ctx.beginPath(); ctx.arc(32, 32, 28, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff'; ctx.fill();
+    const t = new THREE.CanvasTexture(c);
+    t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter;
+    return t;
+  })();
+  const small = matchMedia('(max-width: 720px)').matches;
   const material = new THREE.PointsMaterial({
-    size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0.5,
+    size: small ? 1.5 : 2.2, sizeAttenuation: false, transparent: true, opacity: 0.5,
+    map: dotTex, alphaTest: 0.5, depthWrite: false,
   });
   const points = new THREE.Points(geo, material);
   scene.add(points);
 
+  // Cursor ripple only on devices with a real pointer — touch must not move the dots.
+  const interactive = matchMedia('(hover: hover) and (pointer: fine)').matches;
   let px = 0, py = 0, active = false;
   function onMove(e: PointerEvent) {
     px = (e.clientX / innerWidth) * 2 - 1;
@@ -39,8 +55,10 @@ export function createField(canvas: HTMLCanvasElement) {
     active = true;
   }
   function onLeave() { active = false; }
-  addEventListener('pointermove', onMove);
-  document.addEventListener('pointerleave', onLeave);
+  if (interactive) {
+    addEventListener('pointermove', onMove);
+    document.addEventListener('pointerleave', onLeave);
+  }
 
   function resize() {
     const w = innerWidth, h = innerHeight, a = w / Math.max(h, 1);
@@ -93,7 +111,7 @@ export function createField(canvas: HTMLCanvasElement) {
       removeEventListener('resize', resize);
       document.removeEventListener('pointerleave', onLeave);
       document.removeEventListener('visibilitychange', onVisibility);
-      geo.dispose(); material.dispose(); renderer.dispose();
+      geo.dispose(); material.dispose(); dotTex.dispose(); renderer.dispose();
     },
   };
 }
