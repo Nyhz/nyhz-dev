@@ -144,23 +144,34 @@ const canExpand = shown.length > HIGHLIGHT;
       return;
     }
 
-    // 1) button leaves; 2) header collapses while the list grows (extras stay
-    // hidden so the list doesn't balloon); 3) extras + re-labelled button appear
-    // once the list settled.
-    if (!open) page.classList.remove('projects-reveal');
-    gsap.to(btn, { opacity: 0, y: 6, duration: 0.2, ease: 'power2.in', onComplete: () => {
-      apply();
-      animateLayout(open, false);
-      gsap.to(btn, { opacity: 1, y: 0, duration: 0.35, delay: DUR, ease: 'power2.out', onComplete: () => {
-        if (open) {
+    const finish = () => { projects?.classList.remove('is-busy'); animating = false; };
+
+    if (open) {
+      // button out → header collapses + list grows → button in → extras stagger in
+      gsap.to(btn, { opacity: 0, y: 6, duration: 0.2, ease: 'power2.in', onComplete: () => {
+        apply();
+        animateLayout(true, false);
+        gsap.to(btn, { opacity: 1, y: 0, duration: 0.35, delay: DUR, ease: 'power2.out', onComplete: () => {
           page.classList.add('projects-reveal');
           gsap.fromTo('.prj--extra', { opacity: 0, y: 14 },
             { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out' });
-        }
-        projects?.classList.remove('is-busy');
-        animating = false;
+          finish();
+        } });
       } });
-    } });
+    } else {
+      // extras stagger OUT first → then button out → header returns + list shrinks
+      gsap.to('.prj--extra', {
+        opacity: 0, y: 14, duration: 0.32, ease: 'power2.in', stagger: { each: 0.05, from: 'end' },
+        onComplete: () => {
+          page.classList.remove('projects-reveal');
+          gsap.to(btn, { opacity: 0, y: 6, duration: 0.2, ease: 'power2.in', onComplete: () => {
+            apply();
+            animateLayout(false, false);
+            gsap.to(btn, { opacity: 1, y: 0, duration: 0.35, delay: DUR, ease: 'power2.out', onComplete: finish });
+          } });
+        },
+      });
+    }
   }
 
   btn?.addEventListener('click', () => setExpanded(!page?.classList.contains('projects-open')));
