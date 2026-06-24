@@ -115,7 +115,11 @@
         opacity: 0, x: -40, duration: 0.32, ease: 'power2.out',
         onComplete: () => setContent(d),
       });
-      tl.fromTo(card, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.46, ease: 'power3.out' });
+      // immediateRender:false — otherwise GSAP applies the "from" (opacity:0)
+      // when the timeline is built, hiding the card before the exit can run.
+      tl.fromTo(card,
+        { opacity: 0, x: -40 },
+        { opacity: 1, x: 0, duration: 0.46, ease: 'power3.out', immediateRender: false });
     }
   }
 
