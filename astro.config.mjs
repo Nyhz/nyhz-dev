@@ -1,11 +1,11 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 import keystatic from '@keystatic/astro';
 
-// Static site by default; Keystatic admin/api routes opt into SSR via the
-// node adapter. The public page (`/`) stays prerendered/static.
+// Deployed on Vercel. The public page (`/`) is prerendered/static; the server
+// routes (the contact API, Keystatic admin/api) run as serverless functions.
 export default defineConfig({
   integrations: [react(), keystatic()],
-  adapter: node({ mode: 'standalone' }),
+  adapter: vercel(),
 });
