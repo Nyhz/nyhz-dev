@@ -95,13 +95,18 @@ const canExpand = shown.length > HIGHLIGHT;
   const DUR = 0.6;
   let animating = false;
 
-  // Collapse the header (height + opacity) and grow the list to fill. Multiple
-  // growers (spacers + lower) keep the fill smooth; the header disappears as the
-  // list rises into its place.
+  // Collapse the header (height + opacity + its gap margin) and grow the list to
+  // fill. Multiple growers (spacers + lower) keep the fill smooth; the header
+  // fully disappears and the list rises into its place.
+  let storedMb = '';
   function animateLayout(open: boolean, instant: boolean) {
-    const hero = document.querySelector('.hero');
+    const hero = document.querySelector('.hero') as HTMLElement | null;
     const lower = document.querySelector('.lower');
     const mobile = matchMedia('(max-width: 720px)').matches;
+    if (open && hero) storedMb = getComputedStyle(hero).marginBottom;
+    const heroVars = open
+      ? { height: 0, opacity: 0, marginBottom: 0 }
+      : { height: 'auto', opacity: 1, marginBottom: storedMb || 0 };
     const growers: [Element | null, number][] = mobile
       ? [[hero, open ? 0 : 1], [lower, open ? 1 : 0]]
       : [[document.querySelector('[data-spacer-top]'), open ? 0 : 1],
@@ -109,11 +114,11 @@ const canExpand = shown.length > HIGHLIGHT;
          [lower, open ? 1 : 0]];
 
     if (instant) {
-      gsap.set(hero, { height: open ? 0 : 'auto', opacity: open ? 0 : 1 });
+      if (hero) gsap.set(hero, heroVars);
       growers.forEach(([el, v]) => el && gsap.set(el, { flexGrow: v }));
       return;
     }
-    gsap.to(hero, { height: open ? 0 : 'auto', opacity: open ? 0 : 1, duration: DUR, ease: 'power2.inOut' });
+    if (hero) gsap.to(hero, { ...heroVars, duration: DUR, ease: 'power2.inOut' });
     growers.forEach(([el, v]) => el && gsap.to(el, { flexGrow: v, duration: DUR, ease: 'power2.inOut' }));
   }
 
@@ -130,23 +135,28 @@ const canExpand = shown.length > HIGHLIGHT;
     };
 
     if (reduce) {
+      if (!open) page.classList.remove('projects-reveal');
       apply();
+      if (open) page.classList.add('projects-reveal');
       animateLayout(open, true);
       projects?.classList.remove('is-busy');
       animating = false;
       return;
     }
 
-    // 1) button leaves; 2) header collapses while the list grows;
-    // 3) the re-labelled button returns once the list settled.
+    // 1) button leaves; 2) header collapses while the list grows (extras stay
+    // hidden so the list doesn't balloon); 3) extras + re-labelled button appear
+    // once the list settled.
+    if (!open) page.classList.remove('projects-reveal');
     gsap.to(btn, { opacity: 0, y: 6, duration: 0.2, ease: 'power2.in', onComplete: () => {
       apply();
       animateLayout(open, false);
-      if (open) {
-        gsap.fromTo('.prj--extra', { opacity: 0, y: 14 },
-          { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.1 });
-      }
       gsap.to(btn, { opacity: 1, y: 0, duration: 0.35, delay: DUR, ease: 'power2.out', onComplete: () => {
+        if (open) {
+          page.classList.add('projects-reveal');
+          gsap.fromTo('.prj--extra', { opacity: 0, y: 14 },
+            { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out' });
+        }
         projects?.classList.remove('is-busy');
         animating = false;
       } });

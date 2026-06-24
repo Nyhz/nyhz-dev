@@ -21,7 +21,7 @@ a { color: inherit; text-decoration: none; }
 .spacer { flex: 1 1 0; min-height: 0; }
 
 .hero { display: flex; flex-direction: column; gap: 1.2rem; overflow: hidden;
-  padding-bottom: clamp(4rem, 16vh, 11rem); }
+  margin-bottom: clamp(4rem, 16vh, 11rem); }
 .eyebrow { font: 500 0.72rem var(--mono); letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); }
 
 .lower__track { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
@@ -31,7 +31,9 @@ a { color: inherit; text-decoration: none; }
 .sec-count { color: var(--fg); }
 
 .prj--extra { display: none; }
-.page.projects-open .prj--extra { display: block; }
+/* extras appear only AFTER the rise (separate class), so the list doesn't
+   balloon to its full height and snap while it's still growing */
+.page.projects-open.projects-reveal .prj--extra { display: block; }
 
 /* ---- expanded (desktop): 2 columns, list fills + scrolls, header collapsed (GSAP) ---- */
 @media (min-width: 721px) {
@@ -49,7 +51,7 @@ a { color: inherit; text-decoration: none; }
   .spacer { display: none; }
   /* default: header centered (biased up), 3 projects pinned to the bottom */
   .page { height: 100vh; padding: clamp(2.5rem, 8vh, 4.5rem) clamp(1.25rem, 5vw, 2rem) clamp(2rem, 5vh, 3rem); }
-  .hero { flex: 1 1 auto; justify-content: center; padding-bottom: 0; }
+  .hero { flex: 1 1 auto; justify-content: center; margin-bottom: 0; }
   .lower { flex: 0 0 auto; overflow: hidden; }
 
   /* preview slider */
