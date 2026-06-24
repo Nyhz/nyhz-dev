@@ -3,9 +3,11 @@ import * as THREE from 'three';
 const FOV = 45;
 const FOV_T = Math.tan((FOV * Math.PI) / 180 / 2);
 const CAM_Z = 4;
-// Cursor influence, in normalized-device units around the pointer.
-const RADIUS = 0.2;
-const STRENGTH = 0.4;
+// Cursor influence: RADIUS is the reach around the pointer (in normalized-device
+// units); PUSH is the max nudge in world units — kept small so particles react
+// subtly rather than evacuating a hole.
+const RADIUS = 0.22;
+const PUSH = 0.06;
 
 export function createScene(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -76,7 +78,9 @@ export function createScene(canvas: HTMLCanvasElement) {
         const ddx = sx - px, ddy = sy - py;
         const d = Math.hypot(ddx, ddy);
         if (d < RADIUS && d > 1e-4) {
-          const f = (1 - d / RADIUS) * STRENGTH * halfH;
+          // Smooth falloff (eased) so the nudge fades gently toward the edge.
+          const fall = 1 - d / RADIUS;
+          const f = fall * fall * PUSH;
           const wdx = (ddx / d) * f, wdy = (ddy / d) * f;
           // Push outward in the screen plane, converted back to local space.
           ox = wdx * cosT;
