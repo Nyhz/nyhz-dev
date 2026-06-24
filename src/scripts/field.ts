@@ -10,7 +10,8 @@ const DRIFT = 0.014;        // ambient wave amplitude
 // A faint, full-viewport dot grid that drifts gently and ripples toward the
 // cursor — ambient "magic" behind the content. Monochrome, theme-aware.
 export function createField(canvas: HTMLCanvasElement) {
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  // preserveDrawingBuffer so the dots show up in the theme view-transition snapshot
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 
   const scene = new THREE.Scene();
