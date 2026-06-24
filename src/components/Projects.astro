@@ -71,6 +71,15 @@ const canExpand = shown.length > HIGHLIGHT;
   .prj-more__ar { transition: transform 0.3s ease; }
   .page.projects-open .prj-more__ar { transform: rotate(180deg); }
 
+  /* touch devices keep a sticky :hover after a tap — kill the row hover effects
+     there so a focused row's arrow doesn't bleed onto the preview */
+  @media (hover: none) {
+    .prj__trigger:hover .prj__inner, .prj__trigger:focus-visible .prj__inner,
+    .prj__trigger:active .prj__inner { transform: none; }
+    .prj__trigger:hover .prj__bar, .prj__trigger:focus-visible .prj__bar { transform: scaleY(0); }
+    .prj__trigger:hover .prj__ar, .prj__trigger:focus-visible .prj__ar { opacity: 0; }
+    .prj__trigger:hover .prj__idx { color: var(--muted); }
+  }
   @media (prefers-reduced-motion: reduce) {
     .prj__inner, .prj__ar, .prj__bar, .prj__idx, .prj-more, .prj-more__ar { transition: none; }
   }
@@ -84,26 +93,50 @@ const canExpand = shown.length > HIGHLIGHT;
   const label = document.querySelector('[data-more-label]');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  btn?.addEventListener('click', () => {
-    if (!page) return;
-    const opening = !page.classList.contains('projects-open');
-    if (label) label.textContent = opening ? 'show less' : 'show all';
+  const DUR = 0.6;
+  let animating = false;
 
-    // reset the mobile preview slider so expand starts/ends on the projects panel
+  btn?.addEventListener('click', () => {
+    if (!page || animating) return;
+    animating = true;
+    const opening = !page.classList.contains('projects-open');
+    const projects = document.querySelector('.projects');
+    const lower = document.querySelector('.lower');
+    const hero = document.querySelector('.hero');
+    const mobile = matchMedia('(max-width: 720px)').matches;
+
+    // block hover while the list reflows (rows sliding under a still cursor)
+    projects?.classList.add('is-busy');
     document.querySelector('.lower__track')?.classList.remove('is-preview');
 
-    // Block hover while the list reflows, otherwise a row sliding under a still
-    // cursor fires mouseenter and pops a preview open mid-animation.
-    const projects = document.querySelector('.projects');
-    projects?.classList.add('is-busy');
-    setTimeout(() => projects?.classList.remove('is-busy'), 750);
+    const applyLayout = () => {
+      page.classList.toggle('projects-open');
+      if (label) label.textContent = opening ? 'show less' : 'show all';
+    };
 
-    // The compaction (header up + list grows) is pure CSS transition; we only
-    // toggle the class and fade the extra projects in.
-    page.classList.toggle('projects-open');
-    if (opening && !reduce) {
-      gsap.fromTo('.prj--extra', { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.15 });
+    if (reduce) {
+      applyLayout();
+      gsap.set(lower, { flexGrow: opening ? 1 : 0 });
+      if (mobile) gsap.set(hero, { flexGrow: opening ? 0 : 1 });
+      projects?.classList.remove('is-busy');
+      animating = false;
+      return;
     }
+
+    // 1) button leaves; 2) list stretches (flex-grow via GSAP = smooth rise);
+    // 3) the re-labelled button comes back once the list settled.
+    gsap.to(btn, { opacity: 0, y: 6, duration: 0.2, ease: 'power2.in', onComplete: () => {
+      applyLayout();
+      gsap.to(lower, { flexGrow: opening ? 1 : 0, duration: DUR, ease: 'power2.inOut' });
+      if (mobile) gsap.to(hero, { flexGrow: opening ? 0 : 1, duration: DUR, ease: 'power2.inOut' });
+      if (opening) {
+        gsap.fromTo('.prj--extra', { opacity: 0, y: 14 },
+          { opacity: 1, y: 0, duration: 0.45, stagger: 0.05, ease: 'power2.out', delay: 0.1 });
+      }
+      gsap.to(btn, { opacity: 1, y: 0, duration: 0.35, delay: DUR, ease: 'power2.out', onComplete: () => {
+        projects?.classList.remove('is-busy');
+        animating = false;
+      } });
+    } });
   });
 </script>

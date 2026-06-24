@@ -23,10 +23,11 @@ a { color: inherit; text-decoration: none; }
 
 .hero { display: flex; flex-direction: column; gap: 1.2rem; transition: gap 0.5s ease; }
 .eyebrow { font: 500 0.72rem var(--mono); letter-spacing: 0.28em; text-transform: uppercase;
-  color: var(--muted); overflow: hidden;
+  color: var(--muted); overflow: hidden; max-height: 2rem;
   transition: opacity 0.4s ease, max-height 0.5s ease, margin 0.5s ease; }
 
-.lower { transition: flex-grow 0.6s cubic-bezier(.4,0,.2,1); }
+/* .lower / .hero flex-grow is animated by GSAP (CSS doesn't reliably transition
+   flex-grow), so the header rises smoothly instead of snapping. */
 .lower__track { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
 
 .sec-label { font: 500 0.66rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase;
@@ -43,7 +44,7 @@ a { color: inherit; text-decoration: none; }
   .page.projects-open .hero-name { font-size: clamp(1.7rem, 4vw, 2.6rem); }
   .page.projects-open .eyebrow,
   .page.projects-open .hero-socials { opacity: 0; max-height: 0; margin: 0; pointer-events: none; }
-  .page.projects-open .lower { flex-grow: 1; min-height: 0; }
+  .page.projects-open .lower { min-height: 0; }
   .page.projects-open .lower__track { height: 100%; min-height: 0; align-items: stretch; }
   .page.projects-open .preview { align-self: start; }
   .page.projects-open .projects { display: flex; flex-direction: column; min-height: 0; height: 100%; }
@@ -57,7 +58,7 @@ a { color: inherit; text-decoration: none; }
   /* default: header centered (biased up), 3 projects pinned to the bottom */
   .page { height: 100vh; justify-content: flex-start; gap: 0;
     padding: clamp(2.5rem, 8vh, 4.5rem) clamp(1.25rem, 5vw, 2rem) clamp(2rem, 5vh, 3rem); }
-  .hero { flex: 1 1 auto; justify-content: center; transition: flex-grow 0.6s cubic-bezier(.4,0,.2,1), gap 0.5s ease; }
+  .hero { flex: 1 1 auto; justify-content: center; transition: gap 0.5s ease; }
   .lower { flex: 0 0 auto; overflow: hidden; }
 
   /* preview slider */
@@ -67,12 +68,12 @@ a { color: inherit; text-decoration: none; }
   .lower__track.is-preview { transform: translateX(-50%); }
 
   /* expanded: compact header up, full-width scrollable list */
-  .page.projects-open .hero { flex-grow: 0; gap: 0.5rem; }
+  .page.projects-open .hero { gap: 0.5rem; }
   .page.projects-open .hero-name { font-size: clamp(1.7rem, 9vw, 2.4rem); }
   .page.projects-open .eyebrow,
   .page.projects-open .hero-socials { opacity: 0; max-height: 0; margin: 0; pointer-events: none; }
   .page.projects-open .preview { display: none; }
-  .page.projects-open .lower { flex: 1 1 0; min-height: 0; }
+  .page.projects-open .lower { min-height: 0; }
   .page.projects-open .lower__track { display: block; width: 100%; height: 100%; transform: none; }
   .page.projects-open .lower__track > * { width: 100%; }
   .page.projects-open .projects { display: flex; flex-direction: column; height: 100%; min-height: 0; }
