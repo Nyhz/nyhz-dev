@@ -61,17 +61,16 @@ a { color: inherit; text-decoration: none; }
 .page.projects-open .prj--extra { display: block; }
 
 @media (min-width: 721px) {
+  /* compact header up; keep the 2 columns (preview stays, hover still works);
+     the left list scrolls internally */
   .page.projects-open { justify-content: flex-start; gap: clamp(1.5rem, 4vh, 2.5rem); }
   .page.projects-open .hero { gap: 0.7rem; }
-  .page.projects-open .lower { flex: 1; }
   .page.projects-open .hero-name { font-size: clamp(1.7rem, 4vw, 2.6rem); }
   .page.projects-open .eyebrow,
-  .page.projects-open .hero-socials,
-  .page.projects-open .preview { display: none; }
-  .page.projects-open .lower { min-height: 0; }
-  .page.projects-open .lower__track { grid-template-columns: 1fr; height: 100%; min-height: 0; }
+  .page.projects-open .hero-socials { display: none; }
+  .page.projects-open .lower { flex: 1; min-height: 0; }
+  .page.projects-open .lower__track { height: 100%; min-height: 0; align-items: stretch; }
   .page.projects-open .projects { display: flex; flex-direction: column; min-height: 0; height: 100%; }
-  /* natural internal scroll for the full list */
   .page.projects-open .projects ul { flex: 1; min-height: 0; overflow-y: auto;
     -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
     mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); }

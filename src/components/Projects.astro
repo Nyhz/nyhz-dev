@@ -97,11 +97,16 @@ const canExpand = shown.length > HIGHLIGHT;
 
     // Flip only leaf/content elements — never a container together with its own
     // children (.hero + .hero-name…), which makes Flip fight itself and snap.
+    // The preview is excluded (its card has its own absolute/animated state).
     const targets = gsap.utils.toArray(
-      '.eyebrow, .hero-name, .hero-socials, .preview, .prj, .sec-label, .prj-more',
+      '.eyebrow, .hero-name, .hero-socials, .prj, .sec-label, .prj-more',
     );
     const state = Flip.getState(targets, { props: 'fontSize' });
     page.classList.toggle('projects-open');
+
+    // keep the list from clipping the rows while they animate; restore scroll after
+    const ul = document.querySelector('.projects ul') as HTMLElement | null;
+    if (ul) ul.style.overflow = 'visible';
 
     Flip.from(state, {
       duration: 0.7,
@@ -112,6 +117,7 @@ const canExpand = shown.length > HIGHLIGHT;
         { opacity: 0, y: 24 },
         { opacity: 1, y: 0, duration: 0.5, stagger: 0.04, ease: 'power2.out' }),
       onLeave: (els) => gsap.to(els, { opacity: 0, duration: 0.3, ease: 'power2.in' }),
+      onComplete: () => { if (ul) ul.style.overflow = ''; },
     });
   });
 </script>
