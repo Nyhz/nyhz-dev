@@ -6,6 +6,8 @@
   --line: #232320;
   --particle: #f1efe9;
   --space: clamp(1.25rem, 3vw, 3rem);
-  --font: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  /* Terminal/mono identity — the whole site shares the loader's typeface. */
+  --font: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
 }
