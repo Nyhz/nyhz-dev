@@ -92,7 +92,7 @@
 
     const tl = gsap.timeline({ paused: true, onReverseComplete: hide });
     if (reduce) {
-      tl.set([card, backdrop], { opacity: 1 }).fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+      tl.fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.15 });
     } else {
       // The card already has `border: 1px solid var(--fg)`; the clip-path reveal makes that
       // white border appear to draw in from the top. (Don't tween borderColor — GSAP can't
