@@ -11,27 +11,30 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 ---
 <div class="hero-block" data-anim>
   <p class="eyebrow">{role}{location ? ` — ${location}` : ''}</p>
-  <div class="hero-headline">
-    <h1 class="hero-name" data-text={name}>{name}</h1>
+  <h1 class="hero-name" data-text={name}>{name}</h1>
+  <div class="hero-foot">
+    {socials.length > 0 && (
+      <nav class="hero-socials">
+        {socials.map((s: { label: string; url: string }) => (
+          <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
+            <span class="ico" set:html={icon(s.label)} />
+            <span class="sl">{s.label}</span>
+            <span class="ar">↗</span>
+          </a>
+        ))}
+      </nav>
+    )}
     <Contact />
   </div>
-  {socials.length > 0 && (
-    <nav class="hero-socials">
-      {socials.map((s: { label: string; url: string }) => (
-        <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
-          <span class="ico" set:html={icon(s.label)} />
-          <span class="sl">{s.label}</span>
-          <span class="ar">↗</span>
-        </a>
-      ))}
-    </nav>
-  )}
 </div>
 
 <style>
   .hero-block { display: flex; flex-direction: column; gap: 1.6rem; }
-  .hero-headline { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-  .hero-headline .contact { flex-shrink: 0; margin-top: 0.4rem; }
+  /* socials on the left, "available for work" pushed to the right of the row.
+     (positioned via the container — Astro scopes child .contact to its own
+     component, so a `.hero-foot .contact` rule here wouldn't apply.) */
+  .hero-foot { display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem 1.4rem; flex-wrap: wrap; }
   .hero-name {
     position: relative; font-size: clamp(3.2rem, 9.5vw, 7rem); font-weight: 700;
     letter-spacing: -0.02em; line-height: 0.95; width: max-content; max-width: 100%;
@@ -69,7 +72,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
     80% { opacity: 0.7; transform: translate(-2px,0); clip-path: inset(0 0 68% 0); }
   }
 
-  .hero-socials { display: flex; gap: 1.8rem; margin-top: 0.6rem; flex-wrap: wrap;
+  .hero-socials { display: flex; gap: 1.8rem; flex-wrap: wrap;
     overflow: hidden; max-height: 6rem;
     transition: opacity 0.4s ease, max-height 0.5s ease, margin 0.5s ease; }
   .hero-socials a { position: relative; display: inline-flex; align-items: center; gap: 0.5rem;
