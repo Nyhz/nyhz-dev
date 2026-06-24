@@ -107,12 +107,13 @@
     tl = gsap.timeline();
     if (first) {
       setContent(d);
-      tl.fromTo(card, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out' });
+      tl.fromTo(card, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out' });
     } else {
-      // sequenced: fade out laterally → swap → fade in laterally
-      tl.to(card, { opacity: 0, x: 30, duration: 0.28, ease: 'power2.in' });
+      // sequenced: current slides OUT to the left → swap → next slides IN from
+      // the left moving right.
+      tl.to(card, { opacity: 0, x: -40, duration: 0.34, ease: 'power2.in' });
       tl.add(() => setContent(d));
-      tl.fromTo(card, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.42, ease: 'power3.out' });
+      tl.fromTo(card, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.46, ease: 'power3.out' });
     }
   }
 
