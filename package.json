@@ -1,0 +1,33 @@
+{
+  "name": "nyhz-dev",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.31.0",
+  "dependencies": {
+    "@astrojs/node": "^11.0.0",
+    "@astrojs/react": "^6.0.0",
+    "@keystatic/astro": "^5.1.0",
+    "@keystatic/core": "~0.5.50",
+    "astro": "^7.0.2",
+    "gsap": "~3.15.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "three": "~0.184.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "@types/three": "~0.184.1",
+    "vitest": "^4.1.9"
+  }
+}

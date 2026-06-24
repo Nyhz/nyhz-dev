@@ -1,0 +1,13 @@
+---
+const { socials } = Astro.props;
+---
+<nav class="socials">
+  {socials.map((s) => (
+    <a href={s.url} target="_blank" rel="noopener noreferrer">{s.label}</a>
+  ))}
+</nav>
+<style>
+  .socials { display: flex; gap: 1rem; }
+  .socials a { color: var(--muted); transition: color 0.2s; }
+  .socials a:hover { color: var(--fg); }
+</style>

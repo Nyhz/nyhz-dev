@@ -1,0 +1,35 @@
+---
+const { projects } = Astro.props;
+const shown = projects.slice(0, 4);
+---
+<div class="projects" data-anim>
+  <p class="label">— selected work</p>
+  <ul>
+    {shown.map((p, i) => (
+      <li class="row">
+        <a href={p.repoUrl} target="_blank" rel="noopener noreferrer">
+          <span class="idx">{String(i + 1).padStart(2, '0')}</span>
+          <span class="name">{p.title}</span>
+          <span class="tags">{p.tags.join(' · ')}</span>
+          <span class="arrow">→</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</div>
+<style>
+  .label { color: var(--muted); margin-bottom: 0.75rem; font-size: 0.85rem; }
+  .projects ul { list-style: none; }
+  .row a { display: grid; grid-template-columns: auto 1fr auto auto; align-items: baseline;
+    gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid var(--line);
+    transition: padding-left 0.25s ease, color 0.25s ease; }
+  .row a:hover { padding-left: 0.6rem; }
+  .idx { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .row a:hover .name { font-weight: 600; }
+  .tags { color: var(--muted); font-size: 0.8rem; }
+  .arrow { opacity: 0; transform: translateX(-6px); transition: opacity 0.25s, transform 0.25s; }
+  .row a:hover .arrow { opacity: 1; transform: translateX(0); }
+  @media (prefers-reduced-motion: reduce) {
+    .row a, .arrow { transition: none; }
+  }
+</style>
