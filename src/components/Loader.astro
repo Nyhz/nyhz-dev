@@ -2,9 +2,6 @@
 const { name, tagline = 'creative developer' } = Astro.props;
 ---
 <div class="loader" data-loader data-name={name} data-tagline={tagline}>
-  <canvas class="loader__gl" aria-hidden="true"></canvas>
-  <h1 class="loader__fallback" data-fallback data-text={name} aria-label={name}>{name}</h1>
-
   <div class="loader__frame" aria-hidden="true">
     <span class="ltk tl"></span><span class="ltk tr"></span>
     <span class="ltk bl"></span><span class="ltk br"></span>
@@ -12,8 +9,24 @@ const { name, tagline = 'creative developer' } = Astro.props;
   <div class="loader__scan" aria-hidden="true"></div>
 
   <div class="loader__ui">
-    <span class="lmeta b">v2 — 2026</span>
-    <p class="loader__status"><span data-status></span></p>
+    <!-- cryptic boot log (revealed as progress advances) -->
+    <div class="loader__log" data-log aria-hidden="true">
+      <div>› <span class="hx">0x1f00</span> renderer<span class="ok"> ok</span></div>
+      <div>› shaders <span class="hx">0x3a2e</span><span class="ok"> ok</span></div>
+      <div>› field·grain <span class="hx">0x9c4</span><span class="ok"> ok</span></div>
+      <div>› hydrate <span class="hx">0x04</span> islands<span class="ok"> ok</span></div>
+      <div>› ./nyhz —mount<span class="cur"></span></div>
+    </div>
+
+    <!-- climax: the name is typed out, with a blinking cursor + chromatic glitch -->
+    <div class="loader__name" data-name-wrap aria-hidden="true">
+      <div class="loader__center">
+        <span class="loader__type" data-type data-text={name}>{name}</span>
+      </div>
+    </div>
+
+    <h1 class="loader__sr" aria-label={name}>{name}</h1>
+
     <div class="loader__counter"><span data-count>000</span><i>%</i></div>
     <div class="loader__bar-wrap"><span class="loader__bar" data-bar></span></div>
   </div>
@@ -26,22 +39,9 @@ const { name, tagline = 'creative developer' } = Astro.props;
     position: fixed; inset: 0; z-index: 100; overflow: hidden;
     background: #0a0a0a; color: #f1efe9;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+    --accent: #3ad29f;
   }
-  .loader__gl { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; }
-
-  /* DOM fallback name (only shown when WebGL is unavailable). */
-  .loader__fallback { display: none; position: absolute; inset: 0; z-index: 2;
-    align-items: center; justify-content: center; font-weight: 700;
-    font-size: clamp(3rem, 14vw, 10rem); letter-spacing: -0.05em; }
-  .loader.no-webgl .loader__fallback { display: flex; }
-  .loader.no-webgl .loader__fallback::before,
-  .loader.no-webgl .loader__fallback::after {
-    content: attr(data-text); position: absolute; inset: 0; display: flex;
-    align-items: center; justify-content: center; }
-  .loader.no-webgl .loader__fallback::before { color: #ff2e63; animation: fbR 0.9s steps(2) infinite; }
-  .loader.no-webgl .loader__fallback::after { color: #2ee6ff; animation: fbC 0.9s steps(2) infinite; }
-  @keyframes fbR { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-4px,1px); } }
-  @keyframes fbC { 0%,100% { transform: translate(0,0); } 50% { transform: translate(4px,-1px); } }
+  .loader__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
   .loader__frame { position: absolute; inset: clamp(14px, 1.6vw, 26px); border: 1px solid #2b2b27; z-index: 3; }
   .ltk { position: absolute; width: 9px; height: 9px; border: 1px solid #f1efe9; }
@@ -50,67 +50,90 @@ const { name, tagline = 'creative developer' } = Astro.props;
   .ltk.bl { left: -1px; bottom: -1px; border-right: 0; border-top: 0; }
   .ltk.br { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
 
-  .loader__scan { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0.55;
+  .loader__scan { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0.5;
     mix-blend-mode: overlay; animation: lflick 2.4s steps(2) infinite;
     background:
       repeating-linear-gradient(0deg, rgba(180,180,180,0.10) 0 1px, transparent 1px 3px),
       radial-gradient(circle at 50% 50%, transparent 52%, rgba(0,0,0,0.5) 100%); }
-  @keyframes lflick { 0%,94%,100% { opacity: 0.55; } 95% { opacity: 0.95; } 97% { opacity: 0.28; } }
+  @keyframes lflick { 0%,94%,100% { opacity: 0.5; } 95% { opacity: 0.9; } 97% { opacity: 0.25; } }
 
   .loader__ui { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-  .lmeta { position: absolute; top: clamp(22px, 2.4vw, 38px); font: 500 0.62rem var(--mono);
-    letter-spacing: 0.16em; text-transform: uppercase; color: #76766f; }
-  .lmeta.a { left: clamp(26px, 2.6vw, 42px); color: #f1efe9; }
-  .lmeta.b { right: clamp(26px, 2.6vw, 42px); }
-  .loader__status { position: absolute; left: 0; right: 0; top: 72%; text-align: center;
-    font: 500 0.72rem var(--mono); letter-spacing: 0.34em; color: #76766f; }
+
+  /* ---- boot log ---- */
+  .loader__log { position: absolute; left: clamp(26px, 5vw, 64px); top: clamp(64px, 12vh, 130px);
+    font: 500 clamp(10px, 1.1vw, 12.5px) var(--mono); letter-spacing: 0.04em; color: #76766f;
+    transition: opacity 0.35s ease; }
+  .loader__log div { opacity: 0; transform: translateY(3px); transition: opacity 0.25s ease, transform 0.25s ease; }
+  .loader__log div.in { opacity: 1; transform: none; }
+  .loader__log .hx { color: #4a4a44; }
+  .loader__log .ok { color: var(--accent); }
+  .loader__log .cur { display: inline-block; width: 7px; height: 1em; background: var(--accent);
+    margin-left: 3px; vertical-align: -2px; animation: lblink 0.85s steps(1) infinite; }
+  .loader__log.out { opacity: 0; }
+  /* micro-glitch flicker on the log while loading */
+  .loader.flick .loader__log { transform: translateX(-2px); text-shadow: -1px 0 #ff2e63, 1px 0 #2ee6ff; }
+
+  /* ---- typed name (climax) ---- */
+  .loader__name { position: absolute; inset: 0; display: grid; place-content: center;
+    opacity: 0; transition: opacity 0.3s ease; }
+  .loader__name.in { opacity: 1; }
+  .loader__center { width: 4ch; font: 700 clamp(3rem, 12vw, 7rem)/1 var(--mono); letter-spacing: 0; }
+  .loader__type { position: relative; display: block; width: 0; overflow: hidden; white-space: nowrap;
+    border-right: 0.07em solid var(--accent); animation: lblink 0.8s steps(1) infinite; }
+  .loader__type.typed { overflow: visible; } /* let glitch/shatter spill out once written */
+  .loader__type::before, .loader__type::after { content: attr(data-text); position: absolute; left: 0; top: 0;
+    opacity: 0; pointer-events: none; }
+  .loader__type::before { color: #ff2e63; }
+  .loader__type::after  { color: #2ee6ff; }
+  /* held chromatic jitter (subtle, occasional) */
+  .loader__name.glitch .loader__type::before { animation: lgR 2.6s steps(1) infinite; }
+  .loader__name.glitch .loader__type::after  { animation: lgC 2.6s steps(1) infinite; }
+  @keyframes lgR { 0%,8%{opacity:0;transform:translate(0,0)} 9%{opacity:.85;transform:translate(-3px,1px)}
+    12%,57%{opacity:0} 58%{opacity:.85;transform:translate(-2px,-1px)} 61%,100%{opacity:0} }
+  @keyframes lgC { 0%,8%{opacity:0;transform:translate(0,0)} 9%{opacity:.85;transform:translate(3px,-1px)}
+    12%,57%{opacity:0} 58%{opacity:.85;transform:translate(2px,1px)} 61%,100%{opacity:0} }
+  /* exit shatter */
+  .loader__type.shatter { border-right-color: transparent; animation: lShake 0.5s steps(1) forwards; }
+  .loader__type.shatter::before { animation: lShR 0.5s steps(1) forwards; }
+  .loader__type.shatter::after  { animation: lShC 0.5s steps(1) forwards; }
+  @keyframes lShake { 0%{transform:translate(0,0)} 30%{transform:translate(-6px,2px)} 60%{transform:translate(5px,-2px)} 100%{transform:translate(0,0)} }
+  @keyframes lShR { 0%{opacity:0} 10%{opacity:.95;transform:translate(-10px,3px);clip-path:inset(0 0 62% 0)}
+    45%{opacity:.95;transform:translate(8px,-4px);clip-path:inset(58% 0 0 0)} 100%{opacity:0;transform:translate(-14px,6px)} }
+  @keyframes lShC { 0%{opacity:0} 10%{opacity:.95;transform:translate(10px,-3px);clip-path:inset(0 0 56% 0)}
+    45%{opacity:.95;transform:translate(-8px,4px);clip-path:inset(52% 0 0 0)} 100%{opacity:0;transform:translate(14px,-6px)} }
+
+  @keyframes lblink { 0%,50% { opacity: 1; border-right-color: var(--accent); } 50.01%,100% { opacity: 1; border-right-color: transparent; } }
+
+  /* ---- counter + bar ---- */
   .loader__counter { position: absolute; left: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
-    font: 700 clamp(2.4rem, 8vw, 5rem) var(--mono); font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em; line-height: 1; }
+    font: 700 clamp(2.2rem, 7vw, 4.4rem) var(--mono); font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em; line-height: 1; color: #f1efe9; }
   .loader__counter i { font-style: normal; font-size: 0.36em; color: #76766f; margin-left: 0.3em; }
   .loader__bar-wrap { position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: #2b2b27; }
   .loader__bar { display: block; width: 100%; height: 100%; background: #f1efe9;
     transform: scaleX(0); transform-origin: left center; }
 
-  @media (max-width: 520px) { .lmeta { display: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .loader__scan, .loader.no-webgl .loader__fallback::before,
-    .loader.no-webgl .loader__fallback::after { animation: none; }
+    .loader__scan, .loader__log .cur, .loader__type { animation: none; }
+    .loader__type { border-right-color: transparent; }
   }
 </style>
 
 <script>
   import { gsap } from 'gsap';
-  import { createGlitchName } from '../scripts/loader-gl';
 
-  const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const loader = document.querySelector('[data-loader]') as HTMLElement;
-  const target = (loader.dataset.tagline || '').toLowerCase();
-  const glCanvas = document.querySelector('.loader__gl') as HTMLCanvasElement;
   const countEl = document.querySelector('[data-count]') as HTMLElement;
   const barEl = document.querySelector('[data-bar]') as HTMLElement;
-  const statusEl = document.querySelector('[data-status]') as HTMLElement;
+  const logEl = document.querySelector('[data-log]') as HTMLElement;
+  const logLines = Array.from(logEl.children) as HTMLElement[];
+  const nameWrap = document.querySelector('[data-name-wrap]') as HTMLElement;
+  const typeEl = document.querySelector('[data-type]') as HTMLElement;
+  const NAME = loader.dataset.name || 'nyhz';
   const anims = gsap.utils.toArray<HTMLElement>('[data-anim]');
 
   gsap.set(anims, { opacity: 0, y: 16 });
-
-  const webglOk = (() => { try { return !!document.createElement('canvas').getContext('webgl'); } catch { return false; } })();
-  let gl: { start(): void; setAmt(v: number): void; dispose(): void } | null = null;
-  if (webglOk) {
-    try { gl = createGlitchName(glCanvas, loader.dataset.name || 'nyhz'); } catch { gl = null; }
-  }
-  if (gl) gl.start(); else loader.classList.add('no-webgl');
-
-  function scramble(p: number): string {
-    let out = '';
-    for (let k = 0; k < target.length; k++) {
-      const ch = target[k];
-      if (ch === ' ') { out += ' '; continue; }
-      out += p >= (k + 1) / target.length ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0];
-    }
-    return out;
-  }
 
   function revealSite() {
     gsap.to(anims, {
@@ -121,40 +144,52 @@ const { name, tagline = 'creative developer' } = Astro.props;
   }
 
   if (reduce) {
-    statusEl.textContent = target;
-    gl?.setAmt(0);
+    logLines.forEach((l) => l.classList.add('in'));
+    countEl.textContent = '100';
+    barEl.style.transform = 'scaleX(1)';
+    typeEl.style.width = NAME.length + 'ch';
+    nameWrap.classList.add('in');
+    logEl.classList.add('out');
     loader.style.display = 'none';
-    gl?.dispose();
     revealSite();
   } else {
-    // Constant glitch flicker while loading.
-    const burst = setInterval(() => gl?.setAmt(0.12 + Math.random() * 0.22), 150);
+    // Reveal each log line as progress crosses its threshold.
+    const LOG_AT = [6, 22, 42, 62, 80];
+    // Micro-glitch flicker while loading.
+    const flick = setInterval(() => {
+      loader.classList.add('flick');
+      setTimeout(() => loader.classList.remove('flick'), 60);
+    }, 260 + Math.random() * 220);
+
     const state = { p: 0 };
-    const amt = { v: 0.15 };
-    const tl = gsap.timeline();
+    const typer = { c: 0 };
 
     const tick = () => {
       const v = Math.round(state.p);
       countEl.textContent = String(v).padStart(3, '0');
-      statusEl.textContent = scramble(state.p / 100);
       barEl.style.transform = `scaleX(${state.p / 100})`;
+      logLines.forEach((l, i) => { if (state.p >= LOG_AT[i]) l.classList.add('in'); });
     };
-    // slow start → strong acceleration, then ease off over the last 15
-    tl.to(state, { p: 85, duration: 1.5, ease: 'power3.in', onUpdate: tick });
-    tl.to(state, { p: 100, duration: 0.85, ease: 'power2.out', onUpdate: tick,
-      onComplete() { statusEl.textContent = target; } });
 
-    // Exit — shatter the name, fade the readout, then fade the whole loader
-    // out. The page carries its own identical frame underneath, so the frame
-    // appears continuous (no expand / re-appear).
-    tl.addLabel('out', '+=0.2');
-    tl.call(() => clearInterval(burst), [], 'out');
-    tl.to(amt, { v: 0.85, duration: 0.5, ease: 'power2.in', onUpdate() { gl?.setAmt(amt.v); } }, 'out');
-    tl.to('[data-loader] .loader__ui', { opacity: 0, duration: 0.3, ease: 'power2.in' }, 'out+=0.1');
-    tl.set(loader, { pointerEvents: 'none' });
-    tl.to(loader, { opacity: 0, duration: 0.55, ease: 'power2.inOut' }, 'out+=0.3');
-    tl.add(revealSite, 'out+=0.45');
+    const tl = gsap.timeline();
+    // slow start → strong acceleration, then ease off the last stretch
+    tl.to(state, { p: 85, duration: 1.4, ease: 'power3.in', onUpdate: tick });
+    tl.to(state, { p: 100, duration: 0.8, ease: 'power2.out', onUpdate: tick });
+
+    // finale: fade the log, type the name, then let it glitch
+    tl.add(() => { logEl.classList.add('out'); nameWrap.classList.add('in'); });
+    tl.to(typer, { c: NAME.length, duration: 0.55, ease: `steps(${NAME.length})`,
+      onUpdate() { typeEl.style.width = Math.round(typer.c) + 'ch'; } }, '+=0.05');
+    tl.add(() => { typeEl.classList.add('typed'); nameWrap.classList.add('glitch'); });
+    tl.to({}, { duration: 0.6 }); // hold
+
+    // exit — shatter the name, then fade the whole loader. The page carries its
+    // own identical frame underneath, so the frame appears continuous.
+    tl.addLabel('out');
+    tl.call(() => clearInterval(flick), [], 'out');
+    tl.add(() => typeEl.classList.add('shatter'), 'out');
+    tl.to(loader, { opacity: 0, duration: 0.55, ease: 'power2.inOut' }, 'out+=0.4');
+    tl.add(revealSite, 'out+=0.55');
     tl.set(loader, { display: 'none' });
-    tl.call(() => gl?.dispose());
   }
 </script>
