@@ -13,14 +13,16 @@
         <p class="pv__d-desc"><span data-desc-t></span><i class="pv__caret" aria-hidden="true"></i></p>
         <dl class="pv__meta" data-meta>
           <div class="pv__meta-row"><dt class="pv__k">stack</dt><dd class="pv__v" data-stack></dd></div>
-          <div class="pv__meta-row"><dt class="pv__k">status</dt><dd class="pv__v" data-status></dd></div>
         </dl>
       </div>
-      <nav class="pv__links">
-        <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>github <span class="ar" aria-hidden="true">↗</span></a>
-        <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
-        <a class="pv__link" data-download target="_blank" rel="noopener noreferrer" hidden>download <span class="ar" aria-hidden="true">↓</span></a>
-      </nav>
+      <div class="pv__foot" data-foot>
+        <span class="pv__status" data-status aria-live="off"></span>
+        <nav class="pv__links">
+          <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>github <span class="ar" aria-hidden="true">↗</span></a>
+          <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
+          <a class="pv__link" data-download target="_blank" rel="noopener noreferrer" hidden>download <span class="ar" aria-hidden="true">↓</span></a>
+        </nav>
+      </div>
     </div>
   </div>
 </div>
@@ -52,16 +54,19 @@
   .typing > .pv__caret { display: inline-block; animation: pvBlink 0.8s steps(1) infinite; }
   @keyframes pvBlink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 
-  /* meta — reads as labelled metadata, distinct from the body prose */
-  .pv__meta { margin: 0; display: grid; gap: 0.4rem; opacity: 0;
-    padding-top: 0.9rem; border-top: 1px solid var(--line); }
+  .pv__meta { margin: 0; padding-top: 0.9rem; border-top: 1px solid var(--line); opacity: 0; }
   .pv__meta-row { display: flex; align-items: baseline; gap: 1rem; }
   .pv__k { flex: none; width: 4.5rem; font: 500 0.62rem var(--mono); letter-spacing: 0.18em;
     text-transform: uppercase; color: var(--muted); }
   .pv__v { margin: 0; font: 0.8rem var(--mono); color: var(--fg); }
-  .pv__v[data-status="live"] { color: #3ad29f; }
 
-  .pv__links { display: flex; gap: 1.4rem; margin-top: 1rem; }
+  /* status + links footer (status carries an occasional glitch flicker) */
+  .pv__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+    margin-top: 1rem; opacity: 0; }
+  .pv__status { font: 0.8rem var(--mono); letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
+  .pv__status[data-status="live"] { color: #3ad29f; }
+  .pv__status[data-status="download"] { color: var(--fg); }
+  .pv__links { display: flex; gap: 1.4rem; }
   .pv__link { position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
     font: 0.8rem var(--mono); color: var(--muted); padding-bottom: 4px; transition: color 0.25s; }
   .pv__link .ar { font-size: 0.85em; opacity: 0.5; transition: transform 0.25s, opacity 0.25s; }
@@ -93,8 +98,8 @@
   const descT = pv?.querySelector('[data-desc-t]') as HTMLElement | null;
   const metaEl = pv?.querySelector('[data-meta]') as HTMLElement | null;
   const stackV = pv?.querySelector('[data-stack]') as HTMLElement | null;
-  const statusV = pv?.querySelector('[data-status]') as HTMLElement | null;
-  const linksEl = pv?.querySelector('.pv__links') as HTMLElement | null;
+  const footEl = pv?.querySelector('[data-foot]') as HTMLElement | null;
+  const statusEl = pv?.querySelector('[data-status]') as HTMLElement | null;
   const repo = pv?.querySelector('[data-repo]') as HTMLAnchorElement | null;
   const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
   const download = pv?.querySelector('[data-download]') as HTMLAnchorElement | null;
@@ -104,24 +109,54 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = () => matchMedia('(max-width: 720px)').matches;
 
-  const statusOf = (d: DOMStringMap) => (d.live ? 'live' : d.download ? 'download' : 'personal · source');
+  const statusOf = (d: DOMStringMap) => (d.live ? 'live' : d.download ? 'download' : 'personal');
 
-  function setMeta(d: DOMStringMap) {
-    if (stackV) stackV.textContent = d.tags || '';
-    if (statusV) { const s = statusOf(d); statusV.textContent = s; statusV.dataset.status = s; }
+  // ---- status glitch: occasionally run one letter through a few glyphs, then settle ----
+  const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
+  let stIv = 0;
+  function scrambleStatus() {
+    const truth = statusEl?.dataset.value || '';
+    if (!statusEl || truth.length === 0) return;
+    const i = (Math.random() * truth.length) | 0;
+    if (truth[i] === ' ') return;
+    clearInterval(stIv);
+    let n = 0;
+    stIv = window.setInterval(() => {
+      const a = truth.split('');
+      a[i] = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      statusEl.textContent = a.join('');
+      if (++n >= 4) { clearInterval(stIv); stIv = 0; statusEl.textContent = truth; }
+    }, 55);
   }
+  function setStatus(d: DOMStringMap) {
+    if (!statusEl) return;
+    clearInterval(stIv); stIv = 0;
+    const s = statusOf(d);
+    statusEl.textContent = s;
+    statusEl.dataset.value = s;
+    statusEl.dataset.status = s;
+  }
+  if (!reduce) {
+    window.setInterval(() => {
+      if (!document.hidden && statusEl?.dataset.value && Math.random() < 0.7) scrambleStatus();
+    }, 2400);
+  }
+
   function setLinks(d: DOMStringMap) {
     if (repo) { if (d.repo) { repo.href = d.repo; repo.hidden = false; } else repo.hidden = true; }
     if (live) { if (d.live) { live.href = d.live; live.hidden = false; } else live.hidden = true; }
     if (download) { if (d.download) { download.href = d.download; download.hidden = false; } else download.hidden = true; }
   }
+  // State that must NOT visibly change until the old card has left the screen.
+  function applyContent(d: DOMStringMap) { setLinks(d); setStatus(d); }
+
   function reset() {
     if (titleT) titleT.textContent = '';
     if (descT) descT.textContent = '';
     titleEl?.classList.remove('typing');
     descEl?.classList.remove('typing');
     if (metaEl) gsap.set(metaEl, { opacity: 0 });
-    if (linksEl) gsap.set(linksEl, { opacity: 0 });
+    if (footEl) gsap.set(footEl, { opacity: 0 });
   }
 
   let current: string | null = null;
@@ -145,14 +180,13 @@
   }
 
   function typeDossier(t: gsap.core.Timeline, d: DOMStringMap) {
-    if (!titleEl || !descEl || !titleT || !descT || !metaEl || !linksEl) return;
-    setLinks(d);
+    if (!titleEl || !descEl || !titleT || !descT || !metaEl || !footEl) return;
     typeInto(t, titleEl, titleT, d.title || '', 0.03);
     t.add(() => titleEl.classList.remove('typing'));
     typeInto(t, descEl, descT, d.desc || '', 0.012);   // keeps the teal caret at the end
-    t.add(() => setMeta(d));
+    t.add(() => { if (stackV) stackV.textContent = d.tags || ''; });
     t.to(metaEl, { opacity: 1, duration: 0.3, ease: 'power2.out' });
-    t.to(linksEl, { opacity: 1, duration: 0.3, ease: 'power2.out' }, '>-0.15');
+    t.to(footEl, { opacity: 1, duration: 0.3, ease: 'power2.out' }, '>-0.15');
   }
 
   function show(slug: string, d: DOMStringMap) {
@@ -166,19 +200,22 @@
       reset();
       if (titleT) titleT.textContent = d.title || '';
       if (descT) descT.textContent = d.desc || '';
-      setMeta(d); setLinks(d);
-      gsap.set([card, metaEl, linksEl], { opacity: 1, x: 0 });
+      if (stackV) stackV.textContent = d.tags || '';
+      applyContent(d);
+      gsap.set([card, metaEl, footEl], { opacity: 1, x: 0 });
       return;
     }
 
     tl = gsap.timeline();
     if (first) {
       reset();
+      applyContent(d);
       gsap.set(card, { opacity: 0, x: -40 });
       enterIn(tl);
       typeDossier(tl, d);
     } else {
-      leaveOut(tl, reset);
+      // swap links/status only AFTER the old card has left (no instant flash)
+      leaveOut(tl, () => { reset(); applyContent(d); });
       enterIn(tl);
       typeDossier(tl, d);
     }
