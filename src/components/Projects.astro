@@ -11,7 +11,7 @@ const canExpand = shown.length > HIGHLIGHT;
   <ul>
     {shown.map((p, i) => (
       <li class:list={['prj', i >= HIGHLIGHT && 'prj--extra']} data-proj={p.slug}
-        data-title={p.title} data-cover={p.coverUrl} data-repo={p.repoUrl}
+        data-title={p.title} data-desc={p.description} data-cover={p.coverUrl} data-repo={p.repoUrl}
         data-live={p.deployUrl} data-download={p.downloadUrl} data-tags={p.tags.join(' · ')}>
         <div class="prj__trigger" tabindex="0" role="button" aria-label={`Preview ${p.title}`}>
           <span class="prj__bar"></span>

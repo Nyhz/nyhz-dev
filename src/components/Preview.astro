@@ -8,18 +8,15 @@
 
   <div class="pv__frame" data-frame>
     <div class="pv__card" data-card>
-      <div class="pv__media">
-        <img class="pv__img" data-img alt="" hidden />
-        <div class="pv__ph" data-ph hidden><span data-ph-title></span></div>
+      <div class="pv__dossier">
+        <p class="pv__d-title"><span data-title-t></span><i class="pv__caret" aria-hidden="true"></i></p>
+        <pre class="pv__d-body"><span data-body-t></span><i class="pv__caret" aria-hidden="true"></i></pre>
       </div>
-      <div class="pv__info">
-        <span class="pv__tags" data-tags></span>
-        <nav class="pv__links">
-          <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>github <span class="ar" aria-hidden="true">↗</span></a>
-          <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
-          <a class="pv__link" data-download target="_blank" rel="noopener noreferrer" hidden>download <span class="ar" aria-hidden="true">↓</span></a>
-        </nav>
-      </div>
+      <nav class="pv__links">
+        <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>github <span class="ar" aria-hidden="true">↗</span></a>
+        <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
+        <a class="pv__link" data-download target="_blank" rel="noopener noreferrer" hidden>download <span class="ar" aria-hidden="true">↓</span></a>
+      </nav>
     </div>
   </div>
 </div>
@@ -27,7 +24,6 @@
 <style>
   .preview { width: 100%; }
   .pv__head { display: flex; align-items: baseline; justify-content: flex-end; }
-  /* the "— preview" label only shows once a preview is active */
   .preview .sec-label { opacity: 0; transition: opacity 0.35s ease; }
   .preview.pv-active .sec-label { opacity: 1; }
   .pv__back { display: none; background: none; border: none; cursor: pointer; padding: 0;
@@ -35,24 +31,25 @@
     transition: color 0.2s; }
   .pv__back:hover { color: var(--fg); }
 
-  /* the card is hidden until a project is hovered; the frame reserves its space
-     (media aspect + info min-height) so nothing shifts when it appears */
   .pv__frame { width: 100%; }
   .pv__card { opacity: 0; will-change: transform, opacity; }
 
-  .pv__media { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
-    border: 1px solid var(--line); }
-  .pv__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-  .pv__ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    background: repeating-linear-gradient(135deg, var(--line) 0 1px, transparent 1px 12px); }
-  .pv__ph span { font-size: clamp(1.1rem, 2.4vw, 1.6rem); font-weight: 600; letter-spacing: -0.02em;
-    color: var(--fg); background: var(--bg); padding: 0.2rem 0.7rem; }
+  /* terminal dossier — typed out, teal caret marks position. A single faint
+     scanline keeps it on-brand without the loud loader glitch. */
+  .pv__dossier { position: relative; min-height: 12rem; overflow: hidden;
+    border: 1px solid var(--line); padding: 1.1rem 1.2rem; }
+  .pv__dossier::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.4;
+    background: repeating-linear-gradient(0deg, rgba(180,180,180,0.05) 0 1px, transparent 1px 3px); }
+  .pv__d-title { font: 700 1.05rem var(--mono); letter-spacing: -0.01em; color: var(--fg);
+    margin: 0 0 0.75rem; min-height: 1.3em; }
+  .pv__d-body { font: 0.82rem/1.7 var(--mono); color: var(--dim); white-space: pre-wrap;
+    margin: 0; min-height: 6.5rem; }
+  .pv__caret { display: none; width: 0.5em; height: 1.05em; background: #3ad29f;
+    vertical-align: -0.16em; margin-left: 2px; }
+  .typing > .pv__caret { display: inline-block; animation: pvBlink 0.8s steps(1) infinite; }
+  @keyframes pvBlink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 
-  .pv__info { margin-top: 0.9rem; min-height: 3rem; display: flex; flex-direction: column;
-    align-items: flex-end; text-align: right; gap: 0.7rem; }
-  .pv__tags { font: 0.74rem var(--mono); color: var(--muted); letter-spacing: 0.02em;
-    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pv__links { display: flex; gap: 1.4rem; }
+  .pv__links { display: flex; gap: 1.4rem; margin-top: 1rem; }
   .pv__link { position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
     font: 0.8rem var(--mono); color: var(--muted); padding-bottom: 4px; transition: color 0.25s; }
   .pv__link .ar { font-size: 0.85em; opacity: 0.5; transition: transform 0.25s, opacity 0.25s; }
@@ -66,10 +63,10 @@
   @media (max-width: 720px) {
     .pv__head { justify-content: space-between; }
     .pv__back { display: inline-flex; gap: 0.4rem; }
-    .pv__info { align-items: flex-start; text-align: left; }
   }
   @media (prefers-reduced-motion: reduce) {
     .pv__link, .pv__link .ar { transition: none; }
+    .typing > .pv__caret { animation: none; }
   }
 </style>
 
@@ -78,10 +75,11 @@
 
   const pv = document.querySelector('.preview');
   const card = pv?.querySelector('[data-card]') as HTMLElement | null;
-  const img = pv?.querySelector('[data-img]') as HTMLImageElement | null;
-  const ph = pv?.querySelector('[data-ph]') as HTMLElement | null;
-  const phTitle = pv?.querySelector('[data-ph-title]') as HTMLElement | null;
-  const tags = pv?.querySelector('[data-tags]') as HTMLElement | null;
+  const titleEl = pv?.querySelector('.pv__d-title') as HTMLElement | null;
+  const bodyEl = pv?.querySelector('.pv__d-body') as HTMLElement | null;
+  const titleT = pv?.querySelector('[data-title-t]') as HTMLElement | null;
+  const bodyT = pv?.querySelector('[data-body-t]') as HTMLElement | null;
+  const linksEl = pv?.querySelector('.pv__links') as HTMLElement | null;
   const repo = pv?.querySelector('[data-repo]') as HTMLAnchorElement | null;
   const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
   const download = pv?.querySelector('[data-download]') as HTMLAnchorElement | null;
@@ -91,28 +89,52 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = () => matchMedia('(max-width: 720px)').matches;
 
-  function setContent(d: DOMStringMap) {
-    const cover = d.cover || '', title = d.title || '';
-    if (cover && img && ph) { img.src = cover; img.alt = title; img.hidden = false; ph.hidden = true; }
-    else if (img && ph) { img.hidden = true; ph.hidden = false; if (phTitle) phTitle.textContent = title; }
-    if (tags) tags.textContent = d.tags || '';
+  const bodyOf = (d: DOMStringMap) => {
+    const status = d.live ? 'live' : d.download ? 'download' : 'personal · source';
+    return `${d.desc || ''}\n\nstack    ${d.tags || ''}\nstatus   ${status}`;
+  };
+  function setLinks(d: DOMStringMap) {
     if (repo) { if (d.repo) { repo.href = d.repo; repo.hidden = false; } else repo.hidden = true; }
     if (live) { if (d.live) { live.href = d.live; live.hidden = false; } else live.hidden = true; }
     if (download) { if (d.download) { download.href = d.download; download.hidden = false; } else download.hidden = true; }
+  }
+  function reset() {
+    if (titleT) titleT.textContent = '';
+    if (bodyT) bodyT.textContent = '';
+    titleEl?.classList.remove('typing');
+    bodyEl?.classList.remove('typing');
+    if (linksEl) gsap.set(linksEl, { opacity: 0 });
   }
 
   let current: string | null = null;
   let tl: gsap.core.Timeline | null = null;
 
-  // appear: come from the left and overshoot past the final spot, then settle
   function enterIn(t: gsap.core.Timeline) {
     t.fromTo(card, { opacity: 0, x: -40 },
       { opacity: 1, x: 0, duration: 0.6, ease: 'back.out(2.4)', immediateRender: false });
   }
-  // leave: wind up to the right, then dash out to the left
   function leaveOut(t: gsap.core.Timeline, after?: () => void) {
     t.to(card, { x: 26, duration: 0.18, ease: 'power2.out' });
     t.to(card, { x: -170, opacity: 0, duration: 0.38, ease: 'power3.in', onComplete: after });
+  }
+
+  function typeInto(t: gsap.core.Timeline, host: HTMLElement, span: HTMLElement, text: string, per: number) {
+    const s = { i: 0 };
+    t.add(() => { host.classList.add('typing'); span.textContent = ''; });
+    t.to(s, { i: text.length, duration: Math.max(0.18, text.length * per),
+      ease: `steps(${Math.max(1, text.length)})`,
+      onUpdate() { span.textContent = text.slice(0, Math.round(s.i)); } });
+  }
+
+  // Type the dossier: title, then body (keeps the teal caret blinking at the end),
+  // then fade the links in.
+  function typeDossier(t: gsap.core.Timeline, d: DOMStringMap) {
+    if (!titleEl || !bodyEl || !titleT || !bodyT || !linksEl) return;
+    setLinks(d);
+    typeInto(t, titleEl, titleT, d.title || '', 0.03);
+    t.add(() => titleEl.classList.remove('typing'));
+    typeInto(t, bodyEl, bodyT, bodyOf(d), 0.012);
+    t.to(linksEl, { opacity: 1, duration: 0.3, ease: 'power2.out' }, '>-0.05');
   }
 
   function show(slug: string, d: DOMStringMap) {
@@ -121,16 +143,26 @@
     current = slug;
     pv?.classList.add('pv-active');
     tl?.kill();
-    // mobile: the slider's lateral slide is the transition — no card fade/animation
-    if (reduce || isMobile()) { setContent(d); gsap.set(card, { opacity: 1, x: 0 }); return; }
+
+    if (reduce || isMobile()) {
+      reset();
+      if (titleT) titleT.textContent = d.title || '';
+      if (bodyT) bodyT.textContent = bodyOf(d);
+      setLinks(d);
+      gsap.set([card, linksEl], { opacity: 1, x: 0 });
+      return;
+    }
+
     tl = gsap.timeline();
     if (first) {
-      setContent(d);
+      reset();
       gsap.set(card, { opacity: 0, x: -40 });
       enterIn(tl);
+      typeDossier(tl, d);
     } else {
-      leaveOut(tl, () => setContent(d));   // wind-up right + dash left, swap on complete
-      enterIn(tl);                          // overshoot in
+      leaveOut(tl, reset);
+      enterIn(tl);
+      typeDossier(tl, d);
     }
   }
 
@@ -143,8 +175,8 @@
     leaveOut(tl);
   }
 
-  // Preview opens on CLICK (not hover). Desktop: click a project to reveal it,
-  // click the same one again to close. Mobile: click slides to the preview panel.
+  // Desktop: click a project to reveal it, click it again to close.
+  // Mobile: click slides to the preview panel.
   rows.forEach((r) => {
     const slug = r.dataset.proj!;
     r.querySelector('.prj__trigger')?.addEventListener('click', () => {
