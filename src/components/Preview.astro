@@ -106,7 +106,8 @@
     const first = current === null;
     current = slug;
     tl?.kill();
-    if (reduce) { setContent(d); gsap.set(card, { opacity: 1, x: 0 }); return; }
+    // mobile: the slider's lateral slide is the transition — no card fade/animation
+    if (reduce || isMobile()) { setContent(d); gsap.set(card, { opacity: 1, x: 0 }); return; }
     tl = gsap.timeline();
     if (first) {
       setContent(d);
