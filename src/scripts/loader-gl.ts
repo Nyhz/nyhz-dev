@@ -21,12 +21,12 @@ const FRAG = `
     // subtle horizontal slice jitter (only a few bands, small shift)
     float band = floor(uv.y * 22.0);
     float r1 = rand(vec2(band, t));
-    uv.x += (r1 - 0.5) * (0.006 + uAmt * 0.05) * step(0.78, r1);
-    // rare block tear
+    uv.x += (r1 - 0.5) * (0.012 + uAmt * 0.08) * step(0.72, r1);
+    // occasional block tear
     float r2 = rand(vec2(floor(uv.x * 10.0), t * 1.3));
-    if (r2 > 0.99) uv.y += (rand(vec2(t, band)) - 0.5) * 0.04 * (0.3 + uAmt);
-    // gentle chromatic split — keeps the word legible
-    float s = 0.002 + uAmt * 0.012;
+    if (r2 > 0.975) uv.y += (rand(vec2(t, band)) - 0.5) * 0.05 * (0.3 + uAmt);
+    // chromatic split — kept moderate so the word stays legible
+    float s = 0.003 + uAmt * 0.018;
     float cr = texture2D(uTex, uv + vec2(s, 0.0)).r;
     float cg = texture2D(uTex, uv).r;
     float cb = texture2D(uTex, uv - vec2(s, 0.0)).r;
@@ -70,7 +70,7 @@ export function createGlitchName(canvas: HTMLCanvasElement, text: string) {
   const uniforms = {
     uTex: { value: tex },
     uTime: { value: 0 },
-    uAmt: { value: 0.12 },
+    uAmt: { value: 0.18 },
   };
   const material = new THREE.ShaderMaterial({
     uniforms, vertexShader: VERT, fragmentShader: FRAG, transparent: true,
