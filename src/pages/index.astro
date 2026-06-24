@@ -2,30 +2,20 @@
 import Base from '../layouts/Base.astro';
 import Identity from '../components/Identity.astro';
 import Projects from '../components/Projects.astro';
+import Skills from '../components/Skills.astro';
 import Socials from '../components/Socials.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Scene from '../components/Scene.astro';
 import Loader from '../components/Loader.astro';
 import { getContent } from '../scripts/content';
-const { profile, projects } = await getContent();
+const { profile, projects, skills } = await getContent();
 ---
 <Base title={`${profile.name} — ${profile.role}`}>
   <Loader name={profile.name} slot="overlay" />
-  <div slot="topbar" class="topbar-inner">
-    <span class="wordmark">{profile.name}</span>
-    <div class="topbar-right">
-      <ThemeToggle />
-      <Socials socials={profile.socials} />
-    </div>
-  </div>
-  <Fragment slot="left">
-    <Identity name={profile.name} role={profile.role} location={profile.location} />
-    <Projects projects={projects} />
-  </Fragment>
-  <Scene slot="right" />
+  <ThemeToggle slot="corner" />
+  <Identity slot="tl" name={profile.name} role={profile.role} location={profile.location} />
+  <Scene slot="tr" />
+  <Socials slot="mid" socials={profile.socials} />
+  <Projects slot="bl" projects={projects} />
+  <Skills slot="br" skills={skills} />
 </Base>
-<style>
-  .topbar-inner { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-  .topbar-right { display: flex; align-items: center; gap: 1rem; }
-  .wordmark { font-weight: 600; letter-spacing: -0.02em; }
-</style>

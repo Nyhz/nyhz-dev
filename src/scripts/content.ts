@@ -10,6 +10,9 @@ export type ProjectProps = {
   slug: string; title: string; description: string;
   tags: string[]; repoUrl: string; order: number;
 };
+export type SkillProps = {
+  slug: string; title: string; items: string[]; order: number;
+};
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
@@ -37,12 +40,27 @@ export function mapProjects(items: { slug: string; entry: any }[]): ProjectProps
     .sort((a, b) => a.order - b.order);
 }
 
-export async function getContent(): Promise<{ profile: ProfileProps; projects: ProjectProps[] }> {
+export function mapSkills(items: { slug: string; entry: any }[]): SkillProps[] {
+  return items
+    .map(({ slug, entry }) => ({
+      slug,
+      title: str(entry?.title),
+      items: arr<string>(entry?.items).map(str),
+      order: num(entry?.order),
+    }))
+    .sort((a, b) => a.order - b.order);
+}
+
+export async function getContent(): Promise<{
+  profile: ProfileProps; projects: ProjectProps[]; skills: SkillProps[];
+}> {
   const reader = createReader(process.cwd(), keystaticConfig);
   const profileRaw = await reader.singletons.profile.read();
   const projectRaw = await reader.collections.projects.all();
+  const skillRaw = await reader.collections.skills.all();
   return {
     profile: mapProfile(profileRaw),
     projects: mapProjects(projectRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
+    skills: mapSkills(skillRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
   };
 }

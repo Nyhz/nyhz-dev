@@ -22,9 +22,12 @@ const { title = 'nyhz' } = Astro.props;
   </head>
   <body>
     <div class="shell">
-      <header class="topbar"><slot name="topbar" /></header>
-      <section class="col-left"><slot name="left" /></section>
-      <section class="col-right"><slot name="right" /></section>
+      <div class="corner"><slot name="corner" /></div>
+      <section class="area-tl"><slot name="tl" /></section>
+      <section class="area-tr"><slot name="tr" /></section>
+      <section class="area-mid"><slot name="mid" /></section>
+      <section class="area-bl"><slot name="bl" /></section>
+      <section class="area-br"><slot name="br" /></section>
     </div>
     <slot name="overlay" />
   </body>

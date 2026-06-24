@@ -1,13 +1,19 @@
 import * as THREE from 'three';
-import { repel, type Vec3 } from './displace';
+
+const FOV = 45;
+const FOV_T = Math.tan((FOV * Math.PI) / 180 / 2);
+const CAM_Z = 4;
+// Cursor influence, in normalized-device units around the pointer.
+const RADIUS = 0.2;
+const STRENGTH = 0.4;
 
 export function createScene(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-  camera.position.z = 4;
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
+  camera.position.z = CAM_Z;
 
   // Particles distributed on an icosahedron surface.
   const geo = new THREE.IcosahedronGeometry(1.3, 12);
@@ -20,14 +26,16 @@ export function createScene(canvas: HTMLCanvasElement) {
   const points = new THREE.Points(geo, material);
   scene.add(points);
 
-  const pointer: Vec3 = [100, 100, 100];
+  // Pointer in normalized-device coords (-1..1), plus an active flag so the
+  // form rests when the cursor leaves the canvas.
+  let px = 0, py = 0, active = false;
   function onMove(e: PointerEvent) {
     const r = canvas.getBoundingClientRect();
-    pointer[0] = ((e.clientX - r.left) / r.width) * 2 - 1;
-    pointer[1] = -(((e.clientY - r.top) / r.height) * 2 - 1);
-    pointer[2] = 0;
+    px = ((e.clientX - r.left) / r.width) * 2 - 1;
+    py = -(((e.clientY - r.top) / r.height) * 2 - 1);
+    active = true;
   }
-  function onLeave() { pointer[0] = pointer[1] = pointer[2] = 100; }
+  function onLeave() { active = false; }
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerleave', onLeave);
 
@@ -47,11 +55,36 @@ export function createScene(canvas: HTMLCanvasElement) {
   let t = 0;
   function frame() {
     t += 0.01;
-    if (!reduceMotion) points.rotation.y = t * 0.15;
+    const theta = reduceMotion ? 0 : t * 0.12;
+    points.rotation.y = theta;
+    const cosT = Math.cos(theta), sinT = Math.sin(theta);
+    const aspect = camera.aspect;
+
     for (let i = 0; i < positions.length; i += 3) {
       const bx = base[i], by = base[i + 1], bz = base[i + 2];
       const breathe = reduceMotion ? 1 : 1 + Math.sin(t + bx * 2 + by * 2) * 0.03;
-      const [ox, oy, oz] = repel([bx, by, bz], pointer, 0.7, 0.5);
+
+      let ox = 0, oy = 0, oz = 0;
+      if (active) {
+        // Where this particle sits on screen (project its rotated world pos).
+        const wx = bx * cosT + bz * sinT;
+        const wy = by;
+        const wz = -bx * sinT + bz * cosT;
+        const halfH = FOV_T * (CAM_Z - wz);
+        const sx = wx / (halfH * aspect);
+        const sy = wy / halfH;
+        const ddx = sx - px, ddy = sy - py;
+        const d = Math.hypot(ddx, ddy);
+        if (d < RADIUS && d > 1e-4) {
+          const f = (1 - d / RADIUS) * STRENGTH * halfH;
+          const wdx = (ddx / d) * f, wdy = (ddy / d) * f;
+          // Push outward in the screen plane, converted back to local space.
+          ox = wdx * cosT;
+          oy = wdy;
+          oz = wdx * sinT;
+        }
+      }
+
       positions[i] = bx * breathe + ox;
       positions[i + 1] = by * breathe + oy;
       positions[i + 2] = bz * breathe + oz;
@@ -68,7 +101,7 @@ export function createScene(canvas: HTMLCanvasElement) {
   document.addEventListener('visibilitychange', onVisibility);
 
   return {
-    start() { raf = requestAnimationFrame(frame); },
+    start() { if (!raf) raf = requestAnimationFrame(frame); },
     setTheme(color: string) { setColor(color); },
     dispose() {
       cancelAnimationFrame(raf);

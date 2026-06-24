@@ -37,5 +37,18 @@ export default config({
         order: fields.integer({ label: 'Order', defaultValue: 0 }),
       },
     }),
+    skills: collection({
+      label: 'Skills',
+      slugField: 'title',
+      path: 'src/content/skills/*',
+      format: { data: 'yaml' },
+      schema: {
+        title: fields.slug({ name: { label: 'Category' } }),
+        items: fields.array(fields.text({ label: 'Item' }), {
+          label: 'Items', itemLabel: (p) => p.value,
+        }),
+        order: fields.integer({ label: 'Order', defaultValue: 0 }),
+      },
+    }),
   },
 });

@@ -6,22 +6,44 @@ body { overflow: hidden; }
 a { color: inherit; text-decoration: none; }
 
 .shell {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto 1fr;
-  grid-template-areas: "topbar topbar" "left right";
-  height: 100vh; width: 100%;
-  padding: var(--space);
-  gap: var(--space);
+  grid-template-rows: 1fr auto 1fr;
+  grid-template-areas:
+    "tl tr"
+    "mid mid"
+    "bl br";
+  width: 100%;
+  max-width: 1400px;
+  height: 100vh;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vh, 3.5rem) var(--space);
+  column-gap: calc(var(--space) * 2);
+  row-gap: clamp(1.5rem, 4vh, 3rem);
 }
-.topbar { grid-area: topbar; display: flex; justify-content: space-between; align-items: center; }
-.col-left { grid-area: left; display: flex; flex-direction: column; justify-content: center; gap: 2rem; }
-.col-right { grid-area: right; position: relative; min-height: 0; }
+.area-tl  { grid-area: tl; display: flex; flex-direction: column; justify-content: flex-start; }
+.area-tr  { grid-area: tr; position: relative; min-height: 0; }
+.area-mid { grid-area: mid; display: flex; justify-content: center; align-items: center; }
+.area-bl  { grid-area: bl; display: flex; flex-direction: column; justify-content: flex-start; }
+.area-br  { grid-area: br; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-end; text-align: right; }
+.corner   { position: absolute; top: clamp(1.5rem, 4vh, 3.5rem); right: var(--space); z-index: 5; }
 
 @media (max-width: 720px) {
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto 38vh 1fr;
-    grid-template-areas: "topbar" "right" "left"; }
-  .col-left { justify-content: flex-start; }
+  body { overflow: auto; }
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 34vh auto auto auto;
+    grid-template-areas:
+      "tl"
+      "tr"
+      "mid"
+      "bl"
+      "br";
+    height: auto;
+    min-height: 100vh;
+  }
+  .area-br { align-items: flex-start; text-align: left; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { transition: none; }

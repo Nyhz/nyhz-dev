@@ -1,6 +1,6 @@
 // tests/content.test.ts
 import { describe, it, expect } from 'vitest';
-import { mapProfile, mapProjects } from '../src/scripts/content';
+import { mapProfile, mapProjects, mapSkills } from '../src/scripts/content';
 
 describe('mapProfile', () => {
   it('maps a full profile', () => {
@@ -34,5 +34,20 @@ describe('mapProjects', () => {
     const out = mapProjects([{ slug: 'a', entry: { title: 'A', description: 'd', repoUrl: 'u' } }]);
     expect(out[0].order).toBe(0);
     expect(out[0].tags).toEqual([]);
+  });
+});
+
+describe('mapSkills', () => {
+  it('maps and sorts by order ascending', () => {
+    const out = mapSkills([
+      { slug: 'b', entry: { title: 'B', items: ['x'], order: 2 } },
+      { slug: 'a', entry: { title: 'A', items: ['y', 'z'], order: 1 } },
+    ]);
+    expect(out.map((s) => s.slug)).toEqual(['a', 'b']);
+  });
+  it('defaults order to 0 and items to []', () => {
+    const out = mapSkills([{ slug: 'a', entry: { title: 'A' } }]);
+    expect(out[0].order).toBe(0);
+    expect(out[0].items).toEqual([]);
   });
 });

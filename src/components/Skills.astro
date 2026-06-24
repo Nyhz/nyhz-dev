@@ -1,0 +1,23 @@
+---
+const { skills } = Astro.props;
+const shown = skills.slice(0, 5);
+---
+<div class="skills" data-anim>
+  <p class="label">skills</p>
+  <ul>
+    {shown.map((g) => (
+      <li class="group">
+        <span class="gname">{g.title}</span>
+        <span class="gitems">{g.items.join(' · ')}</span>
+      </li>
+    ))}
+  </ul>
+</div>
+<style>
+  .label { color: var(--muted); margin-bottom: 0.75rem; font-size: 0.85rem; }
+  .skills ul { list-style: none; }
+  .group { padding: 0.55rem 0; border-bottom: 1px solid var(--line); }
+  .group:last-child { border-bottom: none; }
+  .gname { display: block; font-weight: 500; }
+  .gitems { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 0.15rem; }
+</style>
