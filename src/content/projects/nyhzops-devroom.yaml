@@ -1,0 +1,11 @@
+title: NyhzOps Devroom
+description: "Tactical ops center for orchestrating Claude Code agents — spawn missions, run multi-phase campaigns and review debriefs, all over your LAN."
+tags:
+  - ai
+  - orchestration
+  - sqlite
+repoUrl: https://github.com/Nyhz/nyhzops-devroom
+deployUrl: ''
+downloadUrl: ''
+coverUrl: /projects/nyhzops-devroom.png
+order: 3

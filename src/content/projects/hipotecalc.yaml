@@ -1,9 +1,0 @@
-title: Hipotecalc
-description: Mortgage simulator with amortization charts.
-tags:
-  - vue
-  - charts
-repoUrl: https://github.com/nyhz
-deployUrl: https://example.com
-coverUrl: ''
-order: 4

@@ -1,0 +1,11 @@
+title: Numo App
+description: "Local-first wealth tracker: multi-broker portfolio, watchlist alerts, Spanish foral (Bizkaia) tax, a FIRE simulator and a Claude-powered advisor. EUR-first."
+tags:
+  - ai
+  - nextjs
+  - sqlite
+repoUrl: https://github.com/Nyhz/numo-app
+deployUrl: ''
+downloadUrl: ''
+coverUrl: /projects/numo-app.png
+order: 4

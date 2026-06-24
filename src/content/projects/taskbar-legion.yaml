@@ -1,0 +1,11 @@
+title: Taskbar Legion
+description: "An ambient idle RPG that auto-battles in a thin strip at the bottom of your screen — gear a legion of three, crack chests for loot and grind endlessly scaling worlds."
+tags:
+  - pixijs
+  - canvas
+  - tauri
+repoUrl: https://github.com/Nyhz/taskbar-legion
+deployUrl: ''
+downloadUrl: https://github.com/Nyhz/taskbar-legion/releases/latest
+coverUrl: /projects/taskbar-legion.png
+order: 2

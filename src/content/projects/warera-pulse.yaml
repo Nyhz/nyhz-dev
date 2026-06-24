@@ -1,10 +1,11 @@
 title: Warera Pulse
-description: Real-time stats dashboard with live websocket feeds.
+description: "Real-time market & conflict terminal for warera.io — live prices, order books, candle charts, battles and hot nations."
 tags:
-  - react
-  - ws
-  - charts
-repoUrl: https://github.com/nyhz
-deployUrl: https://example.com
-coverUrl: ''
-order: 2
+  - nextjs
+  - socketIO
+  - supabase
+repoUrl: https://github.com/Nyhz/warera-pulse
+deployUrl: https://www.warera-pulse.info/
+downloadUrl: ''
+coverUrl: /projects/warera-pulse.png
+order: 1
