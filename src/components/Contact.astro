@@ -8,6 +8,22 @@
   <span class="cue" aria-hidden="true">+</span>
 </button>
 
+<div class="contact-backdrop" data-contact-backdrop hidden></div>
+<div class="contact-card" data-contact-card role="dialog" aria-modal="true" aria-label="contact form" hidden>
+  <button class="contact-card__close" type="button" data-contact-close aria-label="close">✕</button>
+  <p class="contact-card__title" data-field>get in touch</p>
+  <form class="contact-form" data-contact-form novalidate>
+    <label data-field><span>name</span><input name="name" type="text" maxlength="100" autocomplete="name" required /></label>
+    <label data-field><span>email</span><input name="email" type="email" maxlength="200" autocomplete="email" required /></label>
+    <label data-field><span>message</span><textarea name="message" maxlength="5000" rows="4" required></textarea></label>
+    <input class="hp" name="company" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
+    <div class="contact-form__foot" data-field>
+      <span class="contact-status" data-contact-status role="status" aria-live="polite"></span>
+      <button class="contact-send" type="submit">send</button>
+    </div>
+  </form>
+</div>
+
 <style>
   .contact-chip {
     display: inline-flex; align-items: center; gap: 7px;
@@ -27,4 +43,81 @@
     .live { animation: none; }
     .contact-chip, .cue { transition: none; }
   }
+  .contact-backdrop { position: fixed; inset: 0; z-index: 8; background: rgba(11,11,11,0.6);
+    backdrop-filter: blur(3px); opacity: 0; }
+  .contact-card {
+    position: fixed; z-index: 9; top: clamp(22px, 7vh, 64px); right: clamp(22px, 2.6vw, 42px);
+    width: min(92vw, 360px); transform-origin: top right; overflow: hidden;
+    background: var(--bg); border: 1px solid var(--fg); border-radius: 10px;
+    padding: 1.4rem; color: var(--fg);
+  }
+  .contact-card__close { position: absolute; top: 0.7rem; right: 0.8rem; background: transparent;
+    border: 0; color: var(--muted); cursor: pointer; font-size: 0.9rem; }
+  .contact-card__close:hover { color: var(--fg); }
+  .contact-card__title { font: 500 0.66rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 1.1rem; }
+  .contact-form { display: flex; flex-direction: column; gap: 0.85rem; }
+  .contact-form label { display: flex; flex-direction: column; gap: 0.35rem;
+    font: 500 0.6rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .contact-form input, .contact-form textarea {
+    background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 0.55rem 0.65rem;
+    color: var(--fg); font: 400 0.9rem var(--font); resize: vertical; }
+  .contact-form input:focus, .contact-form textarea:focus { outline: none; border-color: var(--fg); }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .contact-form__foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.2rem; }
+  .contact-status { font: 400 0.72rem var(--mono); color: var(--muted); }
+  .contact-status[data-state="error"] { color: #ff6b6b; }
+  .contact-status[data-state="ok"] { color: #3ad29f; }
+  .contact-send { background: var(--fg); color: var(--bg); border: 0; border-radius: 6px;
+    padding: 0.5rem 1.1rem; cursor: pointer; font: 500 0.66rem var(--mono); letter-spacing: 0.16em;
+    text-transform: uppercase; transition: opacity 0.2s; }
+  .contact-send:disabled { opacity: 0.5; cursor: default; }
 </style>
+
+<script>
+  import { gsap } from 'gsap';
+
+  const chip = document.querySelector<HTMLButtonElement>('[data-contact-open]');
+  const card = document.querySelector<HTMLElement>('[data-contact-card]');
+  const backdrop = document.querySelector<HTMLElement>('[data-contact-backdrop]');
+  const closeBtn = document.querySelector<HTMLButtonElement>('[data-contact-close]');
+  const fields = card ? Array.from(card.querySelectorAll<HTMLElement>('[data-field]')) : [];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (chip && card && backdrop && closeBtn) {
+    let open = false;
+
+    const show = () => { card.hidden = false; backdrop.hidden = false; };
+    const hide = () => { card.hidden = true; backdrop.hidden = true; };
+
+    const tl = gsap.timeline({ paused: true, onReverseComplete: hide });
+    if (reduce) {
+      tl.set([card, backdrop], { opacity: 1 }).fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.15 });
+    } else {
+      // The card already has `border: 1px solid var(--fg)`; the clip-path reveal makes that
+      // white border appear to draw in from the top. (Don't tween borderColor — GSAP can't
+      // interpolate a CSS `var()` and would just snap it.)
+      tl.fromTo(backdrop, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' })
+        .fromTo(card,
+          { clipPath: 'inset(0 0 100% 0)', scale: 0.96 },
+          { clipPath: 'inset(0 0 0% 0)', scale: 1, duration: 0.45, ease: 'power3.out' }, '<')
+        .fromTo(fields, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, '-=0.15');
+    }
+
+    const openCard = () => {
+      open = true; chip.setAttribute('aria-expanded', 'true'); show();
+      tl.play();
+      card.querySelector<HTMLElement>('input,textarea')?.focus();
+    };
+    const closeCard = () => {
+      open = false; chip.setAttribute('aria-expanded', 'false');
+      tl.reverse();
+      chip.focus();
+    };
+
+    chip.addEventListener('click', () => (open ? closeCard() : openCard()));
+    closeBtn.addEventListener('click', closeCard);
+    backdrop.addEventListener('click', closeCard);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) closeCard(); });
+  }
+</script>
