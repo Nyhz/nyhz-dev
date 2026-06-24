@@ -59,13 +59,13 @@ const { name, tagline = 'creative developer' } = Astro.props;
   @keyframes lflick { 0%,94%,100% { opacity: 0.55; } 95% { opacity: 0.95; } 97% { opacity: 0.28; } }
 
   .loader__ui { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-  .lmeta { position: absolute; top: 30px; font: 500 0.62rem var(--mono);
+  .lmeta { position: absolute; top: clamp(22px, 2.4vw, 38px); font: 500 0.62rem var(--mono);
     letter-spacing: 0.16em; text-transform: uppercase; color: #76766f; }
-  .lmeta.a { left: 34px; color: #f1efe9; }
-  .lmeta.b { right: 34px; }
+  .lmeta.a { left: clamp(26px, 2.6vw, 42px); color: #f1efe9; }
+  .lmeta.b { right: clamp(26px, 2.6vw, 42px); }
   .loader__status { position: absolute; left: 0; right: 0; top: 72%; text-align: center;
     font: 500 0.72rem var(--mono); letter-spacing: 0.34em; color: #76766f; }
-  .loader__counter { position: absolute; left: 32px; bottom: 26px;
+  .loader__counter { position: absolute; left: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
     font: 700 clamp(2.4rem, 8vw, 5rem) var(--mono); font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em; line-height: 1; }
   .loader__counter i { font-style: normal; font-size: 0.36em; color: #76766f; margin-left: 0.3em; }
