@@ -1,12 +1,14 @@
 ---
 const { skills } = Astro.props;
 const shown = skills.slice(0, 5);
+const count = String(shown.length).padStart(2, '0');
 ---
 <div class="skills" data-anim>
-  <p class="sec-label sec-label--r">— skills</p>
+  <p class="sec-label sec-label--r"><span class="sec-count">[{count}]</span> skills —</p>
   <ul>
     {shown.map((g) => (
       <li class="skl">
+        <span class="skl__bar"></span>
         <span class="skl__name">{g.title}</span>
         <span class="skl__items">{g.items.join(' · ')}</span>
       </li>
@@ -17,14 +19,22 @@ const shown = skills.slice(0, 5);
 <style>
   .sec-label--r { text-align: right; }
   .skills ul { list-style: none; }
-  .skl { display: flex; flex-direction: column; align-items: flex-end; text-align: right;
-    gap: 0.3rem; padding: 0.85rem 0; border-top: 1px solid var(--line); }
+  .skl { position: relative; display: flex; flex-direction: column; align-items: flex-end;
+    text-align: right; gap: 0.4rem; padding: 1.05rem 0; border-top: 1px solid var(--line);
+    transition: padding-right 0.35s cubic-bezier(.2,.7,.2,1); }
   .skl:last-child { border-bottom: 1px solid var(--line); }
-  .skl__name { font-size: 1.05rem; font-weight: 500; }
-  .skl__items { font: 0.72rem var(--mono); color: var(--muted); letter-spacing: 0.02em; }
+  .skl:hover { padding-right: 1.1rem; }
+  .skl__bar { position: absolute; right: 0; top: 0; bottom: 0; width: 2px; background: var(--fg);
+    transform: scaleY(0); transform-origin: top; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
+  .skl:hover .skl__bar { transform: scaleY(1); }
+  .skl__name { font-size: clamp(1.25rem, 2.2vw, 1.6rem); font-weight: 500; letter-spacing: -0.01em; }
+  .skl__items { font: 0.74rem var(--mono); color: var(--muted); letter-spacing: 0.02em; }
 
   @media (max-width: 720px) {
     .sec-label--r { text-align: left; }
-    .skl { align-items: flex-start; text-align: left; }
+    .skl { align-items: flex-start; text-align: left; padding-right: 0; }
+    .skl:hover { padding-right: 0; padding-left: 1.1rem; }
+    .skl__bar { right: auto; left: 0; }
   }
+  @media (prefers-reduced-motion: reduce) { .skl, .skl__bar { transition: none; } }
 </style>

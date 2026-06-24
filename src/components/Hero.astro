@@ -1,5 +1,12 @@
 ---
 const { name, role, location, socials = [] } = Astro.props;
+
+const ICONS: Record<string, string> = {
+  github: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.8c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>',
+  linkedin: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.8 0 0 .78 0 1.74v20.51C0 23.22.8 24 1.77 24h20.45c.98 0 1.78-.78 1.78-1.75V1.74C24 .78 23.2 0 22.22 0z"/></svg>',
+  default: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>',
+};
+const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 ---
 <div class="hero-block" data-anim>
   <p class="eyebrow">{role}{location ? ` — ${location}` : ''}</p>
@@ -8,9 +15,9 @@ const { name, role, location, socials = [] } = Astro.props;
   </h1>
   {socials.length > 0 && (
     <nav class="hero-socials">
-      {socials.map((s: { label: string; url: string }, i: number) => (
-        <a href={s.url} target="_blank" rel="noopener noreferrer">
-          <span class="sx">{String(i + 1).padStart(2, '0')}</span>
+      {socials.map((s: { label: string; url: string }) => (
+        <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
+          <span class="ico" set:html={icon(s.label)} />
           <span class="sl">{s.label}</span>
           <span class="ar">↗</span>
         </a>
@@ -20,29 +27,49 @@ const { name, role, location, socials = [] } = Astro.props;
 </div>
 
 <style>
-  .hero-block { display: flex; flex-direction: column; gap: 1.5rem; }
+  .hero-block { display: flex; flex-direction: column; gap: 1.6rem; }
   .hero-name {
-    font-size: clamp(3rem, 9vw, 6.5rem); font-weight: 600; letter-spacing: -0.045em;
-    line-height: 0.88; display: flex; flex-wrap: wrap;
+    font-size: clamp(3.2rem, 9.5vw, 7rem); font-weight: 600; letter-spacing: -0.045em;
+    line-height: 0.88; display: flex; flex-wrap: wrap; width: max-content; max-width: 100%;
   }
   .hc { display: inline-block; transition: transform 0.3s cubic-bezier(.2,.7,.2,1); }
   .hero-name:hover .hc { transform: translateY(-0.06em); }
   .hero-name:hover .hc:nth-child(2n) { transform: translateY(0.06em); }
+  .hero-name.glitching { animation: heroGlitch 0.4s steps(2) 1; }
+  @keyframes heroGlitch {
+    0% { text-shadow: none; transform: translate(0,0); clip-path: inset(0 0 0 0); }
+    20% { text-shadow: -3px 0 #ff2e63, 3px 0 #2ee6ff; transform: translate(3px,-1px) skewX(-3deg); clip-path: inset(0 0 42% 0); }
+    40% { text-shadow: 3px 0 #ff2e63, -3px 0 #2ee6ff; transform: translate(-3px,1px); clip-path: inset(45% 0 0 0); }
+    60% { text-shadow: -2px 0 #ff2e63, 2px 0 #2ee6ff; transform: translate(2px,0); clip-path: inset(0 0 12% 0); }
+    80% { text-shadow: 2px 0 #ff2e63, -2px 0 #2ee6ff; transform: translate(-1px,0); }
+    100% { text-shadow: none; transform: translate(0,0); clip-path: inset(0 0 0 0); }
+  }
 
-  .hero-socials { display: flex; gap: 2rem; margin-top: 0.6rem; }
-  .hero-socials a { position: relative; display: inline-flex; align-items: baseline; gap: 0.45rem;
-    font: 500 0.8rem var(--mono); letter-spacing: 0.02em; color: var(--muted); padding-bottom: 4px;
-    transition: color 0.25s; }
-  .hero-socials .sx { font-size: 0.7em; color: var(--muted); }
-  .hero-socials .ar { font-size: 0.85em; transition: transform 0.25s; }
-  .hero-socials a::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 1px;
-    background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; }
-  .hero-socials a:hover { color: var(--fg); }
-  .hero-socials a:hover .ar { transform: translate(3px, -3px); }
-  .hero-socials a:hover::after { transform: scaleX(1); }
+  .hero-socials { display: flex; gap: 1.6rem; margin-top: 0.8rem; flex-wrap: wrap; }
+  .hero-socials a { position: relative; display: inline-flex; align-items: center; gap: 0.6rem;
+    font-size: 1rem; font-weight: 500; color: var(--muted); padding: 0.55rem 0.95rem 0.55rem 0.8rem;
+    border: 1px solid var(--line); border-radius: 999px; transition: color 0.25s, border-color 0.25s, transform 0.25s; }
+  .hero-socials .ico { width: 20px; height: 20px; display: inline-flex; }
+  .hero-socials .ico svg { width: 100%; height: 100%; }
+  .hero-socials .ar { font-size: 0.85em; opacity: 0.6; transition: transform 0.25s, opacity 0.25s; }
+  .hero-socials a:hover { color: var(--fg); border-color: var(--fg); transform: translateY(-2px); }
+  .hero-socials a:hover .ar { transform: translate(3px, -3px); opacity: 1; }
 
   @media (prefers-reduced-motion: reduce) {
-    .hc, .hero-socials a, .hero-socials .ar, .hero-socials a::after { transition: none; }
+    .hc, .hero-socials a, .hero-socials .ar { transition: none; }
     .hero-name:hover .hc, .hero-name:hover .hc:nth-child(2n) { transform: none; }
+    .hero-name.glitching { animation: none; }
   }
 </style>
+
+<script>
+  const el = document.querySelector('.hero-name');
+  if (el && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const loop = () => {
+      el.classList.add('glitching');
+      setTimeout(() => el.classList.remove('glitching'), 420);
+      setTimeout(loop, 3000 + Math.random() * 3000);
+    };
+    setTimeout(loop, 3000 + Math.random() * 3000);
+  }
+</script>
