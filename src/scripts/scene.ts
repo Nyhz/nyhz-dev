@@ -6,7 +6,7 @@ const CAM_Z = 5.5;
 // Cursor influence: RADIUS is the reach around the pointer (in normalized-device
 // units); PUSH is the max nudge in world units — kept small so particles react
 // subtly rather than evacuating a hole.
-const RADIUS = 0.26;
+const RADIUS = 0.42;
 const PUSH = 0.11;
 
 export function createScene(canvas: HTMLCanvasElement) {
