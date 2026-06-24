@@ -4,9 +4,14 @@ html { background: var(--bg); color: var(--fg); font-family: var(--font); }
 body { overflow: hidden; }
 a { color: inherit; text-decoration: none; }
 
-/* Reactive WebGL dot-field, clipped to inside the page frame. */
-.field-canvas { position: fixed; inset: 0; z-index: 0; display: block;
-  clip-path: inset(clamp(14px, 1.6vw, 26px)); }
+/* WebGL grain/vignette, clipped to inside the page frame. The canvas covers the
+   full viewport (so the grain + vignette map 1:1 to it) and a wrapper clips it
+   with overflow:hidden — clip-path on a fixed WebGL canvas bled past the frame
+   on mobile (compositor ignores it). */
+.field-clip { position: fixed; inset: clamp(14px, 1.6vw, 26px); z-index: 0;
+  overflow: hidden; pointer-events: none; }
+.field-canvas { position: absolute; display: block; width: 100vw; height: 100vh;
+  top: calc(-1 * clamp(14px, 1.6vw, 26px)); left: calc(-1 * clamp(14px, 1.6vw, 26px)); }
 
 /* Flexible spacers center the content; on expand GSAP collapses the header
    (height + opacity) and grows the list to fill — the list rises into the
