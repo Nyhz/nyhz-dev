@@ -9,11 +9,3 @@
   --font: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
-:root[data-theme='light'] {
-  --bg: #ece9e2;
-  --fg: #161513;
-  --dim: #44433e;
-  --muted: #6b6b66;
-  --line: #d3cfc6;
-  --particle: #161513;
-}

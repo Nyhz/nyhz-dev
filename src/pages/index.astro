@@ -5,7 +5,6 @@ import Frame from '../components/Frame.astro';
 import Hero from '../components/Hero.astro';
 import Projects from '../components/Projects.astro';
 import Preview from '../components/Preview.astro';
-import ThemeToggle from '../components/ThemeToggle.astro';
 import Loader from '../components/Loader.astro';
 import { getContent } from '../scripts/content';
 const { profile, projects } = await getContent();
@@ -13,7 +12,6 @@ const { profile, projects } = await getContent();
 <Base title={`${profile.name} — ${profile.role}`}>
   <Field slot="bg" />
   <Frame slot="frame" />
-  <ThemeToggle slot="corner" />
   <Loader name={profile.name} tagline={profile.role} slot="overlay" />
 
   <div class="spacer" data-spacer-top></div>

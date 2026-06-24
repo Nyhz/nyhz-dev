@@ -9,22 +9,11 @@ const { title = 'nyhz' } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <script is:inline>
-      (function () {
-        try {
-          var s = localStorage.getItem('nyhz-theme');
-          var t = (s === 'dark' || s === 'light') ? s
-            : (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-          document.documentElement.dataset.theme = t;
-        } catch (e) { document.documentElement.dataset.theme = 'dark'; }
-      })();
-    </script>
   </head>
   <body>
     <slot name="bg" />
     <slot name="frame" />
     <main class="page"><slot /></main>
-    <slot name="corner" />
     <slot name="overlay" />
   </body>
 </html>
