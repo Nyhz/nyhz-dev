@@ -7,19 +7,18 @@
   </div>
 
   <div class="pv__frame" data-frame>
-    <div class="pv__media">
-      <span class="pv__idle" data-idle>hover a project <span aria-hidden="true">↗</span></span>
-      <div class="pv__shot" data-shot>
+    <div class="pv__card" data-card>
+      <div class="pv__media">
         <img class="pv__img" data-img alt="" hidden />
         <div class="pv__ph" data-ph hidden><span data-ph-title></span></div>
       </div>
-    </div>
-    <div class="pv__info" data-info>
-      <span class="pv__tags" data-tags></span>
-      <nav class="pv__links">
-        <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>repo <span class="ar" aria-hidden="true">↗</span></a>
-        <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
-      </nav>
+      <div class="pv__info">
+        <span class="pv__tags" data-tags></span>
+        <nav class="pv__links">
+          <a class="pv__link" data-repo target="_blank" rel="noopener noreferrer" hidden>repo <span class="ar" aria-hidden="true">↗</span></a>
+          <a class="pv__link" data-live target="_blank" rel="noopener noreferrer" hidden>live <span class="ar" aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
     </div>
   </div>
 </div>
@@ -32,26 +31,23 @@
     transition: color 0.2s; }
   .pv__back:hover { color: var(--fg); }
 
+  /* the card is hidden until a project is hovered; the frame reserves its space
+     (media aspect + info min-height) so nothing shifts when it appears */
   .pv__frame { width: 100%; }
+  .pv__card { opacity: 0; will-change: transform, opacity; }
+
   .pv__media { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden;
     border: 1px solid var(--line); }
-  .pv__idle { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font: 500 0.72rem var(--mono); letter-spacing: 0.26em; text-transform: uppercase; color: var(--muted);
-    gap: 0.5rem; transition: opacity 0.4s ease; }
-  .pv__frame.has-sel .pv__idle { opacity: 0; }
-
-  .pv__shot { position: absolute; inset: 0; opacity: 0; }
-  .pv__frame.has-sel .pv__shot { opacity: 1; }
   .pv__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .pv__ph { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     background: repeating-linear-gradient(135deg, var(--line) 0 1px, transparent 1px 12px); }
   .pv__ph span { font-size: clamp(1.1rem, 2.4vw, 1.6rem); font-weight: 600; letter-spacing: -0.02em;
     color: var(--fg); background: var(--bg); padding: 0.2rem 0.7rem; }
 
-  .pv__info { margin-top: 0.9rem; display: flex; flex-direction: column; align-items: flex-end;
-    text-align: right; gap: 0.7rem; opacity: 0; }
-  .pv__frame.has-sel .pv__info { opacity: 1; }
-  .pv__tags { font: 0.74rem var(--mono); color: var(--muted); letter-spacing: 0.02em; }
+  .pv__info { margin-top: 0.9rem; min-height: 3rem; display: flex; flex-direction: column;
+    align-items: flex-end; text-align: right; gap: 0.7rem; }
+  .pv__tags { font: 0.74rem var(--mono); color: var(--muted); letter-spacing: 0.02em;
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pv__links { display: flex; gap: 1.4rem; }
   .pv__link { position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
     font: 0.8rem var(--mono); color: var(--muted); padding-bottom: 4px; transition: color 0.25s; }
@@ -63,53 +59,61 @@
   .pv__link:hover::after { transform: scaleX(1); }
   .pv__link[hidden] { display: none; }
 
-  /* reveal: fade in while sliding to the right */
-  .pv-in { animation: pvIn 0.5s cubic-bezier(.2,.7,.2,1); }
-  @keyframes pvIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-
   @media (max-width: 720px) {
     .pv__back { display: inline-flex; gap: 0.4rem; }
     .pv__info { align-items: flex-start; text-align: left; }
     .sec-label--r { text-align: left; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .pv__idle, .pv__shot, .pv__info, .pv__link, .pv__link .ar { transition: none; }
-    .pv-in { animation: none; }
+    .pv__link, .pv__link .ar { transition: none; }
   }
 </style>
 
 <script>
-  // Scope all lookups to the preview — project rows also carry data-tags /
-  // data-repo / data-live, so a bare querySelector would hit a row instead.
+  import { gsap } from 'gsap';
+
   const pv = document.querySelector('.preview');
-  const frame = pv?.querySelector('[data-frame]') as HTMLElement | null;
+  const card = pv?.querySelector('[data-card]') as HTMLElement | null;
   const img = pv?.querySelector('[data-img]') as HTMLImageElement | null;
   const ph = pv?.querySelector('[data-ph]') as HTMLElement | null;
   const phTitle = pv?.querySelector('[data-ph-title]') as HTMLElement | null;
   const tags = pv?.querySelector('[data-tags]') as HTMLElement | null;
   const repo = pv?.querySelector('[data-repo]') as HTMLAnchorElement | null;
   const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
-  const shot = pv?.querySelector('[data-shot]') as HTMLElement | null;
-  const info = pv?.querySelector('[data-info]') as HTMLElement | null;
   const track = document.querySelector('[data-track]') as HTMLElement | null;
   const back = document.querySelector('[data-back]');
   const rows = Array.from(document.querySelectorAll<HTMLElement>('.prj[data-proj]'));
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = () => matchMedia('(max-width: 720px)').matches;
 
-  function reanimate(el: HTMLElement | null) {
-    if (!el) return;
-    el.classList.remove('pv-in'); void el.offsetWidth; el.classList.add('pv-in');
-  }
-
-  function fill(d: DOMStringMap) {
+  function setContent(d: DOMStringMap) {
     const cover = d.cover || '', title = d.title || '';
     if (cover && img && ph) { img.src = cover; img.alt = title; img.hidden = false; ph.hidden = true; }
     else if (img && ph) { img.hidden = true; ph.hidden = false; if (phTitle) phTitle.textContent = title; }
     if (tags) tags.textContent = d.tags || '';
     if (repo) { if (d.repo) { repo.href = d.repo; repo.hidden = false; } else repo.hidden = true; }
     if (live) { if (d.live) { live.href = d.live; live.hidden = false; } else live.hidden = true; }
-    frame?.classList.add('has-sel');
-    reanimate(shot); reanimate(info);
+  }
+
+  let current: string | null = null;
+  let tl: gsap.core.Timeline | null = null;
+
+  function show(slug: string, d: DOMStringMap) {
+    if (!card || slug === current) return;
+    const first = current === null;
+    current = slug;
+    tl?.kill();
+    if (reduce) { setContent(d); gsap.set(card, { opacity: 1, x: 0 }); return; }
+    tl = gsap.timeline();
+    if (first) {
+      setContent(d);
+      tl.fromTo(card, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out' });
+    } else {
+      // sequenced: fade out laterally → swap → fade in laterally
+      tl.to(card, { opacity: 0, x: 30, duration: 0.28, ease: 'power2.in' });
+      tl.add(() => setContent(d));
+      tl.fromTo(card, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.42, ease: 'power3.out' });
+    }
   }
 
   function setHeight() {
@@ -121,10 +125,11 @@
   }
 
   rows.forEach((r) => {
-    r.addEventListener('mouseenter', () => { if (!isMobile()) fill(r.dataset); });
-    r.addEventListener('focusin', () => { if (!isMobile()) fill(r.dataset); });
+    const slug = r.dataset.proj!;
+    r.addEventListener('mouseenter', () => { if (!isMobile()) show(slug, r.dataset); });
+    r.addEventListener('focusin', () => { if (!isMobile()) show(slug, r.dataset); });
     r.querySelector('a')?.addEventListener('click', (e) => {
-      if (isMobile()) { e.preventDefault(); fill(r.dataset); track?.classList.add('is-preview'); setHeight(); }
+      if (isMobile()) { e.preventDefault(); show(slug, r.dataset); track?.classList.add('is-preview'); setHeight(); }
     });
   });
   back?.addEventListener('click', () => { track?.classList.remove('is-preview'); setHeight(); });
