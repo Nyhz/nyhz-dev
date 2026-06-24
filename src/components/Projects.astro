@@ -19,7 +19,6 @@ const canExpand = shown.length > HIGHLIGHT;
             <span class="prj__head">
               <span class="prj__idx">{String(i + 1).padStart(2, '0')}</span>
               <span class="prj__name">{p.title}</span>
-              <span class="prj__ar">↗</span>
             </span>
             {p.description && <span class="prj__desc">{p.description}</span>}
           </span>
@@ -55,9 +54,6 @@ const canExpand = shown.length > HIGHLIGHT;
   .prj__idx { font: 0.78rem var(--mono); color: var(--muted); transition: color 0.25s; }
   .prj__trigger:hover .prj__idx { color: var(--fg); }
   .prj__name { flex: 1; font-size: clamp(1.2rem, 2.1vw, 1.5rem); font-weight: 500; letter-spacing: -0.01em; }
-  .prj__ar { font-size: 1.05rem; color: var(--muted); opacity: 0; transform: translate(-6px, 6px);
-    transition: all 0.3s ease; }
-  .prj__trigger:hover .prj__ar, .prj__trigger:focus-visible .prj__ar { opacity: 1; transform: translate(0, 0); color: var(--fg); }
 
   .prj__desc { display: block; margin-top: 0.3rem; padding-left: calc(0.78rem + 0.9rem);
     font-size: 0.82rem; color: var(--dim);
@@ -77,11 +73,10 @@ const canExpand = shown.length > HIGHLIGHT;
     .prj__trigger:hover .prj__inner, .prj__trigger:focus-visible .prj__inner,
     .prj__trigger:active .prj__inner { transform: none; }
     .prj__trigger:hover .prj__bar, .prj__trigger:focus-visible .prj__bar { transform: scaleY(0); }
-    .prj__trigger:hover .prj__ar, .prj__trigger:focus-visible .prj__ar { opacity: 0; }
     .prj__trigger:hover .prj__idx { color: var(--muted); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .prj__inner, .prj__ar, .prj__bar, .prj__idx, .prj-more, .prj-more__ar { transition: none; }
+    .prj__inner, .prj__bar, .prj__idx, .prj-more, .prj-more__ar { transition: none; }
   }
 </style>
 
