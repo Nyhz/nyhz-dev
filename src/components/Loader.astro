@@ -1,0 +1,37 @@
+---
+const { name } = Astro.props;
+---
+<div class="loader" data-loader>
+  <span class="loader-word">{name}</span>
+  <span class="loader-count" data-count>0</span>
+</div>
+<style>
+  .loader { position: fixed; inset: 0; z-index: 100; background: var(--bg); color: var(--fg);
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: var(--space); will-change: transform; }
+  .loader-count { font-variant-numeric: tabular-nums; color: var(--muted); }
+  [data-anim] { opacity: 0; transform: translateY(12px); }
+</style>
+<script>
+  import { gsap } from 'gsap';
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const loader = document.querySelector('[data-loader]') as HTMLElement;
+  const count = document.querySelector('[data-count]') as HTMLElement;
+  const anims = gsap.utils.toArray('[data-anim]') as HTMLElement[];
+
+  function reveal() {
+    gsap.to(anims, { opacity: 1, y: 0, duration: 0.6, stagger: 0.08, ease: 'power2.out' });
+    window.dispatchEvent(new Event('loaderdone'));
+  }
+
+  if (reduce) {
+    loader.style.display = 'none';
+    reveal();
+  } else {
+    const tl = gsap.timeline();
+    tl.to({ v: 0 }, { v: 100, duration: 1.1, ease: 'power1.inOut',
+      onUpdate() { count.textContent = String(Math.round(this.targets()[0].v)); } });
+    tl.to(loader, { yPercent: -100, duration: 0.8, ease: 'power3.inOut' }, '+=0.1');
+    tl.add(reveal, '-=0.4');
+  }
+</script>

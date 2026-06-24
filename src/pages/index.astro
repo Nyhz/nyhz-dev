@@ -5,10 +5,12 @@ import Projects from '../components/Projects.astro';
 import Socials from '../components/Socials.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Scene from '../components/Scene.astro';
+import Loader from '../components/Loader.astro';
 import { getContent } from '../scripts/content';
 const { profile, projects } = await getContent();
 ---
 <Base title={`${profile.name} — ${profile.role}`}>
+  <Loader name={profile.name} slot="overlay" />
   <div slot="topbar" class="topbar">
     <span class="wordmark">{profile.name}</span>
     <div class="topbar-right">
