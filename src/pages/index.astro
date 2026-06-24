@@ -16,6 +16,7 @@ const { profile, projects } = await getContent();
   <ThemeToggle slot="corner" />
   <Loader name={profile.name} tagline={profile.role} slot="overlay" />
 
+  <div class="spacer" data-spacer-top></div>
   <section class="hero">
     <Hero
       name={profile.name}
@@ -30,4 +31,5 @@ const { profile, projects } = await getContent();
       <Preview projects={projects} />
     </div>
   </section>
+  <div class="spacer" data-spacer-bottom></div>
 </Base>

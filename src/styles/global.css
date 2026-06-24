@@ -9,25 +9,21 @@ a { color: inherit; text-decoration: none; }
 .field-canvas { position: fixed; inset: 0; z-index: 0; display: block;
   clip-path: inset(clamp(14px, 1.6vw, 26px)); }
 
-/* Narrow content column. The show-all transition is driven by animatable CSS
-   props (gap / flex-grow / font-size) rather than a JS layout library, so the
-   browser reflows every frame and everything moves smoothly with no snap. */
+/* Flexible spacers center the content; on expand GSAP collapses the header
+   (height + opacity) and grows the list to fill — the list rises into the
+   header's place. Gap lives as the hero's padding-bottom so it collapses too. */
 .page {
   position: relative; z-index: 1;
   width: 100%; max-width: 900px; margin: 0 auto; height: 100vh;
   padding: clamp(3rem, 8vh, 6rem) clamp(1.5rem, 4vw, 3rem) clamp(3rem, 7vh, 5rem);
-  display: flex; flex-direction: column; justify-content: center;
-  gap: clamp(4rem, 16vh, 11rem);
-  transition: gap 0.6s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column; justify-content: flex-start;
 }
+.spacer { flex: 1 1 0; min-height: 0; }
 
-.hero { display: flex; flex-direction: column; gap: 1.2rem; transition: gap 0.5s ease; }
-.eyebrow { font: 500 0.72rem var(--mono); letter-spacing: 0.28em; text-transform: uppercase;
-  color: var(--muted); overflow: hidden; max-height: 2rem;
-  transition: opacity 0.4s ease, max-height 0.5s ease, margin 0.5s ease; }
+.hero { display: flex; flex-direction: column; gap: 1.2rem; overflow: hidden;
+  padding-bottom: clamp(4rem, 16vh, 11rem); }
+.eyebrow { font: 500 0.72rem var(--mono); letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); }
 
-/* .lower / .hero flex-grow is animated by GSAP (CSS doesn't reliably transition
-   flex-grow), so the header rises smoothly instead of snapping. */
 .lower__track { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 4rem); align-items: start; }
 
 .sec-label { font: 500 0.66rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase;
@@ -37,13 +33,8 @@ a { color: inherit; text-decoration: none; }
 .prj--extra { display: none; }
 .page.projects-open .prj--extra { display: block; }
 
-/* ---- expanded (desktop): keep 2 columns, compact header, scroll left list ---- */
+/* ---- expanded (desktop): 2 columns, list fills + scrolls, header collapsed (GSAP) ---- */
 @media (min-width: 721px) {
-  .page.projects-open { gap: clamp(1.5rem, 4vh, 2.5rem); }
-  .page.projects-open .hero { gap: 0.6rem; }
-  .page.projects-open .hero-name { font-size: clamp(1.7rem, 4vw, 2.6rem); }
-  .page.projects-open .eyebrow,
-  .page.projects-open .hero-socials { opacity: 0; max-height: 0; margin: 0; pointer-events: none; }
   .page.projects-open .lower { min-height: 0; }
   .page.projects-open .lower__track { height: 100%; min-height: 0; align-items: stretch; }
   .page.projects-open .preview { align-self: start; }
@@ -55,10 +46,10 @@ a { color: inherit; text-decoration: none; }
 
 /* ---- mobile ---- */
 @media (max-width: 720px) {
+  .spacer { display: none; }
   /* default: header centered (biased up), 3 projects pinned to the bottom */
-  .page { height: 100vh; justify-content: flex-start; gap: 0;
-    padding: clamp(2.5rem, 8vh, 4.5rem) clamp(1.25rem, 5vw, 2rem) clamp(2rem, 5vh, 3rem); }
-  .hero { flex: 1 1 auto; justify-content: center; transition: gap 0.5s ease; }
+  .page { height: 100vh; padding: clamp(2.5rem, 8vh, 4.5rem) clamp(1.25rem, 5vw, 2rem) clamp(2rem, 5vh, 3rem); }
+  .hero { flex: 1 1 auto; justify-content: center; padding-bottom: 0; }
   .lower { flex: 0 0 auto; overflow: hidden; }
 
   /* preview slider */
@@ -67,11 +58,7 @@ a { color: inherit; text-decoration: none; }
   .lower__track > * { flex: 0 0 50%; width: 50%; align-self: flex-start; }
   .lower__track.is-preview { transform: translateX(-50%); }
 
-  /* expanded: compact header up, full-width scrollable list */
-  .page.projects-open .hero { gap: 0.5rem; }
-  .page.projects-open .hero-name { font-size: clamp(1.7rem, 9vw, 2.4rem); }
-  .page.projects-open .eyebrow,
-  .page.projects-open .hero-socials { opacity: 0; max-height: 0; margin: 0; pointer-events: none; }
+  /* expanded: header collapsed (GSAP), full-width scrollable list */
   .page.projects-open .preview { display: none; }
   .page.projects-open .lower { min-height: 0; }
   .page.projects-open .lower__track { display: block; width: 100%; height: 100%; transform: none; }
@@ -83,5 +70,5 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html, .page, .hero, .eyebrow, .lower, .hero-name, .hero-socials { transition: none; }
+  html { transition: none; }
 }

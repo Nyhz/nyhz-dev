@@ -101,6 +101,17 @@
   let current: string | null = null;
   let tl: gsap.core.Timeline | null = null;
 
+  // appear: come from the left and overshoot past the final spot, then settle
+  function enterIn(t: gsap.core.Timeline) {
+    t.fromTo(card, { opacity: 0, x: -40 },
+      { opacity: 1, x: 0, duration: 0.6, ease: 'back.out(2.4)', immediateRender: false });
+  }
+  // leave: wind up to the right, then dash out to the left
+  function leaveOut(t: gsap.core.Timeline, after?: () => void) {
+    t.to(card, { x: 26, duration: 0.18, ease: 'power2.out' });
+    t.to(card, { x: -170, opacity: 0, duration: 0.38, ease: 'power3.in', onComplete: after });
+  }
+
   function show(slug: string, d: DOMStringMap) {
     if (!card || slug === current) return;
     const first = current === null;
@@ -111,29 +122,40 @@
     tl = gsap.timeline();
     if (first) {
       setContent(d);
-      tl.fromTo(card, { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.5, ease: 'power3.out' });
+      gsap.set(card, { opacity: 0, x: -40 });
+      enterIn(tl);
     } else {
-      // sequenced: current slides OUT to the left (swap only AFTER it finishes),
-      // then the next slides IN from the left moving right.
-      tl.to(card, {
-        opacity: 0, x: -40, duration: 0.32, ease: 'power2.out',
-        onComplete: () => setContent(d),
-      });
-      // immediateRender:false — otherwise GSAP applies the "from" (opacity:0)
-      // when the timeline is built, hiding the card before the exit can run.
-      tl.fromTo(card,
-        { opacity: 0, x: -40 },
-        { opacity: 1, x: 0, duration: 0.46, ease: 'power3.out', immediateRender: false });
+      leaveOut(tl, () => setContent(d));   // wind-up right + dash left, swap on complete
+      enterIn(tl);                          // overshoot in
     }
+  }
+
+  // auto-close: hide the preview 3s after the cursor leaves the projects + preview
+  let hideTimer = 0;
+  function cancelHide() { clearTimeout(hideTimer); }
+  function scheduleHide() {
+    if (current === null || isMobile() || reduce) return;
+    clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(hide, 3000);
+  }
+  function hide() {
+    if (!card || current === null) return;
+    current = null;
+    tl?.kill();
+    tl = gsap.timeline();
+    leaveOut(tl);
   }
 
   rows.forEach((r) => {
     const slug = r.dataset.proj!;
-    r.addEventListener('mouseenter', () => { if (!isMobile()) show(slug, r.dataset); });
-    r.addEventListener('focusin', () => { if (!isMobile()) show(slug, r.dataset); });
+    r.addEventListener('mouseenter', () => { if (!isMobile()) { cancelHide(); show(slug, r.dataset); } });
+    r.addEventListener('mouseleave', () => { if (!isMobile()) scheduleHide(); });
+    r.addEventListener('focusin', () => { if (!isMobile()) { cancelHide(); show(slug, r.dataset); } });
     r.querySelector('.prj__trigger')?.addEventListener('click', () => {
       if (isMobile()) { show(slug, r.dataset); track?.classList.add('is-preview'); }
     });
   });
+  pv?.addEventListener('mouseenter', () => { if (!isMobile()) cancelHide(); });
+  pv?.addEventListener('mouseleave', () => { if (!isMobile()) scheduleHide(); });
   back?.addEventListener('click', () => { track?.classList.remove('is-preview'); });
 </script>
