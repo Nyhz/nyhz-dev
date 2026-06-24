@@ -1,0 +1,49 @@
+---
+const { coords = '37.98°N / 23.72°E' } = Astro.props;
+---
+<div class="frame" aria-hidden="true">
+  <div class="frame__border">
+    <span class="tick tl"></span><span class="tick tr"></span>
+    <span class="tick bl"></span><span class="tick br"></span>
+  </div>
+  <span class="meta a">nyhz®</span>
+  <span class="meta c"><span data-clock>--:--:--</span> — index</span>
+  <span class="meta d"><i class="live"></i>available for work</span>
+</div>
+
+<style>
+  .frame { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+  .frame__border { position: absolute; inset: clamp(14px, 1.6vw, 26px); border: 1px solid var(--line); }
+  .tick { position: absolute; width: 9px; height: 9px; border: 1px solid var(--fg); }
+  .tick.tl { left: -1px; top: -1px; border-right: 0; border-bottom: 0; }
+  .tick.tr { right: -1px; top: -1px; border-left: 0; border-bottom: 0; }
+  .tick.bl { left: -1px; bottom: -1px; border-right: 0; border-top: 0; }
+  .tick.br { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+
+  .meta { position: absolute; font: 500 0.62rem var(--mono); letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--muted); }
+  .meta.a { left: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px); color: var(--fg); }
+  .meta.b { right: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px); font-variant-numeric: tabular-nums; }
+  .meta.c { left: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
+    font-variant-numeric: tabular-nums; }
+  .meta.d { right: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
+    display: flex; align-items: center; gap: 7px; }
+  .live { width: 6px; height: 6px; border-radius: 50%; background: #3ad29f; box-shadow: 0 0 8px #3ad29f;
+    animation: live 1.6s ease-in-out infinite; }
+  @keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  @media (max-width: 520px) { .meta.c, .meta.d { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .live { animation: none; } }
+</style>
+
+<script>
+  const el = document.querySelector('[data-clock]');
+  if (el) {
+    const tick = () => {
+      const d = new Date();
+      const p = (n: number) => String(n).padStart(2, '0');
+      el.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    };
+    tick();
+    setInterval(tick, 1000);
+  }
+</script>

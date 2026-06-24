@@ -1,25 +1,23 @@
 ---
 const { name, tagline = 'creative developer' } = Astro.props;
-const chars = [...name];
-const PANELS = 8;
 ---
-<div class="loader" data-loader data-tagline={tagline}>
-  <div class="loader__panels" aria-hidden="true">
-    {Array.from({ length: PANELS }).map(() => <span class="panel"></span>)}
+<div class="loader" data-loader data-name={name} data-tagline={tagline}>
+  <canvas class="loader__gl" aria-hidden="true"></canvas>
+  <h1 class="loader__fallback" data-fallback data-text={name} aria-label={name}>{name}</h1>
+
+  <div class="loader__frame" aria-hidden="true">
+    <span class="ltk tl"></span><span class="ltk tr"></span>
+    <span class="ltk bl"></span><span class="ltk br"></span>
   </div>
   <div class="loader__scan" aria-hidden="true"></div>
 
-  <div class="loader__content">
-    <h1 class="loader__name" aria-label={name}>
-      {chars.map((ch) => (
-        <span class="char"><span class="char-inner">{ch === ' ' ? ' ' : ch}</span></span>
-      ))}
-    </h1>
+  <div class="loader__ui">
+    <span class="lmeta a">nyhz® / booting</span>
+    <span class="lmeta b">v2 — 2026</span>
     <p class="loader__status"><span data-status></span></p>
+    <div class="loader__counter"><span data-count>000</span><i>%</i></div>
+    <div class="loader__bar-wrap"><span class="loader__bar" data-bar></span></div>
   </div>
-
-  <div class="loader__counter"><span data-count>000</span><i>%</i></div>
-  <div class="loader__bar-wrap"><span class="loader__bar" data-bar></span></div>
 </div>
 
 <noscript><style>.loader { display: none !important; }</style></noscript>
@@ -27,102 +25,97 @@ const PANELS = 8;
 <style>
   .loader {
     position: fixed; inset: 0; z-index: 100; overflow: hidden;
+    background: #0a0a0a; color: #f1efe9;
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
-    color: var(--fg);
   }
-  .loader__panels { position: absolute; inset: 0; display: flex; z-index: 1; }
-  .panel { flex: 1 1 0; background: var(--bg); will-change: transform; }
+  .loader__gl { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; }
 
-  /* Scanlines + faint vignette for a CRT-ish texture. */
-  .loader__scan {
-    position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0.5;
+  /* DOM fallback name (only shown when WebGL is unavailable). */
+  .loader__fallback { display: none; position: absolute; inset: 0; z-index: 2;
+    align-items: center; justify-content: center; font-weight: 700;
+    font-size: clamp(3rem, 14vw, 10rem); letter-spacing: -0.05em; }
+  .loader.no-webgl .loader__fallback { display: flex; }
+  .loader.no-webgl .loader__fallback::before,
+  .loader.no-webgl .loader__fallback::after {
+    content: attr(data-text); position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center; }
+  .loader.no-webgl .loader__fallback::before { color: #ff2e63; animation: fbR 0.9s steps(2) infinite; }
+  .loader.no-webgl .loader__fallback::after { color: #2ee6ff; animation: fbC 0.9s steps(2) infinite; }
+  @keyframes fbR { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-4px,1px); } }
+  @keyframes fbC { 0%,100% { transform: translate(0,0); } 50% { transform: translate(4px,-1px); } }
+
+  .loader__frame { position: absolute; inset: 20px; border: 1px solid #2b2b27; z-index: 3; }
+  .ltk { position: absolute; width: 9px; height: 9px; border: 1px solid #f1efe9; }
+  .ltk.tl { left: -1px; top: -1px; border-right: 0; border-bottom: 0; }
+  .ltk.tr { right: -1px; top: -1px; border-left: 0; border-bottom: 0; }
+  .ltk.bl { left: -1px; bottom: -1px; border-right: 0; border-top: 0; }
+  .ltk.br { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
+
+  .loader__scan { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0.55;
+    mix-blend-mode: overlay; animation: lflick 2.4s steps(2) infinite;
     background:
-      repeating-linear-gradient(0deg,
-        rgba(127,127,127,0.08) 0, rgba(127,127,127,0.08) 1px,
-        transparent 1px, transparent 3px),
-      radial-gradient(circle at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%);
-    mix-blend-mode: overlay;
-  }
+      repeating-linear-gradient(0deg, rgba(180,180,180,0.10) 0 1px, transparent 1px 3px),
+      radial-gradient(circle at 50% 50%, transparent 52%, rgba(0,0,0,0.5) 100%); }
+  @keyframes lflick { 0%,94%,100% { opacity: 0.55; } 95% { opacity: 0.95; } 97% { opacity: 0.28; } }
 
-  .loader__content {
-    position: absolute; inset: 0; z-index: 2;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 1.6rem; pointer-events: none;
-  }
-  .loader__name {
-    display: flex; font-weight: 600; line-height: 0.9;
-    font-size: clamp(3.2rem, 15vw, 11rem); letter-spacing: -0.05em;
-    animation: glitch 3.2s infinite;
-  }
-  .char { display: inline-block; overflow: hidden; }
-  .char-inner { display: inline-block; will-change: transform; }
+  .loader__ui { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+  .lmeta { position: absolute; top: 30px; font: 500 0.62rem var(--mono);
+    letter-spacing: 0.16em; text-transform: uppercase; color: #76766f; }
+  .lmeta.a { left: 34px; color: #f1efe9; }
+  .lmeta.b { right: 34px; }
+  .loader__status { position: absolute; left: 0; right: 0; top: 60%; text-align: center;
+    font: 500 0.78rem var(--mono); letter-spacing: 0.3em; color: #76766f; }
+  .loader__counter { position: absolute; left: 32px; bottom: 26px;
+    font: 700 clamp(2.4rem, 8vw, 5rem) var(--mono); font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em; line-height: 1; }
+  .loader__counter i { font-style: normal; font-size: 0.36em; color: #76766f; margin-left: 0.3em; }
+  .loader__bar-wrap { position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: #2b2b27; }
+  .loader__bar { display: block; width: 100%; height: 100%; background: #f1efe9;
+    transform: scaleX(0); transform-origin: left center; }
 
-  .loader__status {
-    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.3em;
-    text-transform: lowercase; color: var(--muted); min-height: 1em;
-  }
-
-  .loader__counter {
-    position: absolute; left: var(--space); bottom: calc(var(--space) - 0.4rem); z-index: 2;
-    font-family: var(--mono); font-size: clamp(2.4rem, 8vw, 5rem);
-    font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1;
-  }
-  .loader__counter i { font-style: normal; font-size: 0.38em; color: var(--muted); margin-left: 0.25em; }
-
-  .loader__bar-wrap {
-    position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; z-index: 2;
-    background: var(--line);
-  }
-  .loader__bar {
-    display: block; width: 100%; height: 100%; background: var(--fg);
-    transform: scaleX(0); transform-origin: left center; will-change: transform;
-  }
-
-  /* Periodic chromatic-aberration glitch on the name (loader only). */
-  @keyframes glitch {
-    0%, 88%, 100% { text-shadow: none; transform: translate(0, 0); }
-    89% { text-shadow: -2px 0 #ff2e63, 2px 0 #2ee6ff; transform: translate(1px, -1px); }
-    91% { text-shadow: 2px 0 #ff2e63, -2px 0 #2ee6ff; transform: translate(-2px, 1px); }
-    93% { text-shadow: -1px 0 #ff2e63, 1px 0 #2ee6ff; transform: translate(1px, 0); }
-    95% { text-shadow: none; transform: translate(0, 0); }
-  }
+  @media (max-width: 520px) { .lmeta { display: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .loader__name { animation: none; }
+    .loader__scan, .loader.no-webgl .loader__fallback::before,
+    .loader.no-webgl .loader__fallback::after { animation: none; }
   }
 </style>
 
 <script>
   import { gsap } from 'gsap';
+  import { createGlitchName } from '../scripts/loader-gl';
 
   const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const loader = document.querySelector('[data-loader]') as HTMLElement;
   const target = (loader.dataset.tagline || '').toLowerCase();
+  const glCanvas = document.querySelector('.loader__gl') as HTMLCanvasElement;
   const countEl = document.querySelector('[data-count]') as HTMLElement;
   const barEl = document.querySelector('[data-bar]') as HTMLElement;
   const statusEl = document.querySelector('[data-status]') as HTMLElement;
-  const charInners = gsap.utils.toArray<HTMLElement>('[data-loader] .char-inner');
-  const panels = gsap.utils.toArray<HTMLElement>('[data-loader] .panel');
   const anims = gsap.utils.toArray<HTMLElement>('[data-anim]');
 
-  gsap.set(anims, { opacity: 0, y: 14 });
+  gsap.set(anims, { opacity: 0, y: 16 });
 
-  // Scramble that locks into `target` from left to right as progress climbs.
-  function scramble(progress: number): string {
+  const webglOk = (() => { try { return !!document.createElement('canvas').getContext('webgl'); } catch { return false; } })();
+  let gl: { start(): void; setAmt(v: number): void; dispose(): void } | null = null;
+  if (webglOk) {
+    try { gl = createGlitchName(glCanvas, loader.dataset.name || 'nyhz'); } catch { gl = null; }
+  }
+  if (gl) gl.start(); else loader.classList.add('no-webgl');
+
+  function scramble(p: number): string {
     let out = '';
     for (let k = 0; k < target.length; k++) {
       const ch = target[k];
       if (ch === ' ') { out += ' '; continue; }
-      if (progress >= (k + 1) / target.length) out += ch;
-      else out += GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      out += p >= (k + 1) / target.length ? ch : GLYPHS[(Math.random() * GLYPHS.length) | 0];
     }
     return out;
   }
 
   function revealSite() {
     gsap.to(anims, {
-      opacity: 1, y: 0,
-      duration: reduce ? 0 : 0.7, stagger: reduce ? 0 : 0.08,
+      opacity: 1, y: 0, duration: reduce ? 0 : 0.8, stagger: reduce ? 0 : 0.07,
       ease: 'power2.out', delay: reduce ? 0 : 0.1,
     });
     window.dispatchEvent(new Event('loaderdone'));
@@ -130,19 +123,19 @@ const PANELS = 8;
 
   if (reduce) {
     statusEl.textContent = target;
+    gl?.setAmt(0);
     loader.style.display = 'none';
+    gl?.dispose();
     revealSite();
   } else {
-    gsap.set(charInners, { yPercent: 115 });
+    // Constant glitch flicker while loading.
+    const burst = setInterval(() => gl?.setAmt(0.25 + Math.random() * 0.55), 110);
     const state = { p: 0 };
+    const amt = { v: 0.3 };
     const tl = gsap.timeline();
 
-    // Intro — name rises in by character.
-    tl.to(charInners, { yPercent: 0, duration: 0.75, stagger: 0.06, ease: 'power3.out' }, 0.1);
-
-    // Progress — counter, scramble readout, and bar from one tween.
     tl.to(state, {
-      p: 100, duration: 1.9, ease: 'power1.inOut',
+      p: 100, duration: 2.0, ease: 'power1.inOut',
       onUpdate() {
         const v = Math.round(state.p);
         countEl.textContent = String(v).padStart(3, '0');
@@ -150,25 +143,18 @@ const PANELS = 8;
         barEl.style.transform = `scaleX(${state.p / 100})`;
       },
       onComplete() { statusEl.textContent = target; },
-    }, 0.25);
-
-    // Outro — fade the readout, then a glitchy slice exit.
-    tl.to('[data-loader] .loader__content, [data-loader] .loader__counter, [data-loader] .loader__bar-wrap',
-      { opacity: 0, duration: 0.35, ease: 'power2.in' }, '+=0.25');
-    tl.set(loader, { pointerEvents: 'none' });
-    // Panels shudder sideways...
-    tl.to(panels, {
-      x: () => (Math.random() - 0.5) * 36, duration: 0.05, repeat: 4, yoyo: true, ease: 'none',
-    }, '<');
-    tl.set(panels, { x: 0 });
-    // ...then lift away in random order.
-    tl.to(panels, {
-      yPercent: -100, duration: 0.85, ease: 'power4.inOut',
-      stagger: { each: 0.05, from: 'random' },
     });
-    tl.to('.loader__scan', { opacity: 0, duration: 0.4 }, '<');
 
-    tl.add(revealSite, '-=0.55');
+    // Exit — shatter the name, implode the frame, fade out.
+    tl.addLabel('out', '+=0.2');
+    tl.call(() => clearInterval(burst), [], 'out');
+    tl.to(amt, { v: 1.6, duration: 0.55, ease: 'power2.in', onUpdate() { gl?.setAmt(amt.v); } }, 'out');
+    tl.to('[data-loader] .loader__ui', { opacity: 0, duration: 0.3, ease: 'power2.in' }, 'out+=0.1');
+    tl.to('[data-loader] .loader__frame', { scale: 1.18, opacity: 0, duration: 0.55, ease: 'power3.in' }, 'out+=0.15');
+    tl.set(loader, { pointerEvents: 'none' });
+    tl.to(loader, { opacity: 0, duration: 0.5, ease: 'power2.inOut' }, 'out+=0.35');
+    tl.add(revealSite, 'out+=0.45');
     tl.set(loader, { display: 'none' });
+    tl.call(() => gl?.dispose());
   }
 </script>

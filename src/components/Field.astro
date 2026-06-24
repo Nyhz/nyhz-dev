@@ -1,0 +1,17 @@
+<canvas class="field-canvas" aria-hidden="true"></canvas>
+<script>
+  import { createField } from '../scripts/field';
+  import { THEME_EVENT } from '../scripts/theme';
+  const canvas = document.querySelector('canvas.field-canvas') as HTMLCanvasElement | null;
+  if (canvas) {
+    const ok = (() => { try { return !!document.createElement('canvas').getContext('webgl'); } catch { return false; } })();
+    if (!ok) { canvas.style.display = 'none'; }
+    else {
+      const color = () => getComputedStyle(document.documentElement).getPropertyValue('--particle').trim() || '#f1efe9';
+      const f = createField(canvas);
+      f.setTheme(color());
+      f.start();
+      window.addEventListener(THEME_EVENT, () => f.setTheme(color()));
+    }
+  }
+</script>

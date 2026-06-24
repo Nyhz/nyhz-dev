@@ -1,0 +1,45 @@
+---
+const {
+  name, role, location,
+  intro = 'I build fast, tactile interfaces where motion carries meaning. Currently exploring generative type and the web as a living surface.',
+  socials = [],
+} = Astro.props;
+---
+<div class="hero-block" data-anim>
+  <p class="eyebrow">{role}{location ? ` — ${location}` : ''}</p>
+  <h1 class="hero-name" aria-label={name}>
+    {[...name].map((ch) => <span class="hc">{ch === ' ' ? ' ' : ch}</span>)}
+  </h1>
+  <p class="hero-intro">{intro}</p>
+  {socials.length > 0 && (
+    <nav class="hero-socials">
+      {socials.map((s: { label: string; url: string }) => (
+        <a href={s.url} target="_blank" rel="noopener noreferrer">{s.label}<span class="ar">↗</span></a>
+      ))}
+    </nav>
+  )}
+</div>
+
+<style>
+  .hero-block { display: flex; flex-direction: column; gap: 1.2rem; }
+  .hero-name {
+    font-size: clamp(3rem, 9vw, 6.5rem); font-weight: 600; letter-spacing: -0.045em;
+    line-height: 0.88; display: flex; flex-wrap: wrap;
+  }
+  .hc { display: inline-block; transition: transform 0.3s cubic-bezier(.2,.7,.2,1); }
+  .hero-name:hover .hc { transform: translateY(-0.06em); }
+  .hero-name:hover .hc:nth-child(2n) { transform: translateY(0.06em); }
+
+  .hero-intro { max-width: 34rem; font-size: clamp(0.95rem, 1.25vw, 1.05rem);
+    line-height: 1.6; color: var(--dim); }
+  .hero-socials { display: flex; gap: 1.5rem; margin-top: 0.4rem; }
+  .hero-socials a { font: 500 0.78rem var(--mono); letter-spacing: 0.04em; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 0.25rem; transition: color 0.2s; }
+  .hero-socials a:hover { color: var(--fg); }
+  .hero-socials .ar { font-size: 0.7em; transition: transform 0.2s; }
+  .hero-socials a:hover .ar { transform: translate(2px, -2px); }
+  @media (prefers-reduced-motion: reduce) {
+    .hc, .hero-socials a, .hero-socials .ar { transition: none; }
+    .hero-name:hover .hc, .hero-name:hover .hc:nth-child(2n) { transform: none; }
+  }
+</style>
