@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const N = 120;
+const N = 55;
 const EXT = 1.8;          // spread beyond the view (wraps around)
 const RADIUS = 0.5;       // cursor influence reach (world units)
 const IMPULSE = 0.05;     // push strength when repelled
@@ -35,14 +35,14 @@ export function createSmoke(canvas: HTMLCanvasElement) {
   for (let i = 0; i < N; i++) {
     positions[i * 3] = (Math.random() * 2 - 1) * EXT;
     positions[i * 3 + 1] = (Math.random() * 2 - 1) * EXT;
-    const ang = Math.random() * 6.283, sp = 0.002 + Math.random() * 0.004;
+    const ang = Math.random() * 6.283, sp = 0.0008 + Math.random() * 0.0016;
     baseVel[i * 2] = Math.cos(ang) * sp; baseVel[i * 2 + 1] = Math.sin(ang) * sp;
     vel[i * 2] = baseVel[i * 2]; vel[i * 2 + 1] = baseVel[i * 2 + 1];
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   const material = new THREE.PointsMaterial({
-    map: tex, sizeAttenuation: false, transparent: true, opacity: 0.035, depthWrite: false,
+    map: tex, sizeAttenuation: false, transparent: true, opacity: 0.03, depthWrite: false,
   });
   const points = new THREE.Points(geo, material);
   scene.add(points);
@@ -52,7 +52,7 @@ export function createSmoke(canvas: HTMLCanvasElement) {
     const w = innerWidth, h = innerHeight; aspect = w / Math.max(h, 1);
     renderer.setSize(w, h, false);
     camera.left = -aspect; camera.right = aspect; camera.updateProjectionMatrix();
-    material.size = h * dpr * 0.22;   // soft blobs (buffer px)
+    material.size = h * dpr * 0.4;   // big soft blobs (buffer px)
   }
   resize();
   addEventListener('resize', resize);
