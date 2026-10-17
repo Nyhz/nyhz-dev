@@ -1,9 +1,10 @@
 ---
+import Contact from './Contact.astro';
 ---
 <div class="preview" data-anim>
   <div class="pv__head">
     <button class="pv__back" data-back type="button"><span aria-hidden="true">←</span> back</button>
-    <p class="sec-label sec-label--r">— preview</p>
+    <p class="sec-label sec-label--r" data-pv-label>— preview</p>
   </div>
 
   <a class="pv__screen" data-screen tabindex="-1" aria-hidden="true" target="_blank" rel="noopener noreferrer">
@@ -28,6 +29,15 @@
         </nav>
       </div>
     </div>
+
+    <!-- "available for work" opens here, as one more dossier -->
+    <div class="pv__card" id="contact" data-contact-card role="region" aria-label="contact" hidden>
+      <div class="pv__dossier pv__dossier--contact">
+        <p class="pv__d-title" data-ct-title-host><span data-ct-title></span><i class="pv__caret" aria-hidden="true"></i></p>
+        <p class="pv__d-desc pv__d-desc--short" data-ct-desc-host><span data-ct-desc></span><i class="pv__caret" aria-hidden="true"></i></p>
+        <Contact />
+      </div>
+    </div>
   </div>
 </div>
 
@@ -42,6 +52,7 @@
     opacity: 0; transition: opacity 0.35s var(--ease-out), border-color var(--t-hover) ease; }
   .pv__screen.is-on { display: block; }
   .preview.pv-active .pv__screen.is-on { opacity: 1; }
+  .preview.pv-contact .pv__screen.is-on { opacity: 0; pointer-events: none; }
   .pv__screen canvas { display: block; width: 100%; height: 100%;
     filter: grayscale(1) contrast(1.2) brightness(1.15); transition: filter 0.5s var(--ease-out); }
   .pv__screen::after { content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -77,6 +88,8 @@
   .pv__d-title { font: 700 1.05rem var(--mono); letter-spacing: -0.01em; color: var(--fg);
     margin: 0 0 0.7rem; min-height: 1.3em; }
   .pv__d-desc { font: 0.82rem/1.7 var(--mono); color: var(--dim); margin: 0 0 1.1rem; min-height: 5rem; }
+  .pv__dossier--contact { min-height: 0; padding-bottom: 0.9rem; }
+  .pv__d-desc--short { min-height: 1.7em; margin-bottom: 0.9rem; }
   .pv__caret { display: none; width: 0.5em; height: 1.05em; background: #3ad29f;
     vertical-align: -0.16em; margin-left: 2px; }
   .typing > .pv__caret { display: inline-block; animation: pvBlink 0.8s steps(1) infinite; }
@@ -104,6 +117,9 @@
   @media (max-width: 720px) {
     .pv__head { justify-content: space-between; }
     .pv__idle, .pv__screen { display: none !important; }
+    /* the contact dossier has to fit under the hero in one phone screen */
+    .pv__dossier--contact { padding: 0.9rem 1rem 0.6rem; }
+    .pv__dossier--contact .pv__d-desc--short { display: none; }
     .pv__back { display: inline-flex; gap: 0.4rem; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -129,6 +145,16 @@
   const live = pv?.querySelector('[data-live]') as HTMLAnchorElement | null;
   const download = pv?.querySelector('[data-download]') as HTMLAnchorElement | null;
   const track = document.querySelector('[data-track]') as HTMLElement | null;
+  const label = pv?.querySelector<HTMLElement>('[data-pv-label]') ?? null;
+  const ctCard = pv?.querySelector<HTMLElement>('[data-contact-card]') ?? null;
+  const ctTitleHost = pv?.querySelector<HTMLElement>('[data-ct-title-host]') ?? null;
+  const ctTitle = pv?.querySelector<HTMLElement>('[data-ct-title]') ?? null;
+  const ctDescHost = pv?.querySelector<HTMLElement>('[data-ct-desc-host]') ?? null;
+  const ctDesc = pv?.querySelector<HTMLElement>('[data-ct-desc]') ?? null;
+  const ctFields = Array.from(ctCard?.querySelectorAll<HTMLElement>('[data-field]') ?? []);
+  const avail = document.querySelector<HTMLButtonElement>('[data-contact-open]');
+  const CT_TITLE = 'write to me';
+  const CT_DESC = "tell me what you're building.";
   const back = document.querySelector('[data-back]');
   const rows = Array.from(document.querySelectorAll<HTMLElement>('.prj[data-proj]'));
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -186,16 +212,26 @@
     if (footEl) gsap.set(footEl, { opacity: 0 });
   }
 
+  // `current` is a project slug, 'contact', or null; `shown` is the card on screen
   let current: string | null = null;
+  let shown: HTMLElement | null = null;
   let tl: gsap.core.Timeline | null = null;
 
-  function enterIn(t: gsap.core.Timeline) {
-    t.fromTo(card, { opacity: 0, x: -40 },
+  function setMode(m: 'project' | 'contact') {
+    if (card) card.hidden = m !== 'project';
+    if (ctCard) ctCard.hidden = m !== 'contact';
+    pv?.classList.toggle('pv-contact', m === 'contact');
+    if (label) label.textContent = m === 'contact' ? '— contact' : '— preview';
+    avail?.setAttribute('aria-expanded', String(m === 'contact'));
+  }
+
+  function enterIn(t: gsap.core.Timeline, el: HTMLElement) {
+    t.fromTo(el, { opacity: 0, x: -40 },
       { opacity: 1, x: 0, duration: 0.6, ease: 'back.out(2.4)', immediateRender: false });
   }
-  function leaveOut(t: gsap.core.Timeline, after?: () => void) {
-    t.to(card, { x: 26, duration: 0.18, ease: 'power2.out' });
-    t.to(card, { x: -170, opacity: 0, duration: 0.38, ease: 'power3.in', onComplete: after });
+  function leaveOut(t: gsap.core.Timeline, el: HTMLElement, after?: () => void) {
+    t.to(el, { x: 26, duration: 0.18, ease: 'power2.out' });
+    t.to(el, { x: -170, opacity: 0, duration: 0.38, ease: 'power3.in', onComplete: after });
   }
 
   function typeInto(t: gsap.core.Timeline, host: HTMLElement, span: HTMLElement, text: string, per: number) {
@@ -218,45 +254,93 @@
 
   function show(slug: string, d: DOMStringMap) {
     if (!card || slug === current) return;
-    const first = current === null;
+    const old = shown;
     current = slug;
+    shown = card;
     pv?.classList.add('pv-active');
     tl?.kill();
+    const prep = () => { setMode('project'); reset(); applyContent(d); };
 
     if (reduce || isMobile()) {
-      reset();
+      prep();
       if (titleT) titleT.textContent = d.title || '';
       if (descT) descT.textContent = d.desc || '';
       if (stackV) stackV.textContent = d.tags || '';
-      applyContent(d);
       gsap.set([card, metaEl, footEl], { opacity: 1, x: 0 });
       paintScreen(d, true);
       return;
     }
 
     tl = gsap.timeline();
-    if (first) {
-      reset();
-      applyContent(d);
+    if (old) {
+      // swap content only AFTER the old card has left (no instant flash)
+      leaveOut(tl, old, () => { prep(); paintScreen(d, false); });
+    } else {
+      prep();
       gsap.set(card, { opacity: 0, x: -40 });
       paintScreen(d, false);
-      enterIn(tl);
-      typeDossier(tl, d);
-    } else {
-      // swap links/status only AFTER the old card has left (no instant flash)
-      leaveOut(tl, () => { reset(); applyContent(d); paintScreen(d, false); });
-      enterIn(tl);
-      typeDossier(tl, d);
     }
+    enterIn(tl, card);
+    typeDossier(tl, d);
+  }
+
+  function resetContact() {
+    if (ctTitle) ctTitle.textContent = '';
+    if (ctDesc) ctDesc.textContent = '';
+    ctTitleHost?.classList.remove('typing');
+    ctDescHost?.classList.remove('typing');
+    gsap.set(ctFields, { opacity: 0, y: 8 });
+  }
+  const focusForm = () => {
+    ctDescHost?.classList.remove('typing'); // the caret hands over to the input
+    ctCard?.querySelector<HTMLElement>('input')?.focus({ preventScroll: true });
+  };
+
+  function showContact() {
+    if (!ctCard || current === 'contact') return;
+    const old = shown;
+    current = 'contact';
+    shown = ctCard;
+    pv?.classList.add('pv-active');
+    tl?.kill();
+    const prep = () => { setMode('contact'); resetContact(); };
+
+    if (reduce || isMobile()) {
+      prep();
+      if (ctTitle) ctTitle.textContent = CT_TITLE;
+      if (ctDesc) ctDesc.textContent = CT_DESC;
+      gsap.set(ctCard, { opacity: 1, x: 0 });
+      gsap.set(ctFields, { opacity: 1, y: 0 });
+      if (!isMobile()) focusForm();
+      return;
+    }
+
+    tl = gsap.timeline();
+    if (old) leaveOut(tl, old, prep);
+    else { prep(); gsap.set(ctCard, { opacity: 0, x: -40 }); }
+    enterIn(tl, ctCard);
+    if (ctTitleHost && ctTitle && ctDescHost && ctDesc) {
+      typeInto(tl, ctTitleHost, ctTitle, CT_TITLE, 0.03);
+      tl.add(() => ctTitleHost.classList.remove('typing'));
+      typeInto(tl, ctDescHost, ctDesc, CT_DESC, 0.012);
+    }
+    // fields don't wait for the typing — the form is usable while it finishes
+    const at = old ? 0.95 : 0.4;
+    tl.to(ctFields, { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, at);
+    tl.add(() => ctCard.querySelector<HTMLElement>('input')?.focus({ preventScroll: true }), at);
+    tl.add(() => ctDescHost?.classList.remove('typing'));
   }
 
   function hide() {
-    if (!card || current === null) return;
+    if (current === null || !shown) return;
+    const old = shown;
     current = null;
+    shown = null;
     pv?.classList.remove('pv-active');
+    avail?.setAttribute('aria-expanded', 'false');
     tl?.kill();
     tl = gsap.timeline();
-    leaveOut(tl);
+    leaveOut(tl, old);
   }
 
   rows.forEach((r) => {
@@ -266,7 +350,28 @@
       if (slug === current) hide(); else show(slug, r.dataset);
     });
   });
-  back?.addEventListener('click', () => { track?.classList.remove('is-preview'); });
+  back?.addEventListener('click', () => {
+    track?.classList.remove('is-preview');
+    if (current === 'contact') hide();
+  });
+
+  // "available for work" (hero) toggles the contact dossier, like a project row
+  avail?.addEventListener('click', () => {
+    if (isMobile()) { showContact(); track?.classList.add('is-preview'); return; }
+    if (current === 'contact') hide(); else showContact();
+  });
+  // Esc closes the contact dossier from anywhere (the terminal swallows its own Esc)
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || current !== 'contact') return;
+    hide();
+    track?.classList.remove('is-preview');
+    avail?.focus();
+  });
+  // the terminal's `contact`
+  addEventListener('nyhz:contact', () => {
+    showContact();
+    if (isMobile()) track?.classList.add('is-preview');
+  });
   // the terminal's `open <project>` — always shows (a row click toggles)
   addEventListener('nyhz:open', (e) => {
     const slug = (e as CustomEvent<{ slug: string }>).detail?.slug;

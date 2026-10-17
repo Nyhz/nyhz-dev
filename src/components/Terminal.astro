@@ -97,7 +97,7 @@ const ctx: TermContext = {
     addEventListener('keydown', (e) => {
       if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement;
-      if (t.closest('input, textarea, [contenteditable]') || document.querySelector('.contact--open')) return;
+      if (t.closest('input, textarea, [contenteditable]')) return;
       if (getComputedStyle(root).display === 'none') return;
       e.preventDefault();
       open();
@@ -126,7 +126,7 @@ const ctx: TermContext = {
 
       switch (action.type) {
         case 'open': dispatchEvent(new CustomEvent('nyhz:open', { detail: { slug: action.slug } })); break;
-        case 'contact': document.querySelector<HTMLButtonElement>('[data-contact-open]')?.click(); break;
+        case 'contact': dispatchEvent(new Event('nyhz:contact')); break;
         case 'url': window.open(action.url, '_blank', 'noopener'); break;
         case 'glitch': dispatchEvent(new Event('nyhz:glitch')); break;
         case 'clear': out.replaceChildren(); break;

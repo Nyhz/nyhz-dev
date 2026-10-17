@@ -1,6 +1,5 @@
 ---
 const { name, role, location, socials = [] } = Astro.props;
-import Contact from './Contact.astro';
 
 const ICONS: Record<string, string> = {
   github: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.8c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>',
@@ -24,15 +23,19 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
         ))}
       </nav>
     )}
-    <Contact />
+    <!-- opens the contact dossier in the preview panel (Preview.astro) -->
+    <button class="hero-avail" type="button" data-contact-open aria-controls="contact" aria-expanded="false">
+      <i class="live" aria-hidden="true"></i>
+      <span>available for work</span>
+      <span class="ar" aria-hidden="true">→</span>
+    </button>
   </div>
 </div>
 
 <style>
   .hero-block { display: flex; flex-direction: column; gap: 1.6rem; }
-  /* socials on the left, "available for work" pushed to the right of the row.
-     (positioned via the container — Astro scopes child .contact to its own
-     component, so a `.hero-foot .contact` rule here wouldn't apply.) */
+  /* socials on the left, "available for work" pushed to the right of the row —
+     same type and underline as the socials, set apart only by the live dot */
   .hero-foot { display: flex; align-items: center; justify-content: space-between;
     gap: 1rem 1.4rem; flex-wrap: wrap; }
   .hero-name {
@@ -89,8 +92,27 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
   .hero-socials a:hover .ar { transform: translate(2px, -2px); opacity: 1; }
   .hero-socials a:hover::after { transform: scaleX(1); }
 
+  .hero-avail { position: relative; display: inline-flex; align-items: center; gap: 0.55rem;
+    background: none; border: 0; padding: 0 0 5px; cursor: pointer;
+    font: 500 0.9rem var(--font); color: var(--muted); transition: color 0.25s; }
+  .hero-avail::after { content: ""; position: absolute; left: 0; bottom: 0; height: 1px; width: 100%;
+    background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; }
+  .hero-avail .ar { font-size: 0.85em; opacity: 0.5; transition: transform 0.3s var(--ease-out), opacity 0.25s; }
+  .hero-avail:hover, .hero-avail:focus-visible, .hero-avail[aria-expanded="true"] { color: var(--fg); }
+  .hero-avail:hover::after, .hero-avail:focus-visible::after, .hero-avail[aria-expanded="true"]::after { transform: scaleX(1); }
+  .hero-avail:hover .ar { transform: translateX(3px); opacity: 1; }
+  /* open: the arrow turns to point at the form below */
+  .hero-avail[aria-expanded="true"] .ar { transform: rotate(90deg); opacity: 1; }
+  .hero-avail:focus-visible { outline: none; }
+  .hero-avail:active { transform: translateY(1px); }
+  .live { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    animation: live 1.6s ease-in-out infinite; flex: none; }
+  @keyframes live { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
   @media (prefers-reduced-motion: reduce) {
     .hero-socials a, .hero-socials .ar, .hero-socials a::after { transition: none; }
+    .hero-avail, .hero-avail .ar, .hero-avail::after { transition: none; }
+    .live { animation: none; }
     .hero-name.glitching,
     .hero-name.glitching::before,
     .hero-name.glitching::after { animation: none; }
