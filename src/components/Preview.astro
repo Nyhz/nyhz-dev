@@ -44,15 +44,16 @@ import Contact from './Contact.astro';
 <style>
   .preview { position: relative; width: 100%; }
 
-  /* the cover "screen" lives in the dead space between the hero and this
-     column (absolutely placed → never moves the layout). Height is measured
-     in JS from the room available; it stays hidden when there is too little. */
+  /* the cover "screen" lives in dead space (absolutely placed → never moves the
+     layout): above this column, between it and the hero — or, with the list
+     expanded and the hero collapsed, below the dossier (.is-below). Its size
+     and spot are measured in JS; it stays hidden when there is too little room. */
+  /* it enters and leaves with the dossier card's own move, turned vertical
+     (preview timeline) — hidden until then */
   .pv__screen { position: absolute; left: 0; right: 0; bottom: calc(100% + 1.1rem); display: none;
-    border: 1px solid var(--line); overflow: hidden; background: #0e0e0d;
-    opacity: 0; transition: opacity 0.35s var(--ease-out), border-color var(--t-hover) ease; }
+    border: 1px solid var(--line); overflow: hidden; background: #0e0e0d; opacity: 0;
+    transition: border-color var(--t-hover) ease; }
   .pv__screen.is-on { display: block; }
-  .preview.pv-active .pv__screen.is-on { opacity: 1; }
-  .preview.pv-contact .pv__screen.is-on { opacity: 0; pointer-events: none; }
   .pv__screen canvas { display: block; width: 100%; height: 100%;
     filter: grayscale(1) contrast(1.2) brightness(1.15); transition: filter 0.5s var(--ease-out); }
   /* light interfaces are shown inverted so they sit in the dark page like the
@@ -119,7 +120,7 @@ import Contact from './Contact.astro';
 
   @media (max-width: 720px) {
     .pv__head { justify-content: space-between; }
-    .pv__idle, .pv__screen { display: none !important; }
+    .pv__idle, .pv__screen:not(.is-below) { display: none !important; }
     /* the contact dossier has to fit under the hero in one phone screen */
     .pv__dossier--contact { padding: 0.9rem 1rem 0.6rem; }
     .pv__dossier--contact .pv__d-desc--short { display: none; }
@@ -173,30 +174,105 @@ import Contact from './Contact.astro';
 
   // Fit the screen into the room between the hero and the preview column.
   function layoutScreen() {
+    const off = () => { screenEl?.classList.remove('is-on', 'is-below'); return false; };
     if (!screenEl || !pv) return false;
+    const page = document.querySelector('.page');
     const hero = document.querySelector('.hero');
-    const open = document.querySelector('.page')?.classList.contains('projects-open');
-    if (!hero || isMobile() || open) { screenEl.classList.remove('is-on'); return false; }
-    const room = pv.getBoundingClientRect().top - hero.getBoundingClientRect().bottom - GAP * 2;
-    const h = Math.min(room, pv.clientWidth * 0.56, 230);
-    if (h < MIN_H) { screenEl.classList.remove('is-on'); return false; }
+    const lower = document.querySelector('.lower');
+    const frameEl = pv.querySelector('[data-frame]');
+    if (!page || !hero || !lower || !frameEl) return off();
+    // mid expand/collapse the room is still moving: wait for it to settle
+    if (page.classList.contains('projects-open') !== page.classList.contains('projects-reveal')) return off();
+
+    const pvTop = pv.getBoundingClientRect().top;
+    let room: number, below: boolean;
+    if (page.classList.contains('projects-open')) {
+      // expanded: the hero is gone; use the space the list leaves under the dossier
+      below = true;
+      room = lower.getBoundingClientRect().bottom - frameEl.getBoundingClientRect().bottom - GAP;
+    } else {
+      if (isMobile()) return off();
+      below = false;
+      room = pvTop - hero.getBoundingClientRect().bottom - GAP * 2;
+    }
+    const h = Math.min(room, pv.clientWidth * (below ? 0.625 : 0.56), below ? 320 : 230);
+    if (h < MIN_H) return off();
     screenEl.style.height = `${Math.round(h)}px`;
+    screenEl.style.top = below ? `${Math.round(frameEl.getBoundingClientRect().bottom - pvTop + GAP)}px` : '';
+    screenEl.style.bottom = below ? 'auto' : '';
+    screenEl.classList.toggle('is-below', below);
     screenEl.classList.add('is-on');
     return true;
   }
-  function paintScreen(d: DOMStringMap, instant: boolean) {
-    if (!screen || !screenEl) return;
-    screenEl.href = d.live || d.download || d.repo || '';
-    if (!d.cover || !layoutScreen()) { screen.clear(); return; }
-    screen.show(d.cover, instant);
+  // The picture moves exactly like the dossier card — same distances, timings
+  // and back.out bounce — but vertically, strictly one after the other:
+  // opening, the card lands (bounce included) and only then the picture rises
+  // out of it; closing, the picture sinks back into the card and only then the
+  // card leaves. With the list expanded it sits below the card: mirrored.
+  const CARD_IN = 0.6;         // enterIn, bounce included
+  const LEAVE = 0.18 + 0.38;   // leaveOut / screenLeave: nudge + exit
+  const dir = () => (screenEl?.classList.contains('is-below') ? -1 : 1); // +1: card is under it
+  let screenShown = false;
+
+  function screenLeave(t: gsap.core.Timeline) {
+    if (!screenEl) return false;
+    gsap.killTweensOf(screenEl);
+    if (!screenShown) return false;
+    screenShown = false;
+    t.to(screenEl, { y: -26 * dir(), duration: 0.18, ease: 'power2.out' }, 0);
+    t.to(screenEl, { y: 170 * dir(), opacity: 0, duration: 0.38, ease: 'power3.in' }, '>');
+    return true;
   }
-  addEventListener('resize', () => { if (current) layoutScreen(); });
-  // the list expanding hides it; collapsing brings it back once settled
+  function screenEnter(t: gsap.core.Timeline, at: number) {
+    if (!screenEl) return;
+    t.add(() => { screenShown = screenEl.classList.contains('is-on'); }, at);
+    t.fromTo(screenEl, { opacity: 0, y: () => 40 * dir() },
+      { opacity: 1, y: 0, duration: 0.6, ease: 'back.out(2.4)', immediateRender: false }, at);
+  }
+  function dropScreen() {
+    if (!screenEl) return;
+    gsap.killTweensOf(screenEl);
+    screenShown = false;
+    screenEl.classList.remove('is-on', 'is-below');
+    gsap.set(screenEl, { opacity: 0, y: 0 });
+  }
+  // measure the room, paint the cover, and park it hidden, ready to enter.
+  // (No killTweensOf here: it runs mid-timeline and would kill the entrance
+  // already scheduled in that same timeline. Callers outside a timeline drop
+  // the screen first.)
+  function stageScreen(d: DOMStringMap) {
+    if (!screen || !screenEl) return false;
+    screenEl.href = d.live || d.download || d.repo || '';
+    screen.clear();
+    if (!d.cover || !layoutScreen()) { dropScreen(); return false; }
+    gsap.set(screenEl, { opacity: 0, y: 40 * dir() });
+    screen.show(d.cover);
+    return true;
+  }
+  const currentRow = () => rows.find((r) => r.dataset.proj === current);
+  let resizeT = 0;
+  addEventListener('resize', () => {
+    clearTimeout(resizeT);
+    resizeT = window.setTimeout(() => {
+      const r = currentRow();
+      if (!r || !screen) return;
+      dropScreen();
+      if (stageScreen(r.dataset)) { gsap.set(screenEl, { opacity: 1, y: 0 }); screenShown = true; }
+    }, 150);
+  });
+  // expanding/collapsing the list moves the room: put the picture away while
+  // it moves, then bring it out of the card again in the settled spot
+  let relayT = 0;
   new MutationObserver(() => {
-    const d = rows.find((r) => r.dataset.proj === current)?.dataset;
-    if (!d) return;
-    if (document.querySelector('.page')?.classList.contains('projects-open')) layoutScreen();
-    else setTimeout(() => paintScreen(d, true), 650);
+    const r = currentRow();
+    if (!r) return;
+    dropScreen();
+    clearTimeout(relayT);
+    relayT = window.setTimeout(() => {
+      if (currentRow() !== r || !stageScreen(r.dataset)) return;
+      const t = gsap.timeline();
+      screenEnter(t, 0);
+    }, 700);
   }).observe(document.querySelector('.page')!, { attributes: true, attributeFilter: ['class'] });
   // ---- zero layout shift ----
   // The panel reserves the height of its tallest possible state — the contact
@@ -231,7 +307,7 @@ import Contact from './Contact.astro';
   let reserveT = 0;
   addEventListener('resize', () => { clearTimeout(reserveT); reserveT = window.setTimeout(reserve, 120); });
 
-  // warm the cache on hover intent, so the decode starts without a wait
+  // warm the cache on hover intent, so the picture is ready when the card lands
   rows.forEach((r) => r.addEventListener('pointerenter', () => screen?.preload(r.dataset.cover || ''), { once: true }));
 
   // Link state must NOT visibly change until the old card has left the screen.
@@ -265,11 +341,11 @@ import Contact from './Contact.astro';
 
   function enterIn(t: gsap.core.Timeline, el: HTMLElement) {
     t.fromTo(el, { opacity: 0, x: -40 },
-      { opacity: 1, x: 0, duration: 0.6, ease: 'back.out(2.4)', immediateRender: false });
+      { opacity: 1, x: 0, duration: CARD_IN, ease: 'back.out(2.4)', immediateRender: false });
   }
-  function leaveOut(t: gsap.core.Timeline, el: HTMLElement, after?: () => void) {
-    t.to(el, { x: 26, duration: 0.18, ease: 'power2.out' });
-    t.to(el, { x: -170, opacity: 0, duration: 0.38, ease: 'power3.in', onComplete: after });
+  function leaveOut(t: gsap.core.Timeline, el: HTMLElement, after?: () => void, at?: number) {
+    t.to(el, { x: 26, duration: 0.18, ease: 'power2.out' }, at);
+    t.to(el, { x: -170, opacity: 0, duration: 0.38, ease: 'power3.in', onComplete: after }, '>');
   }
 
   function typeInto(t: gsap.core.Timeline, host: HTMLElement, span: HTMLElement, text: string, per: number) {
@@ -305,21 +381,29 @@ import Contact from './Contact.astro';
       if (descT) descT.textContent = d.desc || '';
       if (stackV) stackV.textContent = d.tags || '';
       gsap.set([card, metaEl, footEl], { opacity: 1, x: 0 });
-      paintScreen(d, true);
+      dropScreen();
+      if (stageScreen(d)) {
+        if (reduce) { gsap.set(screenEl, { opacity: 1, y: 0 }); screenShown = true; }
+        else screenEnter(gsap.timeline({ delay: 0.35 }), 0); // after the panel has slid in
+      }
       return;
     }
 
     tl = gsap.timeline();
     if (old) {
-      // swap content only AFTER the old card has left (no instant flash)
-      leaveOut(tl, old, () => { prep(); paintScreen(d, false); });
+      // picture back into the card, then (staggered) the card out; content
+      // swaps only AFTER the old card has left (no instant flash)
+      const sank = screenLeave(tl);
+      leaveOut(tl, old, () => { prep(); stageScreen(d); }, sank ? LEAVE : 0);
     } else {
       prep();
+      stageScreen(d);
       gsap.set(card, { opacity: 0, x: -40 });
-      paintScreen(d, false);
     }
+    const enterAt = tl.duration();
     enterIn(tl, card);
     typeDossier(tl, d);
+    screenEnter(tl, enterAt + CARD_IN); // once the card has fully landed, out of it
   }
 
   function resetContact() {
@@ -349,13 +433,16 @@ import Contact from './Contact.astro';
       if (ctDesc) ctDesc.textContent = CT_DESC;
       gsap.set(ctCard, { opacity: 1, x: 0 });
       gsap.set(ctFields, { opacity: 1, y: 0 });
+      dropScreen();
       if (!isMobile()) focusForm();
       return;
     }
 
     tl = gsap.timeline();
-    if (old) leaveOut(tl, old, prep);
+    const sank = screenLeave(tl);
+    if (old) leaveOut(tl, old, () => { prep(); dropScreen(); }, sank ? LEAVE : 0);
     else { prep(); gsap.set(ctCard, { opacity: 0, x: -40 }); }
+    const enterAt = tl.duration();
     enterIn(tl, ctCard);
     if (ctTitleHost && ctTitle && ctDescHost && ctDesc) {
       typeInto(tl, ctTitleHost, ctTitle, CT_TITLE, 0.03);
@@ -363,7 +450,7 @@ import Contact from './Contact.astro';
       typeInto(tl, ctDescHost, ctDesc, CT_DESC, 0.012);
     }
     // fields don't wait for the typing — the form is usable while it finishes
-    const at = old ? 0.95 : 0.4;
+    const at = enterAt + 0.4;
     tl.to(ctFields, { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, ease: 'power2.out' }, at);
     tl.add(() => ctCard.querySelector<HTMLElement>('input')?.focus({ preventScroll: true }), at);
     tl.add(() => ctDescHost?.classList.remove('typing'));
@@ -374,11 +461,12 @@ import Contact from './Contact.astro';
     const old = shown;
     current = null;
     shown = null;
-    pv?.classList.remove('pv-active');
     avail?.setAttribute('aria-expanded', 'false');
     tl?.kill();
     tl = gsap.timeline();
-    leaveOut(tl, old);
+    // picture into the card, card away, and only then the idle prompt returns
+    const sank = screenLeave(tl);
+    leaveOut(tl, old, () => { dropScreen(); pv?.classList.remove('pv-active'); }, sank ? LEAVE : 0);
   }
 
   rows.forEach((r) => {
