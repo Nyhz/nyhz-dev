@@ -1,0 +1,153 @@
+---
+// A real prompt in the frame's bottom-left corner (mirrors the clock on the
+// right). `/` opens it; commands live in scripts/terminal.ts. Desktop only —
+// on touch screens there is no keyboard to invite.
+import { statusOf, type ProfileProps, type ProjectProps } from '../scripts/content';
+import type { TermContext } from '../scripts/terminal';
+
+const { profile, projects } = Astro.props as { profile: ProfileProps; projects: ProjectProps[] };
+const ctx: TermContext = {
+  name: profile.name,
+  role: profile.role,
+  location: profile.location,
+  projects: projects.slice(0, 10).map((p) => ({ slug: p.slug, title: p.title, status: statusOf(p) })),
+  socials: profile.socials,
+};
+---
+<div class="term" data-term data-ctx={JSON.stringify(ctx)}>
+  <div class="term__out" data-term-out role="log" aria-live="polite"></div>
+  <button class="term__hint" type="button" data-term-hint>
+    <span class="term__p" aria-hidden="true">›_</span> press <kbd>/</kbd> to type
+  </button>
+  <form class="term__line" data-term-form hidden>
+    <span class="term__p" aria-hidden="true">›</span>
+    <input data-term-input type="text" aria-label="terminal — type help" autocomplete="off"
+      autocapitalize="off" spellcheck="false" maxlength="80" />
+  </form>
+</div>
+
+<style>
+  .term { position: fixed; z-index: 7; left: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem;
+    font: 500 0.7rem var(--mono); color: var(--muted); }
+  @media (hover: none), (max-width: 720px) { .term { display: none; } }
+
+  .term__hint { background: none; border: 0; padding: 0; cursor: pointer; color: inherit;
+    font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    transition: color var(--t-hover) ease; }
+  .term__hint:hover, .term__hint:focus-visible { color: var(--fg); }
+  .term__hint:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
+  .term__hint kbd { font: inherit; color: var(--fg); padding: 0.05em 0.4em; margin: 0 0.15em;
+    border: 1px solid var(--line); border-radius: 3px; }
+  .term__p { color: var(--accent); letter-spacing: 0; }
+  .term.is-open .term__hint { display: none; }
+
+  .term__line { display: flex; align-items: center; gap: 0.55em; }
+  .term__line[hidden] { display: none; }
+  .term__line input { width: 30ch; background: none; border: 0; outline: none; padding: 0;
+    font: 500 0.78rem var(--mono); color: var(--fg); caret-color: var(--accent); caret-shape: block; }
+
+  .term__out { display: none; max-width: min(46ch, calc(100vw - 6rem)); padding: 0.7rem 0.85rem;
+    background: var(--bg); border: 1px solid var(--line); line-height: 1.65; white-space: pre; overflow: hidden; }
+  .term__out:not(:empty) { display: block; }
+  .term__out .cmd { color: var(--muted); }
+  .term__out .res { color: var(--dim); }
+  .term__out .res.fresh { animation: termIn 0.22s var(--ease-out) both; }
+  @keyframes termIn { from { opacity: 0; transform: translateY(4px); } }
+  @media (prefers-reduced-motion: reduce) { .term__out .res.fresh { animation: none; } }
+</style>
+
+<script>
+  import { runCommand, complete, type TermContext } from '../scripts/terminal';
+
+  const root = document.querySelector<HTMLElement>('[data-term]');
+  const out = root?.querySelector<HTMLElement>('[data-term-out]');
+  const hint = root?.querySelector<HTMLButtonElement>('[data-term-hint]');
+  const form = root?.querySelector<HTMLFormElement>('[data-term-form]');
+  const input = root?.querySelector<HTMLInputElement>('[data-term-input]');
+
+  if (root && out && hint && form && input) {
+    const ctx = JSON.parse(root.dataset.ctx || '{}') as TermContext;
+    const history: string[] = [];
+    let hIdx = 0;
+    const MAX_LINES = 9;
+
+    const print = (text: string, cls: 'cmd' | 'res') => {
+      const div = document.createElement('div');
+      div.className = `${cls} ${cls === 'res' ? 'fresh' : ''}`;
+      div.textContent = text;
+      out.append(div);
+      while (out.childElementCount > MAX_LINES) out.firstElementChild?.remove();
+    };
+
+    const open = () => {
+      root.classList.add('is-open');
+      form.hidden = false;
+      input.focus();
+      if (!out.childElementCount) print('type help', 'res');
+    };
+    const close = () => {
+      root.classList.remove('is-open');
+      form.hidden = true;
+      input.value = '';
+      out.replaceChildren();
+    };
+
+    hint.addEventListener('click', open);
+    addEventListener('keydown', (e) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement;
+      if (t.closest('input, textarea, [contenteditable]') || document.querySelector('.contact--open')) return;
+      if (getComputedStyle(root).display === 'none') return;
+      e.preventDefault();
+      open();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); hint.focus(); }
+      else if (e.key === 'Tab') { e.preventDefault(); input.value = complete(input.value, ctx); }
+      else if (e.key === 'ArrowUp' && history.length) {
+        e.preventDefault(); hIdx = Math.max(0, hIdx - 1); input.value = history[hIdx];
+      } else if (e.key === 'ArrowDown' && history.length) {
+        e.preventDefault(); hIdx = Math.min(history.length, hIdx + 1); input.value = history[hIdx] ?? '';
+      }
+    });
+    // leaving the prompt (a click elsewhere, the contact form taking focus) closes it
+    input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 120));
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const line = input.value;
+      input.value = '';
+      if (line.trim()) { history.push(line.trim()); hIdx = history.length; }
+      const { lines, action } = runCommand(line, ctx);
+      print(`› ${line}`, 'cmd');
+      lines.forEach((l) => print(l, 'res'));
+
+      switch (action.type) {
+        case 'open': dispatchEvent(new CustomEvent('nyhz:open', { detail: { slug: action.slug } })); break;
+        case 'contact': document.querySelector<HTMLButtonElement>('[data-contact-open]')?.click(); break;
+        case 'url': window.open(action.url, '_blank', 'noopener'); break;
+        case 'glitch': dispatchEvent(new Event('nyhz:glitch')); break;
+        case 'clear': out.replaceChildren(); break;
+        case 'exit': close(); hint.focus(); break;
+      }
+    });
+  }
+
+  // for whoever opens the devtools
+  console.log(
+    '%c›_ nyhz%c\nhi, curious one. there is a terminal on the page — press / and type help.',
+    'font: 700 20px ui-monospace, monospace; color: #3ad29f', 'font: 12px ui-monospace, monospace; color: #b9b8b0',
+  );
+
+  // the tab keeps a prompt blinking while you're away
+  const title = document.title;
+  let blink = 0;
+  document.addEventListener('visibilitychange', () => {
+    clearInterval(blink);
+    if (!document.hidden) { document.title = title; return; }
+    let on = false;
+    blink = window.setInterval(() => { on = !on; document.title = on ? '›_ still here' : '› still here'; }, 900);
+  });
+</script>

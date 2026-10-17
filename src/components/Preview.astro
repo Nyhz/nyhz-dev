@@ -6,7 +6,12 @@
     <p class="sec-label sec-label--r">— preview</p>
   </div>
 
+  <a class="pv__screen" data-screen tabindex="-1" aria-hidden="true" target="_blank" rel="noopener noreferrer">
+    <canvas></canvas>
+  </a>
+
   <div class="pv__frame" data-frame>
+    <p class="pv__idle" aria-hidden="true">› select a project<i class="pv__caret"></i></p>
     <div class="pv__card" data-card>
       <div class="pv__dossier">
         <p class="pv__d-title"><span data-title-t></span><i class="pv__caret" aria-hidden="true"></i></p>
@@ -27,7 +32,30 @@
 </div>
 
 <style>
-  .preview { width: 100%; }
+  .preview { position: relative; width: 100%; }
+
+  /* the cover "screen" lives in the dead space between the hero and this
+     column (absolutely placed → never moves the layout). Height is measured
+     in JS from the room available; it stays hidden when there is too little. */
+  .pv__screen { position: absolute; left: 0; right: 0; bottom: calc(100% + 1.1rem); display: none;
+    border: 1px solid var(--line); overflow: hidden; background: #0e0e0d;
+    opacity: 0; transition: opacity 0.35s var(--ease-out), border-color var(--t-hover) ease; }
+  .pv__screen.is-on { display: block; }
+  .preview.pv-active .pv__screen.is-on { opacity: 1; }
+  .pv__screen canvas { display: block; width: 100%; height: 100%;
+    filter: grayscale(1) contrast(1.2) brightness(1.15); transition: filter 0.5s var(--ease-out); }
+  .pv__screen::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px); }
+  @media (hover: hover) {
+    .pv__screen:hover { border-color: var(--muted); }
+    .pv__screen:hover canvas { filter: none; }
+  }
+
+  .pv__frame { position: relative; }
+  .pv__idle { position: absolute; top: 1.1rem; left: 1.2rem; font: 0.8rem var(--mono); color: var(--muted);
+    transition: opacity 0.3s ease; }
+  .pv__idle .pv__caret { display: inline-block; animation: pvBlink 0.8s steps(1) infinite; }
+  .preview.pv-active .pv__idle { opacity: 0; }
   .pv__head { display: flex; align-items: baseline; justify-content: flex-end; }
   .preview .sec-label { opacity: 0; transition: opacity 0.35s ease; }
   .preview.pv-active .sec-label { opacity: 1; }
@@ -35,6 +63,7 @@
     font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
     transition: color 0.2s; }
   .pv__back:hover { color: var(--fg); }
+  .pv__back:active { transform: translateX(-2px); }
 
   .pv__frame { width: 100%; }
   .pv__card { opacity: 0; will-change: transform, opacity; }
@@ -74,16 +103,18 @@
 
   @media (max-width: 720px) {
     .pv__head { justify-content: space-between; }
+    .pv__idle, .pv__screen { display: none !important; }
     .pv__back { display: inline-flex; gap: 0.4rem; }
   }
   @media (prefers-reduced-motion: reduce) {
     .pv__link, .pv__link .ar { transition: none; }
-    .typing > .pv__caret { animation: none; }
+    .typing > .pv__caret, .pv__idle .pv__caret { animation: none; }
   }
 </style>
 
 <script>
   import { gsap } from 'gsap';
+  import { createScreen } from '../scripts/screen';
 
   const pv = document.querySelector('.preview');
   const card = pv?.querySelector('[data-card]') as HTMLElement | null;
@@ -102,6 +133,42 @@
   const rows = Array.from(document.querySelectorAll<HTMLElement>('.prj[data-proj]'));
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = () => matchMedia('(max-width: 720px)').matches;
+
+  // ---- cover screen ----
+  const screenEl = pv?.querySelector<HTMLAnchorElement>('[data-screen]') ?? null;
+  const screenCv = screenEl?.querySelector('canvas') ?? null;
+  const screen = screenCv ? createScreen(screenCv) : null;
+  const GAP = 20, MIN_H = 72;
+
+  // Fit the screen into the room between the hero and the preview column.
+  function layoutScreen() {
+    if (!screenEl || !pv) return false;
+    const hero = document.querySelector('.hero');
+    const open = document.querySelector('.page')?.classList.contains('projects-open');
+    if (!hero || isMobile() || open) { screenEl.classList.remove('is-on'); return false; }
+    const room = pv.getBoundingClientRect().top - hero.getBoundingClientRect().bottom - GAP * 2;
+    const h = Math.min(room, pv.clientWidth * 0.56, 230);
+    if (h < MIN_H) { screenEl.classList.remove('is-on'); return false; }
+    screenEl.style.height = `${Math.round(h)}px`;
+    screenEl.classList.add('is-on');
+    return true;
+  }
+  function paintScreen(d: DOMStringMap, instant: boolean) {
+    if (!screen || !screenEl) return;
+    screenEl.href = d.live || d.download || d.repo || '';
+    if (!d.cover || !layoutScreen()) { screen.clear(); return; }
+    screen.show(d.cover, instant);
+  }
+  addEventListener('resize', () => { if (current) layoutScreen(); });
+  // the list expanding hides it; collapsing brings it back once settled
+  new MutationObserver(() => {
+    const d = rows.find((r) => r.dataset.proj === current)?.dataset;
+    if (!d) return;
+    if (document.querySelector('.page')?.classList.contains('projects-open')) layoutScreen();
+    else setTimeout(() => paintScreen(d, true), 650);
+  }).observe(document.querySelector('.page')!, { attributes: true, attributeFilter: ['class'] });
+  // warm the cache on hover intent, so the decode starts without a wait
+  rows.forEach((r) => r.addEventListener('pointerenter', () => screen?.preload(r.dataset.cover || ''), { once: true }));
 
   // Link state must NOT visibly change until the old card has left the screen.
   function applyContent(d: DOMStringMap) {
@@ -163,6 +230,7 @@
       if (stackV) stackV.textContent = d.tags || '';
       applyContent(d);
       gsap.set([card, metaEl, footEl], { opacity: 1, x: 0 });
+      paintScreen(d, true);
       return;
     }
 
@@ -171,11 +239,12 @@
       reset();
       applyContent(d);
       gsap.set(card, { opacity: 0, x: -40 });
+      paintScreen(d, false);
       enterIn(tl);
       typeDossier(tl, d);
     } else {
       // swap links/status only AFTER the old card has left (no instant flash)
-      leaveOut(tl, () => { reset(); applyContent(d); });
+      leaveOut(tl, () => { reset(); applyContent(d); paintScreen(d, false); });
       enterIn(tl);
       typeDossier(tl, d);
     }
@@ -198,4 +267,12 @@
     });
   });
   back?.addEventListener('click', () => { track?.classList.remove('is-preview'); });
+  // the terminal's `open <project>` — always shows (a row click toggles)
+  addEventListener('nyhz:open', (e) => {
+    const slug = (e as CustomEvent<{ slug: string }>).detail?.slug;
+    const r = rows.find((row) => row.dataset.proj === slug);
+    if (!slug || !r) return;
+    show(slug, r.dataset);
+    if (isMobile()) track?.classList.add('is-preview');
+  });
 </script>

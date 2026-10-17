@@ -7,6 +7,15 @@
   if (canvas) {
     const ok = (() => { try { return !!document.createElement('canvas').getContext('webgl'); } catch { return false; } })();
     if (!ok) { canvas.style.display = 'none'; }
-    else { createGrain(canvas).start(); }
+    else {
+      const grain = createGrain(canvas);
+      grain.start();
+      // the terminal's `glitch` command (and the name's own glitch) send a
+      // shockwave out from the wordmark
+      addEventListener('nyhz:shock', (e) => {
+        const { x, y, strength = 1.6 } = (e as CustomEvent).detail ?? {};
+        grain.ripple(x ?? innerWidth / 2, y ?? innerHeight / 2, strength);
+      });
+    }
   }
 </script>

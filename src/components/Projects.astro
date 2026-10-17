@@ -1,9 +1,8 @@
 ---
+import { statusOf } from '../scripts/content';
 const { projects } = Astro.props;
 const HIGHLIGHT = 3;
 const MAX = 10;
-const statusOf = (p: { deployUrl: string; downloadUrl: string }) =>
-  (p.deployUrl ? 'live' : p.downloadUrl ? 'download' : 'personal');
 const shown = projects.slice(0, MAX);
 const total = String(shown.length).padStart(2, '0');
 const canExpand = shown.length > HIGHLIGHT;
@@ -43,6 +42,7 @@ const canExpand = shown.length > HIGHLIGHT;
   .prj__trigger { position: relative; display: block; padding: 1rem 0; cursor: pointer;
     border-top: 1px solid var(--line); outline: none; }
   .prj__trigger:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
+  .prj__trigger:active .prj__inner { transform: translateX(1.1rem) scale(0.985); transition-duration: var(--t-press); }
 
   /* shift via transform only → never reflows, no layout shift on hover */
   .prj__inner { display: block; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
@@ -67,6 +67,7 @@ const canExpand = shown.length > HIGHLIGHT;
     font: 500 0.7rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
     transition: color 0.25s; }
   .prj-more:hover { color: var(--fg); }
+  .prj-more:active { transform: translateY(1px); }
   .prj-more__ar { transition: transform 0.3s ease; }
   .page.projects-open .prj-more__ar { transform: rotate(180deg); }
 
@@ -187,6 +188,41 @@ const canExpand = shown.length > HIGHLIGHT;
     if (!page?.classList.contains('projects-open')) return;
     if (!page.contains(e.target as Node)) setExpanded(false);
   });
+</script>
+
+<script>
+  // Rows are role=button divs: Enter / Space activate them like a click.
+  document.querySelectorAll<HTMLElement>('.prj__trigger').forEach((t) => {
+    t.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); t.click(); }
+    });
+  });
+
+  // Hover / focus decodes the project name: unresolved letters cycle through
+  // glyphs and lock in left→right. Mono face → widths never change.
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
+    document.querySelectorAll<HTMLElement>('.prj__trigger').forEach((t) => {
+      const name = t.querySelector<HTMLElement>('.prj__name');
+      if (!name) return;
+      const truth = name.textContent || '';
+      let raf = 0;
+      const decode = () => {
+        cancelAnimationFrame(raf);
+        const t0 = performance.now(), dur = 90 + truth.length * 26;
+        const step = (now: number) => {
+          const k = Math.min((now - t0) / dur, 1);
+          const locked = Math.floor(k * truth.length);
+          name.textContent = truth.split('').map((c, i) =>
+            i < locked || c === ' ' ? c : GLYPHS[(Math.random() * GLYPHS.length) | 0]).join('');
+          if (k < 1) raf = requestAnimationFrame(step); else name.textContent = truth;
+        };
+        raf = requestAnimationFrame(step);
+      };
+      t.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') decode(); });
+      t.addEventListener('focus', decode);
+    });
+  }
 </script>
 
 <script>

@@ -11,7 +11,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 ---
 <div class="hero-block" data-anim>
   <p class="eyebrow">{role}{location ? ` — ${location}` : ''}</p>
-  <h1 class="hero-name" data-text={name}>{name}</h1>
+  <h1 class="hero-name" data-text={name} aria-label={name}>{[...name].map((ch) => <span class="ch" aria-hidden="true">{ch}</span>)}</h1>
   <div class="hero-foot">
     {socials.length > 0 && (
       <nav class="hero-socials">
@@ -36,10 +36,13 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
   .hero-foot { display: flex; align-items: center; justify-content: space-between;
     gap: 1rem 1.4rem; flex-wrap: wrap; }
   .hero-name {
-    position: relative; font-size: clamp(3.2rem, 9.5vw, 7rem); font-weight: 700;
+    position: relative; font-size: var(--name-size); font-weight: 700;
     letter-spacing: -0.02em; line-height: 0.95; width: max-content; max-width: 100%;
     padding-bottom: 0.06em; transition: font-size 0.6s cubic-bezier(.4,0,.2,1);
   }
+  /* each letter's weight is driven by the pointer (variable font; mono advance
+     widths don't change with weight, so nothing reflows) */
+  .hero-name .ch { font-weight: var(--w, 700); }
   /* Chromatic glitch (same vibe as the loader) on duplicated colour layers,
      so the real name is never clipped. */
   .hero-name::before, .hero-name::after {
@@ -95,13 +98,53 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 </style>
 
 <script>
-  const el = document.querySelector('.hero-name');
-  if (el && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const loop = () => {
+  const el = document.querySelector<HTMLElement>('.hero-name');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (el && !reduce) {
+    const glitch = () => {
+      if (el.classList.contains('glitching')) return;
       el.classList.add('glitching');
       setTimeout(() => el.classList.remove('glitching'), 420);
-      setTimeout(loop, 3000 + Math.random() * 3000);
     };
+    const loop = () => { glitch(); setTimeout(loop, 3000 + Math.random() * 3000); };
     setTimeout(loop, 3000 + Math.random() * 3000);
+
+    // the terminal's `glitch` command: a burst of three, plus a shockwave
+    addEventListener('nyhz:glitch', () => {
+      const r = el.getBoundingClientRect();
+      dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x: r.left + r.width / 2, y: r.top + r.height / 2, strength: 2 } }));
+      [0, 480, 960].forEach((d) => setTimeout(glitch, d));
+    });
+
+    // Pointer proximity thins the letters: each glyph eases from 700 toward
+    // 180 as the cursor nears it. Runs only while something is still moving.
+    if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      const chars = Array.from(el.querySelectorAll<HTMLElement>('.ch'));
+      const cur = chars.map(() => 700);
+      const want = chars.map(() => 700);
+      let raf = 0;
+      const tick = () => {
+        let moving = false;
+        chars.forEach((c, i) => {
+          cur[i] += (want[i] - cur[i]) * 0.14;
+          if (Math.abs(want[i] - cur[i]) > 0.5) moving = true; else cur[i] = want[i];
+          c.style.setProperty('--w', cur[i].toFixed(0));
+        });
+        raf = moving ? requestAnimationFrame(tick) : 0;
+      };
+      const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+      addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        const R = el.getBoundingClientRect().height * 1.9;
+        chars.forEach((c, i) => {
+          const b = c.getBoundingClientRect();
+          const d = Math.hypot(e.clientX - (b.left + b.width / 2), e.clientY - (b.top + b.height / 2));
+          const k = Math.max(0, 1 - d / R);
+          want[i] = 700 - 520 * k * k * (3 - 2 * k);
+        });
+        kick();
+      }, { passive: true });
+      document.documentElement.addEventListener('pointerleave', () => { want.fill(700); kick(); });
+    }
   }
 </script>

@@ -33,7 +33,7 @@
   .contact {
     display: inline-flex; flex-direction: column; align-items: stretch;
     border: 1px solid var(--line); border-radius: 12px; background: transparent;
-    color: var(--muted); transition: color 0.2s, border-color 0.2s;
+    color: var(--muted); transition: color 0.2s, border-color 0.2s, transform var(--t-press) var(--ease-out);
   }
   .contact-head { display: flex; align-items: center; }
   .contact-trigger {
@@ -42,8 +42,9 @@
     font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
   }
   .contact:not(.contact--open):hover { color: var(--fg); border-color: var(--fg); }
+  .contact:not(.contact--open):active { transform: scale(0.97); }
   .contact-trigger:focus-visible { outline: 1px solid var(--fg); outline-offset: 3px; border-radius: 12px; }
-  .live { width: 6px; height: 6px; border-radius: 50%; background: #3ad29f; box-shadow: 0 0 8px #3ad29f;
+  .live { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent);
     animation: live 1.6s ease-in-out infinite; flex: none; }
   .cue { font-size: 0.95em; opacity: 0.6; transition: transform 0.2s, opacity 0.2s; }
   .contact:not(.contact--open):hover .cue { opacity: 1; transform: rotate(90deg); }
@@ -81,10 +82,11 @@
   .contact-form__foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.2rem; }
   .contact-status { font: 400 0.72rem var(--mono); color: var(--muted); }
   .contact-status[data-state="error"] { color: #ff6b6b; }
-  .contact-status[data-state="ok"] { color: #3ad29f; }
+  .contact-status[data-state="ok"] { color: var(--accent); }
   .contact-send { background: var(--fg); color: var(--bg); border: 0; border-radius: 6px;
     padding: 0.5rem 1.1rem; cursor: pointer; font: 500 0.66rem var(--mono); letter-spacing: 0.16em;
-    text-transform: uppercase; transition: opacity 0.2s; }
+    text-transform: uppercase; transition: opacity 0.2s, transform var(--t-press) var(--ease-out); }
+  .contact-send:not(:disabled):active { transform: scale(0.97); }
   .contact-send:disabled { opacity: 0.5; cursor: default; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -256,7 +258,7 @@
           });
           const out = await res.json().catch(() => ({}));
           if (res.ok) {
-            setStatus('sent — thanks!', 'ok');
+            setStatus('sent. talk soon.', 'ok');
             form.reset();
           } else {
             setStatus(out.error || 'something went wrong', 'error');

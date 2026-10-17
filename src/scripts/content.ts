@@ -14,6 +14,10 @@ export type SkillProps = {
   slug: string; title: string; items: string[]; level: number; order: number;
 };
 
+/** how a project ships: a live deploy, a download, or just the repo */
+export const statusOf = (p: { deployUrl: string; downloadUrl: string }) =>
+  (p.deployUrl ? 'live' : p.downloadUrl ? 'download' : 'personal');
+
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
 const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);

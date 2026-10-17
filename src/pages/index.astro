@@ -6,12 +6,14 @@ import Hero from '../components/Hero.astro';
 import Projects from '../components/Projects.astro';
 import Preview from '../components/Preview.astro';
 import Loader from '../components/Loader.astro';
+import Terminal from '../components/Terminal.astro';
 import { getContent } from '../scripts/content';
 const { profile, projects } = await getContent();
 ---
 <Base title={`${profile.name} — ${profile.role}`}>
   <Field slot="bg" />
   <Frame slot="frame" />
+  <Terminal profile={profile} projects={projects} slot="overlay" />
   <Loader name={profile.name} tagline={profile.role} slot="overlay" />
 
   <div class="spacer" data-spacer-top></div>
