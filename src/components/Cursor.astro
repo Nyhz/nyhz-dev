@@ -1,0 +1,112 @@
+---
+// A custom cursor in the frame's own language: a teal dot inside the four
+// corner ticks of the page frame. Over anything interactive the ticks spring
+// (the dossier card's back.out bounce) to lock around the element's box.
+// Fine pointers only; text fields keep the native I-beam.
+---
+<div class="cur" data-cursor aria-hidden="true">
+  <i class="cur__tick tl"></i><i class="cur__tick tr"></i>
+  <i class="cur__tick bl"></i><i class="cur__tick br"></i>
+  <i class="cur__dot"></i>
+</div>
+
+<style>
+  .cur { position: fixed; inset: 0; z-index: 200; pointer-events: none; opacity: 0;
+    transition: opacity 0.2s ease; }
+  .cur.is-on { opacity: 1; }
+  .cur__tick, .cur__dot { position: absolute; left: 0; top: 0; will-change: transform; }
+  /* same 9px ticks as Frame.astro's corners */
+  .cur__tick { width: 9px; height: 9px; border: 1px solid var(--fg); }
+  .cur__tick.tl { border-right: 0; border-bottom: 0; }
+  .cur__tick.tr { border-left: 0; border-bottom: 0; }
+  .cur__tick.bl { border-right: 0; border-top: 0; }
+  .cur__tick.br { border-left: 0; border-top: 0; }
+  .cur__dot { width: 4px; height: 4px; margin: -2px 0 0 -2px; background: var(--accent);
+    transition: opacity 0.2s ease; }
+  .cur.is-locked .cur__dot { opacity: 0.5; }
+  .cur.is-text { opacity: 0; }
+
+  :global(html.has-cursor), :global(html.has-cursor *) { cursor: none !important; }
+  :global(html.has-cursor input), :global(html.has-cursor textarea) { cursor: text !important; }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+
+  const root = document.querySelector<HTMLElement>('[data-cursor]');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)');
+
+  if (root && fine.matches) {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const [tl, tr, bl, br] = (['tl', 'tr', 'bl', 'br'] as const).map((c) => root.querySelector<HTMLElement>(`.${c}`)!);
+    const dot = root.querySelector<HTMLElement>('.cur__dot')!;
+    const TICK = 9, REST = 22, PAD = 6;
+    const INTERACTIVE = 'a[href], button:not(:disabled), [role="button"], summary';
+    const TEXT = 'input:not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]';
+
+    document.documentElement.classList.add('has-cursor');
+
+    const ptr = { x: innerWidth / 2, y: innerHeight / 2 };
+    const box = { x: ptr.x - REST / 2, y: ptr.y - REST / 2, w: REST, h: REST };
+    const press = { v: 0 };
+    let target: HTMLElement | null = null;
+    let locking = false; // a lock tween is running: don't snap to the rect yet
+    let raf = 0;
+
+    const lockRect = (el: HTMLElement) => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left - PAD, y: r.top - PAD, w: r.width + PAD * 2, h: r.height + PAD * 2 };
+    };
+
+    function lock(el: HTMLElement | null) {
+      if (el === target) return;
+      target = el;
+      root!.classList.toggle('is-locked', !!el);
+      gsap.killTweensOf(box);
+      if (!el) { locking = false; return; } // back to following the pointer
+      locking = true;
+      gsap.to(box, { ...lockRect(el), duration: reduce ? 0 : 0.5, ease: 'back.out(1.7)',
+        onComplete: () => { locking = false; } });
+    }
+
+    function frame() {
+      if (target && !target.isConnected) lock(null);
+      if (target && !locking) Object.assign(box, lockRect(target));       // stay on it if it moves
+      else if (!target) {                                                 // trail the pointer a little
+        const k = reduce ? 1 : 0.28;
+        box.x += (ptr.x - REST / 2 - box.x) * k; box.y += (ptr.y - REST / 2 - box.y) * k;
+        box.w += (REST - box.w) * k; box.h += (REST - box.h) * k;
+      }
+      const p = press.v;
+      const x0 = box.x + p, y0 = box.y + p, x1 = box.x + box.w - TICK - p, y1 = box.y + box.h - TICK - p;
+      tl.style.transform = `translate(${x0}px, ${y0}px)`;
+      tr.style.transform = `translate(${x1}px, ${y0}px)`;
+      bl.style.transform = `translate(${x0}px, ${y1}px)`;
+      br.style.transform = `translate(${x1}px, ${y1}px)`;
+      dot.style.transform = `translate(${ptr.x}px, ${ptr.y}px)`;
+      raf = requestAnimationFrame(frame);
+    }
+
+    addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') { root.classList.remove('is-on'); return; }
+      ptr.x = e.clientX; ptr.y = e.clientY;
+      root.classList.add('is-on');
+      if (!raf) raf = requestAnimationFrame(frame);
+    }, { passive: true });
+
+    addEventListener('pointerover', (e) => {
+      const el = e.target as Element;
+      root.classList.toggle('is-text', !!el.closest(TEXT));
+      lock(el.closest<HTMLElement>(INTERACTIVE));
+    }, { passive: true });
+
+    // a press squeezes the ticks in, release springs them back
+    addEventListener('pointerdown', () => { if (!reduce) gsap.to(press, { v: 3, duration: 0.12, ease: 'power2.out' }); });
+    addEventListener('pointerup', () => { if (!reduce) gsap.to(press, { v: 0, duration: 0.45, ease: 'back.out(2.4)' }); });
+
+    document.documentElement.addEventListener('pointerleave', () => root.classList.remove('is-on'));
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { cancelAnimationFrame(raf); raf = 0; }
+    });
+  }
+</script>
