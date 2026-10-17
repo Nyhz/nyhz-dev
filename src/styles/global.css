@@ -98,8 +98,13 @@ a { color: inherit; text-decoration: none; }
   .page.projects-open .lower__track { height: 100%; }
   .page.projects-open .lower__track > * { height: 100%; }
   .page.projects-open .projects { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-  .page.projects-open .projects ul { flex: 0 1 auto; min-height: 0; overflow-y: auto;
+  /* scrolling only once the list has settled (projects-reveal, as on desktop):
+     while it grows/shrinks a scroll container would flash its scrollbar.
+     The bar itself stays hidden — the masked edges say there's more. */
+  .page.projects-open.projects-reveal .projects ul { flex: 0 1 auto; min-height: 0; overflow-y: auto;
+    scrollbar-width: none;
     -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
     mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); }
+  .page.projects-open .projects ul::-webkit-scrollbar { display: none; }
 }
 
