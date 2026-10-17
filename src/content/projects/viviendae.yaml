@@ -1,0 +1,11 @@
+title: Viviendae
+description: "CRM for Spanish real-estate agencies: matches every new listing against buyers' searches and tells each client by email or WhatsApp when a home that fits comes in."
+tags:
+  - nextjs
+  - postgres
+  - bullmq
+repoUrl: ''
+deployUrl: ''
+downloadUrl: ''
+coverUrl: /projects/viviendae.jpg
+order: 4

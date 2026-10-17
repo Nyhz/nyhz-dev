@@ -1,0 +1,11 @@
+title: Second Brain
+description: "A personal second brain: a markdown vault curated by an AI agent, with a live dashboard, a Three.js knowledge graph and an MCP server for other tools."
+tags:
+  - nextjs
+  - three.js
+  - mcp
+repoUrl: ''
+deployUrl: ''
+downloadUrl: ''
+coverUrl: /projects/second-brain.jpg
+order: 8

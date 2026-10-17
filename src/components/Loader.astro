@@ -140,31 +140,44 @@ const { name, tagline = 'creative developer' } = Astro.props;
     window.dispatchEvent(new Event('loaderdone'));
   }
 
-  // Fly the typed loader name to the hero name's spot, hand off to the real
-  // (identical, mono) hero wordmark, and reveal the site. The page's own frame
-  // sits underneath, so the frame stays continuous.
+  // Fly the typed loader name onto the hero name and hand over on the landing
+  // frame: the real name stays hidden for the whole flight, so there is only
+  // ever one "nyhz" on screen. Positions are measured on the text itself
+  // (Range boxes), not the containers, whose line-heights differ.
+  const heroName = document.querySelector<HTMLElement>('.hero-name');
+  if (heroName && !reduce) heroName.style.visibility = 'hidden';
+
+  const textBox = (el: Element) => {
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    return r.getBoundingClientRect();
+  };
+
   function flyToHero() {
     typeEl.style.borderRightColor = 'transparent'; // drop the caret
-    const hero = document.querySelector('.hero-name') as HTMLElement | null;
-    if (!hero) {
+    nameWrap.classList.remove('glitch');           // land clean, no chromatic frame
+    if (!heroName) {
       gsap.timeline({ onComplete: () => gsap.set(loader, { display: 'none' }) })
         .to(loader, { opacity: 0, duration: 0.5, ease: 'power2.inOut' })
         .add(revealSite, 0.1);
       return;
     }
-    const src = centerEl.getBoundingClientRect();
-    const tr = hero.getBoundingClientRect();
-    const scale = tr.height / src.height;
-    const dx = tr.left - src.left;
-    const dy = (tr.top - 16) - src.top; // undo the entrance y:16 → target the FINAL spot
+    const box = centerEl.getBoundingClientRect();
+    const src = textBox(typeEl);
+    const dst = textBox(heroName);
+    const scale = dst.height / src.height;
+    const FLY = 0.7;
 
     gsap.timeline()
       .to([frameEl, scanEl, logEl, counterEl, barWrap], { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0)
       .to(loader, { backgroundColor: 'rgba(10,10,10,0)', duration: 0.5, ease: 'power2.in' }, 0.1)
-      .to(centerEl, { x: dx, y: dy, scale, transformOrigin: 'top left', duration: 0.7, ease: 'power3.inOut' }, 0)
-      .add(revealSite, 0.2)                                  // hero name fades into place under the flier
-      .to(centerEl, { opacity: 0, duration: 0.25, ease: 'power2.out' }, 0.68) // crossfade onto the real one
-      .set(loader, { display: 'none' });
+      .to(centerEl, {
+        x: dst.left - src.left, y: dst.top - src.top, scale, duration: FLY, ease: 'power3.inOut',
+        transformOrigin: `${src.left - box.left}px ${src.top - box.top}px`,
+      }, 0)
+      .add(revealSite, 0.2) // eyebrow, links and lists rise in around the flight
+      .add(() => { heroName.style.visibility = ''; gsap.set(centerEl, { opacity: 0 }); }, FLY)
+      .set(loader, { display: 'none' }, FLY + 0.05);
   }
 
   if (reduce) {

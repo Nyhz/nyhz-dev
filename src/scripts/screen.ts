@@ -10,7 +10,22 @@ export function coverRect(iw: number, ih: number, W: number, H: number, focusY =
   return [(iw - sw) / 2, (ih - sh) * focusY, sw, sh];
 }
 
-export function createScreen(canvas: HTMLCanvasElement) {
+/** mean luminance (0..1) of an image, from a 16×16 thumbnail */
+function luma(img: HTMLImageElement) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  const x = c.getContext('2d', { willReadFrequently: true });
+  if (!x) return 0;
+  x.drawImage(img, 0, 0, 16, 16);
+  const d = x.getImageData(0, 0, 16, 16).data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+  return sum / (256 * 255);
+}
+
+// `onLuma` reports each cover's brightness so light UIs can be shown inverted
+// (they'd glare in the dark page otherwise).
+export function createScreen(canvas: HTMLCanvasElement, opts: { onLuma?: (l: number) => void } = {}) {
   const ctx = canvas.getContext('2d');
   const cache = new Map<string, Promise<HTMLImageElement>>();
   let raf = 0;
@@ -46,6 +61,7 @@ export function createScreen(canvas: HTMLCanvasElement) {
     let img: HTMLImageElement;
     try { img = await load(url); } catch { if (my === token) clear(); return; }
     if (my !== token) return;
+    opts.onLuma?.(luma(img));
 
     const dpr = fit();
     const W = canvas.width, H = canvas.height;

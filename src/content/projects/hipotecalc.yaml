@@ -1,0 +1,11 @@
+title: Hipotecalc
+description: "Mortgage, ITP and rental-yield calculators for Spain — free, no sign-up, with the ECB's official Euribor refreshed every month by a GitHub Action."
+tags:
+  - astro
+  - react
+  - echarts
+repoUrl: https://github.com/Nyhz/hipotecalc-reloaded
+deployUrl: https://www.hipotecalc.com
+downloadUrl: ''
+coverUrl: /projects/hipotecalc.jpg
+order: 3

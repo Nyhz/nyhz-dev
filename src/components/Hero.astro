@@ -8,10 +8,12 @@ const ICONS: Record<string, string> = {
 };
 const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 ---
-<div class="hero-block" data-anim>
-  <p class="eyebrow">{role}{location ? ` — ${location}` : ''}</p>
+<!-- the name itself has no entrance: the loader flies its typed name here and
+     hands over on the landing frame (Loader.astro) -->
+<div class="hero-block">
+  <p class="eyebrow" data-anim>{role}{location ? ` — ${location}` : ''}</p>
   <h1 class="hero-name" data-text={name} aria-label={name}>{[...name].map((ch) => <span class="ch" aria-hidden="true">{ch}</span>)}</h1>
-  <div class="hero-foot">
+  <div class="hero-foot" data-anim>
     {socials.length > 0 && (
       <nav class="hero-socials">
         {socials.map((s: { label: string; url: string }) => (
@@ -155,8 +157,11 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
         raf = moving ? requestAnimationFrame(tick) : 0;
       };
       const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+      // stays at rest until the loader's name has landed and handed over
+      let live = false;
+      addEventListener('loaderdone', () => setTimeout(() => { live = true; }, 900), { once: true });
       addEventListener('pointermove', (e) => {
-        if (e.pointerType !== 'mouse') return;
+        if (!live || e.pointerType !== 'mouse') return;
         const R = el.getBoundingClientRect().height * 1.9;
         chars.forEach((c, i) => {
           const b = c.getBoundingClientRect();

@@ -1,0 +1,11 @@
+title: HL Bot
+description: "Session-based trading bot for Hyperliquid perps, with a dashboard that draws its reasoning live — trigger levels on the chart, positions, PnL, fees and funding."
+tags:
+  - python
+  - fastapi
+  - nextjs
+repoUrl: https://github.com/Nyhz/hl-bot
+deployUrl: ''
+downloadUrl: ''
+coverUrl: /projects/hl-bot.jpg
+order: 9

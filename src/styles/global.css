@@ -84,6 +84,11 @@ a { color: inherit; text-decoration: none; }
   .lower__track { display: flex; width: 200%; gap: 0;
     transform: translateX(0); transition: transform 0.5s cubic-bezier(.4,0,.2,1); }
   .lower__track > * { flex: 0 0 50%; width: 50%; align-self: flex-start; }
+  /* the preview reserves its tallest state (no layout shift), which can make
+     the track taller than the list: the list panel stretches with it and
+     keeps show-all pinned to the bottom */
+  .lower__track > .projects { align-self: stretch; display: flex; flex-direction: column; }
+  .lower__track > .projects .prj-more { margin-top: auto; padding-top: 1.2rem; }
   .lower__track.is-preview { transform: translateX(-50%); }
 
   /* expanded: header collapsed (GSAP), list fills + scrolls. The preview panel
