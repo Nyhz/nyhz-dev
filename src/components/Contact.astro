@@ -36,13 +36,20 @@
   .cf__row:has([aria-invalid="true"]) .cf__k { color: #ff6b6b; }
   @media (max-width: 720px) {
     .cf__row { padding: 0.5rem 0; }
-    .cf textarea { height: 3.2em; }
+    .cf textarea { height: 2.6em; }
+  }
+  /* iOS zooms into any field under 16px on focus (and the page ends up
+     panned off its frame) — touch screens get 16px, no zoom */
+  @media (pointer: coarse) {
+    .cf input, .cf textarea { font-size: 16px; }
   }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
   .cf__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
     padding-top: 0.8rem; border-top: 1px solid var(--line); }
   .cf__status { font: 0.72rem var(--mono); color: var(--muted); }
+  /* transmitting: the message turns to hex, in accent, while the packet travels */
+  .cf.is-tx input, .cf.is-tx textarea { color: var(--accent); }
   .cf__status[data-state="error"] { color: #ff6b6b; }
   .cf__status[data-state="ok"] { color: var(--accent); }
   .cf__send { position: relative; display: inline-flex; align-items: center; gap: 0.4rem; flex: none;
@@ -63,7 +70,59 @@
 </style>
 
 <script>
+  import { gsap } from 'gsap';
   import { validateContact } from '../scripts/contact';
+  import { sound } from '../scripts/sound';
+
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const toHex = (t: string) => Array.from(new TextEncoder().encode(t), (b) => b.toString(16).padStart(2, '0')).join(' ');
+
+  // Sending is a transmission: the fields encode to hex, and a packet of light
+  // leaves the send button, runs to the frame's edge and along it into the
+  // bottom-right corner, which lights up as it lands.
+  function transmit(fields: (HTMLInputElement | HTMLTextAreaElement)[], from: DOMRect) {
+    return new Promise<void>((done) => {
+      if (reduce) { done(); return; }
+      fields.forEach((f) => {
+        const text = f.value, hex = toHex(text);
+        const o = { n: 0 };
+        // left to right, characters give way to their bytes
+        gsap.to(o, { n: hex.length, duration: 0.6, ease: 'none', onUpdate: () => {
+          const k = Math.round(o.n);
+          f.value = hex.slice(0, k) + text.slice(Math.ceil(k / 3));
+        } });
+      });
+      const border = document.querySelector('.frame__border')?.getBoundingClientRect();
+      if (!border) { setTimeout(done, 600); return; }
+      const x0 = from.left + from.width / 2, y0 = from.top + from.height / 2;
+      const right = border.right - 1, bottom = border.bottom - 1;
+      // the packet and two fainter dots trailing it
+      const dots = [0, 1, 2].map((i) => {
+        const d = document.createElement('i');
+        d.style.cssText = `position:fixed;left:0;top:0;z-index:205;pointer-events:none;border-radius:50%;`
+          + `width:${6 - i * 1.5}px;height:${6 - i * 1.5}px;margin:${-(3 - i * 0.75)}px 0 0 ${-(3 - i * 0.75)}px;`
+          + `background:#3ad29f;box-shadow:0 0 ${12 - i * 4}px #3ad29f;opacity:${1 - i * 0.3}`;
+        document.body.append(d);
+        return d;
+      });
+      sound.send();
+      dots.forEach((d, i) => {
+        gsap.timeline({ delay: 0.25 + i * 0.05, onComplete: () => {
+          d.remove();
+          if (i === 0) {
+            const tick = document.querySelector<HTMLElement>('.frame__border .tick.br');
+            if (tick) gsap.fromTo(tick, { borderColor: '#3ad29f', boxShadow: '0 0 14px #3ad29f' },
+              { borderColor: 'rgba(0,0,0,0)', boxShadow: '0 0 0 rgba(0,0,0,0)', duration: 0.9, ease: 'power2.out', clearProps: 'borderColor,boxShadow' });
+            dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x: right, y: bottom, strength: 1.2 } }));
+            done();
+          }
+        } })
+          .set(d, { x: x0, y: y0 })
+          .to(d, { x: right, duration: 0.45, ease: 'power2.in' })
+          .to(d, { y: bottom, duration: Math.max(0.15, (bottom - y0) / 1400), ease: 'none' });
+      });
+    });
+  }
 
   const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
   const status = form?.querySelector<HTMLElement>('[data-contact-status]');
@@ -98,21 +157,28 @@
         return;
       }
       sendBtn.disabled = true;
-      setStatus('sending…', '');
+      setStatus('transmitting…', '');
+      const body = JSON.stringify(data);
+      const fields = Array.from(form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('.cf__row input, .cf__row textarea'));
+      const typed = fields.map((f) => f.value);
+      form.classList.add('is-tx');
+      const restore = () => { form.classList.remove('is-tx'); fields.forEach((f, i) => { f.value = typed[i]; }); };
+      const flight = transmit(fields, sendBtn.getBoundingClientRect());
       try {
-        const res = await fetch('/api/contact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
+        const res = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
         const out = await res.json().catch(() => ({}));
+        await flight;
         if (res.ok) {
-          setStatus('sent. talk soon.', 'ok');
+          form.classList.remove('is-tx');
           form.reset();
+          setStatus(`transmitted · ${(body.length / 1024).toFixed(1)}kb · ack — talk soon.`, 'ok');
         } else {
+          restore(); // never lose what they wrote
           setStatus(out.error || 'something went wrong', 'error');
         }
       } catch {
+        await flight;
+        restore();
         setStatus('network error — try again', 'error');
       }
       sendBtn.disabled = false;

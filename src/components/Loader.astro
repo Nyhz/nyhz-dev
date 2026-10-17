@@ -113,12 +113,38 @@ const { name, tagline = 'creative developer' } = Astro.props;
 
 <script>
   import { gsap } from 'gsap';
+  import { ago } from '../scripts/eggs';
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const loader = document.querySelector('[data-loader]') as HTMLElement;
   const countEl = document.querySelector('[data-count]') as HTMLElement;
   const barEl = document.querySelector('[data-bar]') as HTMLElement;
   const logEl = document.querySelector('[data-log]') as HTMLElement;
+
+  // a returning visitor (back after an hour, within a day) skips the boot log:
+  // one line, "welcome back", and a shorter hold — and an achievement. After
+  // 24h away it's a first visit again.
+  let seen = 0;
+  try {
+    seen = Number(localStorage.getItem('nyhz:seen')) || 0;
+    localStorage.setItem('nyhz:seen', String(Date.now()));
+  } catch { /* no memory, no welcome */ }
+  const away = Date.now() - seen;
+  const back = seen > 0 && away > 36e5 && away < 864e5;
+  if (back) {
+    const line = document.createElement('div');
+    line.innerHTML = `› welcome back <span class="hx">· last seen ${ago(away)} ago</span>`;
+    logEl.replaceChildren(line);
+    addEventListener('loaderdone', () => dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: 'return' } })), { once: true });
+  }
+  // back from a kernel panic (the terminal's rm -rf /): the boot owns up to it
+  let panicked = false;
+  try { panicked = sessionStorage.getItem('nyhz:panic') === '1'; } catch { /* no */ }
+  if (panicked) {
+    const line = document.createElement('div');
+    line.innerHTML = '› fsck /dev/nyhz <span class="hx">0xdead</span><span class="ok"> recovered</span>';
+    logEl.prepend(line);
+  }
   const logLines = Array.from(logEl.children) as HTMLElement[];
   const nameWrap = document.querySelector('[data-name-wrap]') as HTMLElement;
   const centerEl = nameWrap.querySelector('.loader__center') as HTMLElement;
@@ -235,7 +261,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
     tl.to(typer, { c: NAME.length, duration: 0.55, ease: `steps(${NAME.length})`,
       onUpdate() { typeEl.style.width = Math.round(typer.c) + 'ch'; } });
     tl.add(() => { typeEl.classList.add('typed'); nameWrap.classList.add('glitch'); });
-    tl.to({}, { duration: 1.5 }); // hold longer so more glitch bursts show
+    tl.to({}, { duration: back ? 0.7 : 1.5 }); // hold longer so more glitch bursts show
 
     // exit — fly the name to the hero
     tl.call(() => { clearTimeout(flickTimer); loader.classList.remove('flick'); });

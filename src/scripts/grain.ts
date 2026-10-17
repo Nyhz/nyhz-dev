@@ -128,6 +128,8 @@ export function createGrain(canvas: HTMLCanvasElement) {
     setTheme(_c: string) { /* luminance-based, theme-agnostic */ },
     /** a shockwave from a viewport point (CSS px) */
     ripple,
+    /** points the lamp at a viewport point (CSS px), as if the pointer were there */
+    lamp(x: number, y: number) { target.x = x / innerWidth; target.y = 1 - y / innerHeight; lastMove = performance.now(); },
     dispose() {
       cancelAnimationFrame(raf);
       removeEventListener('resize', resize);

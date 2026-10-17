@@ -6,7 +6,10 @@ const { coords = '37.98°N / 23.72°E' } = Astro.props;
     <span class="tick tl"></span><span class="tick tr"></span>
     <span class="tick bl"></span><span class="tick br"></span>
   </div>
-  <span class="meta d"><span data-clock>--:--:--</span> · © 2026</span>
+  <span class="meta a act" data-activity hidden>
+    <i class="act__dot"></i><span>last push</span><span class="act__k" data-act-when></span><b data-act-repo></b><span class="act__msg" data-act-msg></span>
+  </span>
+  <span class="meta d" data-clock-wrap><span data-clock>--:--:--</span><span class="note" data-clock-note></span> · © 2026</span>
 </div>
 
 <style>
@@ -25,15 +28,88 @@ const { coords = '37.98°N / 23.72°E' } = Astro.props;
   .meta.d { right: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
     font-variant-numeric: tabular-nums; }
   @media (max-width: 520px) { .meta.d { display: none; } }
+
+  /* last push (api/activity): the label in the meta style, the commit headline
+     in plain case, typed out once it arrives */
+  .act { display: flex; align-items: baseline; gap: 0.7rem; max-width: min(72ch, 52vw); color: var(--muted);
+    white-space: nowrap; opacity: 0; transition: opacity 0.6s ease; }
+  .act > * { flex: none; }
+  .act[hidden] { display: none; }
+  .act.is-in { opacity: 1; }
+  .act__dot { align-self: center; flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 6px var(--accent); }
+  .act__k { color: var(--fg); }
+  .act b { font-weight: 500; color: var(--fg); text-transform: none; letter-spacing: 0.04em; }
+  .act__msg { flex: 0 1 auto !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    text-transform: none; letter-spacing: 0.02em; color: var(--dim); }
+  @media (max-width: 720px) { .act { display: none; } }
+  /* the screensaver's and snake's HUDs take this corner */
+  :global(html.egg-sleep) .act, :global(html.egg-game) .act { opacity: 0; }
+  /* special minutes (13:37, 03:33): the clock says something, in accent, and
+     glitches as it starts */
+  .note { color: var(--accent); }
+  .note:not(:empty)::before { content: ' · '; color: var(--muted); }
+  .meta.d.is-glitch { animation: clockGlitch 0.9s steps(2) 1; }
+  @keyframes clockGlitch {
+    0%, 100% { text-shadow: none; transform: none; }
+    20% { text-shadow: -2px 0 #ff2e63, 2px 0 #2ee6ff; transform: translateX(2px); }
+    45% { text-shadow: 2px 0 #ff2e63, -2px 0 #2ee6ff; transform: translateX(-3px) skewX(-8deg); }
+    70% { text-shadow: -1px 0 #ff2e63, 1px 0 #2ee6ff; transform: translateX(1px); }
+  }
+  @media (prefers-reduced-motion: reduce) { .meta.d.is-glitch { animation: none; } }
 </style>
 
 <script>
+  import { clockNote } from '../scripts/eggs';
+  import { relTime, type Activity } from '../scripts/activity';
+
+  // last push: fetched once the loader is done (it never competes with the boot)
+  const act = document.querySelector<HTMLElement>('[data-activity]');
+  if (act) {
+    addEventListener('loaderdone', async () => {
+      let a: Activity | null = null;
+      try { a = await (await fetch('/api/activity')).json(); } catch { /* stays hidden */ }
+      if (!a?.repo) return;
+      const when = act.querySelector('[data-act-when]');
+      const msg = act.querySelector('[data-act-msg]');
+      const at = Date.parse(a.at);
+      const tickWhen = () => { if (when) when.textContent = relTime(Date.now() - at); };
+      tickWhen();
+      setInterval(tickWhen, 60000);
+      act.querySelector('[data-act-repo]')!.textContent = a.repo;
+      act.hidden = false;
+      requestAnimationFrame(() => act.classList.add('is-in'));
+      // the headline types itself out, like everything else here
+      const text = a.message;
+      if (!msg || !text) return;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { msg.textContent = text; return; }
+      let i = 0;
+      const iv = setInterval(() => { msg.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(iv); }, 18);
+    }, { once: true });
+  }
+
   const el = document.querySelector('[data-clock]');
+  const wrap = document.querySelector<HTMLElement>('[data-clock-wrap]');
+  const noteEl = document.querySelector('[data-clock-note]');
   if (el) {
+    let lastNote = '';
     const tick = () => {
       const d = new Date();
       const p = (n: number) => String(n).padStart(2, '0');
       el.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+      const note = clockNote(d.getHours(), d.getMinutes());
+      if (note !== lastNote) {
+        lastNote = note;
+        if (noteEl) noteEl.textContent = note;
+        if (note && wrap) {
+          wrap.classList.remove('is-glitch');
+          void wrap.offsetWidth;
+          wrap.classList.add('is-glitch');
+        }
+        // the page goes l33t for the minute (Eggs.astro). Next task: the
+        // eggs' listener may not be up yet on the first tick.
+        setTimeout(() => dispatchEvent(new CustomEvent('nyhz:leet', { detail: { on: !!note } })));
+      }
     };
     tick();
     setInterval(tick, 1000);

@@ -1,0 +1,909 @@
+---
+// Easter eggs. Six of them, each an achievement (scripts/eggs.ts keeps score
+// in localStorage; `achievements` in the terminal lists them):
+//   konami  ↑↑↓↓←→←→BA breaks the page for a second, then it recomposes
+//   gravity five quick clicks on the name drop its letters to the frame floor
+//   secrets `cat .secrets` in the terminal (terminal.ts)
+//   matrix  `matrix` / `hack` / `sudo rm -rf /`: glyph rain behind the page
+//   sleep   15s idle: the name peels off the hero and bounces like a DVD logo
+//   leet    13:37 / 03:33: the whole page turns to l33t for that minute
+//   …and more (see EGGS in scripts/eggs.ts). Desktop gets a counter by the
+//   clock once the first one is found, with a hint for each one left.
+---
+<div class="egg-toast" data-egg-toast role="status" aria-live="polite" hidden>
+  <i class="egg-toast__gem" aria-hidden="true">◆</i>
+  <span class="egg-toast__k" data-egg-k></span>
+  <span class="egg-toast__t" data-egg-t></span>
+  <span class="egg-toast__n" data-egg-n></span>
+</div>
+<button class="snd" type="button" data-sound aria-pressed="false">
+  <span class="snd__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span data-sound-label>sound off</span>
+</button>
+<button class="eggs-btn" type="button" data-eggs-btn hidden aria-expanded="false" aria-controls="eggs-panel">
+  <i aria-hidden="true">◆</i> <span data-eggs-n>0</span>/<span data-eggs-total>0</span>
+</button>
+<section class="eggs-panel" id="eggs-panel" data-eggs-panel aria-label="achievements" hidden>
+  <i class="eggs-tick tl"></i><i class="eggs-tick tr"></i><i class="eggs-tick bl"></i><i class="eggs-tick br"></i>
+  <header class="eggs-panel__head">achievements <span data-eggs-score></span></header>
+  <ul class="eggs-panel__list" data-eggs-list></ul>
+  <button class="eggs-panel__cert" type="button" data-eggs-cert hidden>view your certificate →</button>
+</section>
+<canvas class="egg-rain" data-egg-rain aria-hidden="true"></canvas>
+<div class="egg-veil" aria-hidden="true"></div>
+<div class="egg-panic" data-egg-panic aria-hidden="true" hidden><pre data-egg-panic-text></pre></div>
+<div class="egg-saver" data-egg-saver aria-hidden="true">
+  <canvas class="egg-trail" data-egg-trail></canvas>
+  <span class="egg-dvd" data-egg-dvd>nyhz</span>
+  <div class="egg-hud"><span class="egg-hud__rec">sleep mode</span><span data-egg-idle>idle 00:15</span><span class="egg-hud__c" data-egg-corners></span></div>
+  <p class="egg-wake"><span>move to wake</span></p>
+  <i class="egg-flash" data-egg-flash></i>
+</div>
+
+<style>
+  /* achievement toast: bottom centre, between the prompt and the clock */
+  .egg-toast { position: fixed; z-index: 190; left: 0; right: 0; margin: 0 auto; width: max-content;
+    max-width: calc(100vw - 4rem); bottom: clamp(22px, 2.4vw, 38px);
+    display: flex; align-items: baseline; flex-wrap: wrap; justify-content: center; gap: 0.35rem 0.8rem;
+    padding: 0.6rem 1rem; background: rgba(10, 10, 10, 0.92); border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    font: 500 0.64rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    pointer-events: none; }
+  .egg-toast[hidden] { display: none; }
+  .egg-toast__gem { font-style: normal; color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+  .egg-toast__t { color: var(--fg); letter-spacing: 0.08em; text-transform: none; font-size: 0.78rem; }
+  .egg-toast__n { color: var(--accent); }
+
+  /* sound toggle, top-right corner of the frame: little bars that dance when on */
+  .snd { position: fixed; z-index: 8; right: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px);
+    display: inline-flex; align-items: center; gap: 0.55rem; background: none; border: 0; padding: 0.2rem 0; cursor: pointer;
+    font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    transition: color var(--t-hover) ease; }
+  .snd:hover, .snd[aria-pressed="true"] { color: var(--fg); }
+  .snd:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
+  .snd__bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 9px; }
+  .snd__bars i { width: 2px; height: 2px; background: currentColor; }
+  .snd[aria-pressed="true"] .snd__bars i { background: var(--accent); animation: sndBar 0.9s ease-in-out infinite alternate; }
+  .snd[aria-pressed="true"] .snd__bars i:nth-child(2) { animation-delay: -0.3s; }
+  .snd[aria-pressed="true"] .snd__bars i:nth-child(3) { animation-delay: -0.6s; }
+  .snd[aria-pressed="true"] .snd__bars i:nth-child(4) { animation-delay: -0.15s; }
+  @keyframes sndBar { from { height: 2px; } to { height: 9px; } }
+  :global(html.egg-sleep) .snd, :global(html.egg-game) .snd { opacity: 0.15; }
+  @media (prefers-reduced-motion: reduce) { .snd[aria-pressed="true"] .snd__bars i { animation: none; height: 6px; } }
+
+  /* the counter sits just above the corner clock; the panel opens over it.
+     Desktop only — phones can't reach most of them. */
+  .eggs-btn { position: fixed; z-index: 8; right: clamp(26px, 2.6vw, 42px);
+    bottom: calc(clamp(22px, 2.4vw, 38px) + 1.5rem); background: none; border: 0; padding: 0.2rem 0; cursor: pointer;
+    font: 500 0.62rem var(--mono); letter-spacing: 0.16em; color: var(--muted); font-variant-numeric: tabular-nums;
+    transition: color var(--t-hover) ease; }
+  .eggs-btn[hidden] { display: none; }
+  .eggs-btn i { font-style: normal; color: var(--accent); text-shadow: 0 0 8px var(--accent); }
+  .eggs-btn:hover, .eggs-btn[aria-expanded="true"] { color: var(--fg); }
+  .eggs-btn:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
+  .eggs-panel { position: fixed; z-index: 9; right: clamp(26px, 2.6vw, 42px); bottom: calc(clamp(22px, 2.4vw, 38px) + 3.4rem);
+    width: min(24rem, calc(100vw - 4rem)); padding: 0.9rem 1rem 0.7rem;
+    background: rgba(10, 10, 10, 0.88); border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transform-origin: 100% 100%; }
+  .eggs-panel[hidden] { display: none; }
+  .eggs-tick { position: absolute; width: 9px; height: 9px; border: 1px solid var(--fg); }
+  .eggs-tick.tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .eggs-tick.tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+  .eggs-tick.bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+  .eggs-tick.br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+  .eggs-panel__head { font: 500 0.62rem var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted);
+    padding-bottom: 0.6rem; margin-bottom: 0.3rem; border-bottom: 1px solid var(--line); }
+  .eggs-panel__head span { color: var(--accent); }
+  .eggs-panel__list { list-style: none; font: 0.76rem/1.5 var(--mono); }
+  .eggs-panel__list :global(li) { display: grid; grid-template-columns: 1.4em minmax(0, 1fr); padding: 0.28rem 0; color: var(--dim); }
+  .eggs-panel__list :global(li.is-found) { color: var(--fg); }
+  .eggs-panel__list :global(li.is-found b) { color: var(--accent); font-weight: 500; }
+  .eggs-panel__list :global(li b) { font-weight: 500; color: var(--muted); }
+  .eggs-panel__list :global(li.is-bonus) { margin-top: 0.4rem; padding-top: 0.6rem; border-top: 1px dashed var(--line); }
+  .eggs-panel__list :global(li small) { display: block; font-size: 0.68rem; color: var(--muted); }
+  .eggs-panel__cert { margin-top: 0.6rem; background: none; border: 0; padding: 0.3rem 0; cursor: pointer;
+    font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); }
+  .eggs-panel__cert[hidden] { display: none; }
+  .eggs-panel__cert:hover { text-shadow: 0 0 10px var(--accent); }
+  @media (hover: none), (max-width: 720px) { .eggs-btn, .eggs-panel { display: none !important; } }
+
+  /* l33t minute: the clock lights up too */
+  :global(html.egg-leet .meta.d) { color: var(--accent); text-shadow: 0 0 10px var(--accent); }
+
+  /* glyph rain: under the page, over the grain field, inside the frame */
+  .egg-rain { position: fixed; inset: clamp(14px, 1.6vw, 26px); width: calc(100vw - 2 * clamp(14px, 1.6vw, 26px));
+    height: calc(100vh - 2 * clamp(14px, 1.6vw, 26px)); z-index: 0; pointer-events: none; display: none; opacity: 0; }
+  .egg-rain.is-on { display: block; }
+
+  /* screensaver */
+  /* the hero name peels off and bounces; a phosphor trail (canvas) follows it,
+     the grain's lamp rides along under it, walls squash it and ripple the
+     field, corners burst. A small HUD keeps time. */
+  .egg-saver { position: fixed; inset: clamp(14px, 1.6vw, 26px); z-index: 150; display: none; overflow: hidden; }
+  .egg-saver.is-on { display: block; }
+  .egg-trail { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .egg-dvd { position: absolute; left: 0; top: 0; font: 700 clamp(2.2rem, 6vw, 4.5rem)/1 var(--mono);
+    letter-spacing: -0.02em; white-space: nowrap; color: var(--fg); transform-origin: 50% 50%;
+    will-change: transform; transition: color 0.25s; text-shadow: 0 0 28px rgba(255, 255, 255, 0.1); }
+  .egg-dvd.is-glitch { text-shadow: -3px 0 #ff2e63, 3px 0 #2ee6ff; }
+  .egg-hud { position: absolute; left: 1.1rem; top: 1rem; display: flex; gap: 1.4rem;
+    font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    font-variant-numeric: tabular-nums; opacity: 0; transition: opacity 0.4s ease; }
+  .egg-hud__rec::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 0.6em;
+    border-radius: 50%; background: #ff2e63; box-shadow: 0 0 8px #ff2e63; vertical-align: 1px;
+    animation: eggRec 1.2s steps(1) infinite; }
+  @keyframes eggRec { 50% { opacity: 0; } }
+  .egg-hud__c { color: var(--accent); }
+  .egg-wake { position: absolute; left: 0; right: 0; bottom: 1rem; text-align: center;
+    font: 500 0.62rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted);
+    opacity: 0; transition: opacity 0.4s ease; }
+  .egg-wake span { animation: eggBreathe 2.6s ease-in-out infinite; }
+  @keyframes eggBreathe { 50% { opacity: 0.25; } }
+  .egg-saver.is-shown .egg-hud, .egg-saver.is-shown .egg-wake { opacity: 1; transition-duration: 0.8s; transition-delay: 0.9s; }
+  .egg-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  :global(html.egg-sleep .page) { opacity: 0.06; transition: opacity 1.2s ease; }
+  :global(html.egg-sleep .term), :global(html.egg-sleep .preview .pv__screen) { opacity: 0; }
+  :global(html:not(.egg-sleep) .page) { transition: opacity 0.4s ease; }
+
+  /* root mode (terminal backdoor): accent goes red, a red scanline veil over everything */
+  :global(html.egg-root) { --accent: #ff2e63; }
+  .egg-veil { position: fixed; inset: 0; z-index: 180; pointer-events: none; opacity: 0; transition: opacity 0.6s ease;
+    background:
+      repeating-linear-gradient(0deg, rgba(255, 46, 99, 0.05) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, transparent 50%, rgba(255, 46, 99, 0.14)); }
+  :global(html.egg-root) .egg-veil { opacity: 1; }
+
+  /* kernel panic */
+  .egg-panic { position: fixed; inset: 0; z-index: 450; background: #0a0a0a; display: flex; align-items: center;
+    padding: clamp(1.5rem, 8vw, 6rem); }
+  .egg-panic[hidden] { display: none; }
+  .egg-panic pre { font: 0.8rem/1.7 var(--mono); color: #b9b8b0; white-space: pre-wrap; max-width: 70ch; }
+  .egg-panic :global(.big) { display: block; font: 700 clamp(1.6rem, 5vw, 3rem)/1.1 var(--mono); color: #ff2e63;
+    margin-bottom: 0.6rem; text-shadow: -2px 0 #2ee6ff; }
+  .egg-panic :global(.dim) { color: #6f6e68; }
+  .egg-panic :global(.cd) { color: var(--fg); }
+
+  /* konami: the page breaks — slices, chromatic split, jolts — then recomposes */
+  :global(html.egg-broken .page) { animation: eggBreak 1.1s steps(1) 1; }
+  @keyframes eggBreak {
+    0%   { transform: translate(0); filter: none; clip-path: none; }
+    8%   { transform: translate(-14px, 4px) skewX(6deg); filter: drop-shadow(-6px 0 #ff2e63) drop-shadow(6px 0 #2ee6ff); clip-path: inset(10% 0 55% 0); }
+    16%  { transform: translate(18px, -6px); filter: drop-shadow(6px 0 #ff2e63) drop-shadow(-6px 0 #2ee6ff); clip-path: inset(40% 0 20% 0); }
+    24%  { transform: translate(-6px, 0) skewX(-12deg); filter: invert(1); clip-path: inset(0 0 70% 0); }
+    32%  { transform: translate(10px, 8px); filter: drop-shadow(-10px 0 #ff2e63) drop-shadow(10px 0 #2ee6ff); clip-path: inset(60% 0 0 0); }
+    40%  { transform: translate(0, -12px) scaleY(1.04); filter: none; clip-path: inset(20% 0 30% 0); }
+    52%  { transform: translate(-20px, 0); filter: drop-shadow(4px 0 #ff2e63) drop-shadow(-4px 0 #2ee6ff); clip-path: none; }
+    64%  { transform: translate(6px, 2px) skewX(4deg); filter: invert(1) hue-rotate(90deg); clip-path: inset(0 0 40% 0); }
+    76%  { transform: translate(-3px, 0); filter: drop-shadow(-2px 0 #ff2e63) drop-shadow(2px 0 #2ee6ff); clip-path: none; }
+    88%  { transform: translate(1px, 0); filter: none; }
+    100% { transform: none; filter: none; clip-path: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html.egg-broken .page) { animation: none; }
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { achievements, isEgg, isBonus, konamiStep, KONAMI, EGGS, REQUIRED, leet } from '../scripts/eggs';
+  import { sound } from '../scripts/sound';
+
+  const html = document.documentElement;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ach = achievements();
+  const achieve = (id: string) => dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id } }));
+  const shock = (x: number, y: number, strength = 1.2) =>
+    dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x, y, strength } }));
+  const inField = (e: Event) => !!(e.target as HTMLElement | null)?.closest?.('input, textarea, [contenteditable]');
+  const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&/<>*+=';
+
+  // ---------- sound toggle ----------
+  const sndBtn = document.querySelector<HTMLButtonElement>('[data-sound]');
+  const paintSound = () => {
+    sndBtn?.setAttribute('aria-pressed', String(sound.on));
+    const l = sndBtn?.querySelector('[data-sound-label]');
+    if (l) l.textContent = sound.on ? 'sound on' : 'sound off';
+  };
+  paintSound();
+  sndBtn?.addEventListener('click', () => { sound.set(!sound.on); paintSound(); });
+  addEventListener('nyhz:glitch', () => sound.glitch());
+
+  // ---------- toast ----------
+  const toastEl = document.querySelector<HTMLElement>('[data-egg-toast]');
+  const kEl = toastEl?.querySelector('[data-egg-k]');
+  const tEl = toastEl?.querySelector('[data-egg-t]');
+  const nEl = toastEl?.querySelector('[data-egg-n]');
+  const queue: [string, string, string][] = [];
+  let ready = false, showing = false;
+  const go = () => { if (!ready) { ready = true; flush(); } };
+  addEventListener('loaderdone', () => setTimeout(go, 1400), { once: true });
+  setTimeout(go, 9000);
+
+  function flush() {
+    if (!ready || showing || !toastEl) return;
+    const next = queue.shift();
+    if (!next) return;
+    showing = true;
+    const [k, t, n] = next;
+    if (kEl) kEl.textContent = k;
+    if (nEl) nEl.textContent = n;
+    toastEl.hidden = false;
+    sound.unlock();
+    // the title decodes in, like the project names
+    let f = 0;
+    const iv = setInterval(() => {
+      const lock = Math.floor((f++ / 14) * t.length);
+      if (tEl) tEl.textContent = t.split('').map((c, i) => (i < lock || c === ' ' ? c : GLYPHS[(Math.random() * GLYPHS.length) | 0])).join('');
+      if (lock >= t.length) { clearInterval(iv); if (tEl) tEl.textContent = t; }
+    }, 40);
+    const done = () => { toastEl.hidden = true; showing = false; flush(); };
+    if (reduce) { if (tEl) tEl.textContent = t; setTimeout(done, 3600); return; }
+    gsap.timeline({ onComplete: done })
+      .fromTo(toastEl, { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'back.out(2.4)' })
+      .to(toastEl, { y: 14, opacity: 0, duration: 0.3, ease: 'power2.in' }, '+=3.2');
+  }
+
+  // ---------- the counter + hints panel (desktop) ----------
+  const desktop = matchMedia('(hover: hover) and (min-width: 721px)');
+  const btn = document.querySelector<HTMLButtonElement>('[data-eggs-btn]');
+  const panel = document.querySelector<HTMLElement>('[data-eggs-panel]');
+  const list = panel?.querySelector('[data-eggs-list]');
+  const setCount = () => {
+    btn?.querySelector('[data-eggs-n]')?.replaceChildren(String(ach.count()));
+    btn?.querySelector('[data-eggs-total]')?.replaceChildren(String(ach.total));
+    panel?.querySelector('[data-eggs-score]')?.replaceChildren(`${ach.count()}/${ach.total}`);
+    if (btn) btn.hidden = ach.count() === 0;
+  };
+  const renderList = () => {
+    // the required ones, then the bonuses under a dashed line
+    list?.replaceChildren(...[...REQUIRED, ...EGGS.filter((e) => isBonus(e.id))].map((egg) => {
+      const li = document.createElement('li');
+      if (isBonus(egg.id)) li.classList.add('is-bonus');
+      const b = document.createElement('b');
+      const found = ach.has(egg.id);
+      li.classList.toggle('is-found', found);
+      b.textContent = found ? '◆' : '◇';
+      const txt = document.createElement('span');
+      txt.textContent = (found ? egg.title : '???') + (isBonus(egg.id) ? '  · bonus' : '');
+      if (!found) { const sm = document.createElement('small'); sm.textContent = egg.hint; txt.append(sm); }
+      li.append(b, txt);
+      return li;
+    }));
+  };
+  const certBtn = panel?.querySelector<HTMLButtonElement>('[data-eggs-cert]');
+  certBtn?.addEventListener('click', () => { togglePanel(false); dispatchEvent(new Event('nyhz:cert')); });
+  const togglePanel = (open = !!panel?.hidden) => {
+    if (!panel || !btn) return;
+    btn.setAttribute('aria-expanded', String(open));
+    if (open) {
+      renderList();
+      if (certBtn) certBtn.hidden = !ach.complete();
+      panel.hidden = false;
+      if (!reduce) gsap.fromTo(panel, { opacity: 0, y: 12, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: 'back.out(2)' });
+    } else panel.hidden = true;
+  };
+  btn?.addEventListener('click', () => togglePanel());
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && panel && !panel.hidden) togglePanel(false); });
+  addEventListener('pointerdown', (e) => {
+    const t = e.target as Node;
+    if (panel && !panel.hidden && !panel.contains(t) && !btn?.contains(t)) togglePanel(false);
+  });
+  setCount();
+
+  addEventListener('nyhz:achieve', (e) => {
+    const id = (e as CustomEvent<{ id: string }>).detail?.id;
+    if (!id || !isEgg(id) || !ach.unlock(id)) return; // only the first time
+    const egg = EGGS.find((x) => x.id === id)!;
+    setCount();
+    if (panel && !panel.hidden) renderList();
+    if (btn && !reduce) gsap.fromTo(btn, { scale: 1.35 }, { scale: 1, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
+    // phones get no score (they can't reach most of them)
+    queue.push([isBonus(id) ? 'bonus unlocked' : 'achievement unlocked', egg.title,
+      isBonus(id) ? 'bonus' : desktop.matches ? `${ach.count()}/${ach.total}` : '']);
+    if (!isBonus(id) && ach.complete()) {
+      queue.push(['all found', "you're one of us now", desktop.matches ? `${ach.total}/${ach.total}` : '']);
+      setTimeout(() => { shock(innerWidth / 2, innerHeight / 2, 2.4); dispatchEvent(new Event('nyhz:glitch')); }, 4400);
+      setTimeout(() => dispatchEvent(new Event('nyhz:cert')), 8800); // after both toasts: the certificate
+    }
+    flush();
+  });
+
+  // ---------- konami: the page breaks, then recomposes ----------
+  const heroName = document.querySelector<HTMLElement>('.hero-name');
+  const chars = Array.from(heroName?.querySelectorAll<HTMLElement>('.ch') ?? []);
+  const NAME = heroName?.dataset.text || 'nyhz';
+  let kp = 0;
+  addEventListener('keydown', (e) => {
+    if (inField(e)) { kp = 0; return; }
+    kp = konamiStep(kp, e.key);
+    if (kp < KONAMI.length) return;
+    kp = 0;
+    dispatchEvent(new Event('nyhz:glitch'));
+    if (!reduce) {
+      html.classList.remove('egg-broken');
+      void html.offsetWidth;
+      html.classList.add('egg-broken');
+      setTimeout(() => html.classList.remove('egg-broken'), 1150);
+      // the name's letters scramble while it's broken
+      const truth = chars.map((c) => c.textContent);
+      const iv = setInterval(() => chars.forEach((c) => { c.textContent = GLYPHS[(Math.random() * GLYPHS.length) | 0]; }), 60);
+      setTimeout(() => { clearInterval(iv); chars.forEach((c, i) => { c.textContent = truth[i]; }); }, 1000);
+    }
+    setTimeout(() => achieve('konami'), 1300);
+  });
+
+  // ---------- gravity: poke the name five times ----------
+  let pokes: number[] = [];
+  let falling = false;
+  heroName?.addEventListener('click', (e) => {
+    const now = performance.now();
+    pokes = pokes.filter((t) => now - t < 2000);
+    pokes.push(now);
+    if (!reduce && !falling) shock(e.clientX, e.clientY, 0.35 + pokes.length * 0.12);
+    if (pokes.length < 5 || falling) return;
+    pokes = [];
+    if (reduce) { achieve('gravity'); return; }
+    drop();
+  });
+
+  function drop(id: 'gravity' | 'shake' = 'gravity') {
+    if (!heroName || !chars.length) return;
+    if (document.querySelector('.page.projects-open')) { achieve(id); return; } // the name is folded away
+    falling = true;
+    const hero = document.querySelector<HTMLElement>('.hero');
+    if (hero) hero.style.overflow = 'visible';
+    heroName.style.zIndex = '5';
+    chars.forEach((c) => { c.style.display = 'inline-block'; });
+    const box = (document.querySelector('.frame__border') ?? html).getBoundingClientRect(); // the floor is the frame
+    const st = chars.map((el) => ({
+      el, r: el.getBoundingClientRect(), x: 0, y: 0, a: 0, landed: false,
+      vx: (Math.random() - 0.5) * 7, vy: -(3 + Math.random() * 6), va: (Math.random() - 0.5) * 14,
+    }));
+    let last = performance.now();
+    const t0 = last;
+    const step = (now: number) => {
+      const dt = Math.min(2, (now - last) / 16.67);
+      last = now;
+      let moving = false;
+      for (const s of st) {
+        s.vy += 0.75 * dt;
+        s.x += s.vx * dt; s.y += s.vy * dt; s.a += s.va * dt;
+        const floor = box.bottom - s.r.bottom - 1;
+        const minX = box.left - s.r.left + 1, maxX = box.right - s.r.right - 1;
+        if (s.y > floor) {
+          if (!s.landed && s.vy > 6) shock(s.r.left + s.x + s.r.width / 2, box.bottom, 0.5);
+          s.landed = true;
+          s.y = floor; s.vy *= -0.42; s.vx *= 0.82; s.va *= 0.6;
+          if (Math.abs(s.vy) < 1.2) s.vy = 0;
+        }
+        if (s.x < minX) { s.x = minX; s.vx *= -0.6; }
+        if (s.x > maxX) { s.x = maxX; s.vx *= -0.6; }
+        if (s.y >= floor) { s.vx *= 0.94; s.va *= 0.85; }
+        if (Math.abs(s.vx) > 0.05 || Math.abs(s.vy) > 0.05 || s.y < floor) moving = true;
+        s.el.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.a}deg)`;
+      }
+      if (moving && now - t0 < 5000) requestAnimationFrame(step);
+      else setTimeout(rebuild, 1600);
+    };
+    requestAnimationFrame(step);
+    setTimeout(() => achieve(id), 1100);
+  }
+
+  // the letters fly back up into the name and it glitches back to life
+  function rebuild() {
+    gsap.to(chars, {
+      x: 0, y: 0, rotation: 0, duration: 0.9, ease: 'back.out(1.5)', stagger: 0.07,
+      onComplete: () => {
+        gsap.set(chars, { clearProps: 'transform,display' });
+        const hero = document.querySelector<HTMLElement>('.hero');
+        if (hero) hero.style.overflow = '';
+        if (heroName) heroName.style.zIndex = '';
+        heroName?.classList.add('glitching');
+        setTimeout(() => heroName?.classList.remove('glitching'), 420);
+        falling = false;
+      },
+    });
+  }
+
+  // ---------- shake (phones): shaking the device drops the letters ----------
+  type Motion = { requestPermission?: () => Promise<string> };
+  const DME = (window as unknown as { DeviceMotionEvent?: Motion }).DeviceMotionEvent;
+  let lastAcc: { x: number; y: number; z: number } | null = null;
+  let jolts: number[] = [];
+  const onMotion = (e: DeviceMotionEvent) => {
+    const a = e.accelerationIncludingGravity;
+    if (!a || a.x == null || a.y == null || a.z == null) return;
+    if (lastAcc) {
+      const d = Math.abs(a.x - lastAcc.x) + Math.abs(a.y - lastAcc.y) + Math.abs(a.z - lastAcc.z);
+      const now = performance.now();
+      if (d > 28) {
+        jolts = jolts.filter((t) => now - t < 900);
+        jolts.push(now);
+        if (jolts.length >= 3 && !falling) { jolts = []; reduce ? achieve('shake') : drop('shake'); }
+      }
+    }
+    lastAcc = { x: a.x, y: a.y, z: a.z };
+  };
+  if (DME && matchMedia('(pointer: coarse)').matches) {
+    if (typeof DME.requestPermission === 'function') {
+      // iOS asks first, and only from a gesture: the first poke of the name
+      // (the prompt itself is a hint that something's up)
+      heroName?.addEventListener('click', () => {
+        DME.requestPermission!().then((r) => { if (r === 'granted') addEventListener('devicemotion', onMotion); }).catch(() => {});
+      }, { once: true });
+    } else addEventListener('devicemotion', onMotion);
+  }
+
+  // ---------- wave: typing the name anywhere makes it wave back ----------
+  let typed = '';
+  addEventListener('keydown', (e) => {
+    if (inField(e) || e.metaKey || e.ctrlKey || e.altKey || e.key.length !== 1) return;
+    typed = (typed + e.key.toLowerCase()).slice(-NAME.length);
+    if (typed !== NAME.toLowerCase()) return;
+    typed = '';
+    setTimeout(() => achieve('wave'), 900);
+    if (reduce || falling || !chars.length || document.querySelector('.page.projects-open')) return;
+    const lift = parseFloat(getComputedStyle(heroName!).fontSize) * 0.26;
+    gsap.set(chars, { display: 'inline-block' });
+    gsap.timeline({ onComplete: () => gsap.set(chars, { clearProps: 'transform,display,color' }) })
+      .to(chars, { y: -lift, duration: 0.26, ease: 'power2.out', stagger: { each: 0.08, yoyo: true, repeat: 1 } })
+      .to(chars, { color: '#3ad29f', duration: 0.18, stagger: { each: 0.08, yoyo: true, repeat: 1 } }, 0);
+    const r = heroName!.getBoundingClientRect();
+    shock(r.left + r.width / 2, r.top + r.height / 2, 0.8);
+  });
+
+  // ---------- light mode: asked for, refused, with a flash of what it'd be like ----------
+  addEventListener('nyhz:flash', () => {
+    setTimeout(() => achieve('light'), 900);
+    if (reduce) return; // no flashes for people who asked for less motion
+    const f = document.createElement('div');
+    f.style.cssText = 'position:fixed;inset:0;z-index:400;background:#f4f3ee;pointer-events:none';
+    document.body.append(f);
+    gsap.timeline({ onComplete: () => f.remove() })
+      .to(f, { opacity: 0, duration: 0.45, ease: 'power2.in', delay: 0.09 })
+      .add(() => dispatchEvent(new Event('nyhz:glitch')), 0.1);
+  });
+
+  // ---------- l33t minute (13:37, 03:33 — the clock in Frame.astro calls it) ----------
+  // every word on the page turns to leetspeak for the minute, with a break-in
+  const originals = new Map<Text, string>();
+  const swapLeet = (on: boolean) => {
+    if (!on) {
+      originals.forEach((v, t) => { if (t.isConnected) t.data = v; });
+      originals.clear();
+      return;
+    }
+    const pageEl = document.querySelector('.page');
+    if (!pageEl) return;
+    const walk = document.createTreeWalker(pageEl, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode() as Text | null; n; n = walk.nextNode() as Text | null) {
+      if (!/[aeiostz]/i.test(n.data) || n.parentElement?.closest('input, textarea, script, style')) continue;
+      originals.set(n, n.data);
+      n.data = leet(n.data);
+    }
+  };
+  addEventListener('nyhz:leet', (e) => {
+    const on = !!(e as CustomEvent<{ on: boolean }>).detail?.on;
+    if (on === html.classList.contains('egg-leet')) return;
+    html.classList.toggle('egg-leet', on);
+    if (on) setTimeout(() => achieve('leet'), 1200);
+    if (reduce) { swapLeet(on); return; }
+    html.classList.remove('egg-broken');
+    void html.offsetWidth;
+    html.classList.add('egg-broken');
+    setTimeout(() => swapLeet(on), 250);
+    setTimeout(() => html.classList.remove('egg-broken'), 1150);
+    if (on) shock(innerWidth / 2, innerHeight / 2, 2);
+  });
+
+  // ---------- kernel panic: the terminal's rm -rf / ----------
+  // the page breaks, a panic screen counts down, and the site really reboots
+  // (reload); the achievement lands after the new loader
+  const panicEl = document.querySelector<HTMLElement>('[data-egg-panic]');
+  const panicText = panicEl?.querySelector('[data-egg-panic-text]');
+  const PANIC = 'nyhz:panic';
+  addEventListener('nyhz:panic', () => {
+    try { sessionStorage.setItem(PANIC, '1'); } catch { /* the reboot still happens */ }
+    if (!reduce) { html.classList.remove('egg-broken'); void html.offsetWidth; html.classList.add('egg-broken'); }
+    setTimeout(() => {
+      if (!panicEl || !panicText) { location.reload(); return; }
+      panicText.innerHTML = [
+        '<span class="big">KERNEL PANIC</span>not syncing: too curious',
+        '',
+        '<span class="dim">CPU: 0 PID: 1337 Comm: nyhz.sh Tainted: G     O  6.6.6-nyhz</span>',
+        '<span class="dim">Call Trace:</span>',
+        '<span class="dim"> &lt;TASK&gt;</span>',
+        ' curiosity+0x1f/0x80',
+        ' rm_rf_root+0x42/0x42',
+        ' do_syscall_64+0x3b/0x90',
+        '<span class="dim"> &lt;/TASK&gt;</span>',
+        '<span class="dim">---[ end Kernel panic - not syncing: too curious ]---</span>',
+        '',
+        'rebooting in <span class="cd" data-cd>3</span>…',
+      ].join('\n');
+      panicEl.hidden = false;
+      const cd = panicText.querySelector('[data-cd]');
+      [2, 1, 0].forEach((n, i) => setTimeout(() => { if (cd) cd.textContent = String(n); }, (i + 1) * 900));
+      setTimeout(() => location.reload(), 3000);
+    }, reduce ? 0 : 900);
+  });
+  let panicked = false;
+  try { panicked = sessionStorage.getItem(PANIC) === '1'; } catch { /* no */ }
+  if (panicked) {
+    addEventListener('loaderdone', () => {
+      try { sessionStorage.removeItem(PANIC); } catch { /* no */ }
+      achieve('panic');
+    }, { once: true });
+  }
+
+  // ---------- overheat: whip the mouse around for a couple of seconds ----------
+  if (!reduce && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    let heat = 0, lx = 0, ly = 0, lt = 0, cool = 0;
+    addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const now = performance.now();
+      const gap = now - lt;
+      if (lt && gap < 300) {
+        const v = Math.hypot(e.clientX - lx, e.clientY - ly) / Math.max(1, gap);
+        heat = Math.max(0, heat + (v > 2.2 ? gap : -gap * 0.5));
+      } else heat = 0; // stopped: cooled down
+      lx = e.clientX; ly = e.clientY; lt = now;
+      if (heat > 2200 && now > cool) { heat = 0; cool = now + 15000; overheat(); }
+    }, { passive: true });
+
+    const overheat = () => {
+      dispatchEvent(new Event('nyhz:overheat')); // the cursor glitches out and dies (Cursor.astro)
+      sound.glitch();
+      shock(lx, ly, 1.4);
+      for (let i = 0; i < 16; i++) {
+        const sp = document.createElement('span');
+        sp.textContent = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+        sp.style.cssText = `position:fixed;left:${lx}px;top:${ly}px;z-index:210;pointer-events:none;`
+          + `font:500 11px var(--mono);color:${['#ff2e63', '#2ee6ff', '#3ad29f', '#f5c542'][i % 4]}`;
+        document.body.append(sp);
+        gsap.to(sp, { x: (Math.random() - 0.5) * 160, y: 30 + Math.random() * 140, rotation: (Math.random() - 0.5) * 360,
+          opacity: 0, duration: 0.9 + Math.random() * 0.6, ease: 'power2.out', onComplete: () => sp.remove() });
+      }
+      // …and comes back with a tiny boot line where the pointer is
+      setTimeout(() => {
+        const b = document.createElement('span');
+        b.textContent = '› cursor.sys restarted';
+        b.style.cssText = `position:fixed;left:${lx + 14}px;top:${ly + 14}px;z-index:210;pointer-events:none;`
+          + 'font:500 0.62rem var(--mono);letter-spacing:0.12em;color:var(--accent)';
+        document.body.append(b);
+        gsap.to(b, { opacity: 0, delay: 1.2, duration: 0.6, onComplete: () => b.remove() });
+        achieve('overheat');
+      }, 2300);
+    };
+  }
+
+  // ---------- the console api: nyhz.help() ----------
+  const C = {
+    h: 'font: 700 13px ui-monospace, monospace; color: #3ad29f',
+    t: 'font: 12px/1.6 ui-monospace, monospace; color: #b9b8b0',
+    d: 'font: 12px/1.6 ui-monospace, monospace; color: #6f6e68',
+    r: 'font: 700 12px ui-monospace, monospace; color: #ff2e63',
+  };
+  const api = {
+    help() {
+      console.log('%cnyhz.help()\n%c  nyhz.hack()     breach the mainframe\n  nyhz.coffee()   refuel\n  nyhz.eggs()     what you\'ve found\n  nyhz.whoami()   who is this', C.h, C.t);
+    },
+    hack() {
+      const steps: [string, string][] = [
+        ['[*] resolving nyhz.dev… 10.13.37.1', C.d],
+        ['[*] scanning ports… 22 80 443 1337', C.d],
+        ['[*] bypassing firewall… ████████████ ok', C.t],
+        ['[*] injecting payload… ▓▓▓▓▓▓▓▓▓▓▓▓ 100%', C.t],
+        ['[!] intrusion detected. just kidding.', C.r],
+        ['[+] access granted.', C.h],
+      ];
+      steps.forEach(([m, st], i) => setTimeout(() => console.log(`%c${m}`, st), i * 450));
+      setTimeout(() => { dispatchEvent(new Event('nyhz:matrix')); achieve('console'); }, steps.length * 450);
+      return 'connecting…';
+    },
+    coffee() {
+      console.log('%c      ( (\n       ) )\n    ........\n    |      |]\n    \\      /\n     `----\'\n%crefuelled. back to work.', C.t, C.h);
+    },
+    eggs() { console.log(`%c${ach.lines().join('\n')}`, C.t); },
+    whoami() { console.log('%ca person who hides things in websites.', C.t); },
+  };
+  try { Object.defineProperty(window, 'nyhz', { value: Object.freeze(api), configurable: true }); } catch { /* taken */ }
+
+  // ---------- matrix: glyph rain behind the page ----------
+  const rainEl = document.querySelector<HTMLCanvasElement>('[data-egg-rain]');
+  let raining = false;
+  addEventListener('nyhz:matrix', () => {
+    setTimeout(() => achieve('matrix'), 2400);
+    if (reduce || raining || !rainEl) return;
+    const ctx = rainEl.getContext('2d');
+    if (!ctx) return;
+    raining = true;
+    rainEl.classList.add('is-on');
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const W = (rainEl.width = Math.round(rainEl.clientWidth * dpr));
+    const H = (rainEl.height = Math.round(rainEl.clientHeight * dpr));
+    const fs = Math.round(15 * dpr);
+    const RAIN = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789NYHZ<>/*+=';
+    const cols = Math.ceil(W / fs);
+    const drops = Array.from({ length: cols }, () => Math.random() * -(H / fs));
+    const speed = Array.from({ length: cols }, () => 0.35 + Math.random() * 0.5);
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, W, H);
+    ctx.font = `${fs}px "Geist Mono Variable", ui-monospace, monospace`;
+    let lastT = 0;
+    const end = performance.now() + 7000;
+    const frame = (now: number) => {
+      if (now - lastT > 33) { // ~30fps is plenty for rain
+        lastT = now;
+        ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
+        ctx.fillRect(0, 0, W, H);
+        for (let i = 0; i < cols; i++) {
+          const y = drops[i] * fs;
+          ctx.fillStyle = Math.random() < 0.06 ? '#d9fff0' : '#3ad29f';
+          ctx.fillText(RAIN[(Math.random() * RAIN.length) | 0], i * fs, y);
+          drops[i] += speed[i];
+          if (y > H && Math.random() > 0.97) drops[i] = 0;
+        }
+      }
+      if (now < end) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    gsap.timeline()
+      .to(rainEl, { opacity: 0.85, duration: 0.8, ease: 'power2.out' })
+      .to(rainEl, { opacity: 0, duration: 1.2, ease: 'power2.in' }, 5.6)
+      .add(() => { rainEl.classList.remove('is-on'); raining = false; });
+  });
+
+  // ---------- sleep: 15s idle and the name peels off the hero to bounce like a DVD logo ----------
+  const saver = document.querySelector<HTMLElement>('[data-egg-saver]');
+  const dvd = saver?.querySelector<HTMLElement>('[data-egg-dvd]');
+  const trail = saver?.querySelector<HTMLCanvasElement>('[data-egg-trail]');
+  const tctx = trail?.getContext('2d') ?? null;
+  const idleEl = saver?.querySelector('[data-egg-idle]');
+  const cornersEl = saver?.querySelector('[data-egg-corners]');
+  const flashEl = saver?.querySelector<HTMLElement>('[data-egg-flash]');
+  const dbg = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('idle')) : 0;
+  const IDLE = dbg > 0 ? dbg * 1000 : 15000;
+  const COLORS = ['#f2f1ea', '#3ad29f', '#ff2e63', '#2ee6ff', '#f5c542'];
+  let idleT = 0, sleeping = false, waking = false, moving = false, raf = 0;
+  const busy = () => document.hidden || falling || raining || html.classList.contains('egg-game')
+    || !!document.activeElement?.closest('input, textarea')
+    || !!document.querySelector('.term.is-open');
+  const arm = () => { clearTimeout(idleT); idleT = window.setTimeout(sleep, IDLE); };
+
+  // the logo: top-left of its unscaled box (saver coords), scale, squash, opacity
+  const o = { x: 0, y: 0, s: 1, sx: 1, sy: 1, a: 1 };
+  let vx = 0, vy = 0, ci = 0, corners = 0, hitX = -1e9, hitY = -1e9, sleptAt = 0, nextScramble = 0, dpr = 1;
+  type Spark = { x: number; y: number; vx: number; vy: number; life: number; ch: string; c: string };
+  let sparks: Spark[] = [];
+  // torn echoes: now and then the logo leaves a few horizontal slices of
+  // itself behind, shoved sideways in red / cyan / its colour. They flicker
+  // and are gone within half a second — interference, not a smear.
+  type Slice = { y: number; h: number; dx: number; c: string };
+  type Echo = { x: number; y: number; s: number; t0: number; life: number; slices: Slice[] };
+  let echoes: Echo[] = [];
+  let nextTear = 0, jolt = 0, joltUntil = 0;
+  const sprites = new Map<string, HTMLCanvasElement>();
+  // the name pre-rendered once per colour + size, to cut slices from
+  function sprite(color: string, fs: number) {
+    const key = `${color}|${fs}`;
+    let c = sprites.get(key);
+    if (!c) {
+      c = document.createElement('canvas');
+      const x = c.getContext('2d')!;
+      const font = `700 ${fs}px "Geist Mono Variable", ui-monospace, monospace`;
+      x.font = font;
+      c.width = Math.ceil(x.measureText(NAME).width + fs * 0.2);
+      c.height = Math.ceil(fs * 1.2);
+      x.font = font;
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillStyle = color;
+      x.fillText(NAME, c.width / 2, c.height / 2);
+      sprites.set(key, c);
+    }
+    return c;
+  }
+  function tear(cx: number, cy: number, strength: number) {
+    if (!dvd) return;
+    const fs = Math.round(parseFloat(getComputedStyle(dvd).fontSize) * dpr);
+    const H = fs * 1.2;
+    const away = -Math.sign(vx) || 1; // slices are left behind, against the motion
+    const tint = ['#ff2e63', '#2ee6ff', COLORS[ci], '#ff2e63', '#2ee6ff'];
+    const slices = Array.from({ length: 3 + Math.round(Math.random() * 3 * strength) }, () => {
+      const h = H * (0.05 + Math.random() * 0.15);
+      return { y: Math.random() * (H - h), h, c: tint[(Math.random() * tint.length) | 0],
+        dx: (away * (6 + Math.random() * 34) + (Math.random() - 0.5) * 18) * strength * dpr };
+    });
+    echoes.push({ x: cx, y: cy, s: o.s, t0: performance.now(), life: 240 + Math.random() * 200 * strength, slices });
+    // and the logo itself jolts as it tears
+    glitchDvd(90);
+    jolt = (Math.random() - 0.5) * 10 * strength;
+    joltUntil = performance.now() + 70;
+  }
+
+  // where the hero's name sits, as a logo position + scale (null if the hero is collapsed)
+  function heroSpot(w: number, h: number) {
+    if (!heroName || !saver || !dvd) return null;
+    const range = document.createRange();
+    range.selectNodeContents(heroName);
+    const r = range.getBoundingClientRect(), s0 = saver.getBoundingClientRect();
+    if (r.height < 8) return null;
+    const s = parseFloat(getComputedStyle(heroName).fontSize) / parseFloat(getComputedStyle(dvd).fontSize);
+    return { x: r.left - s0.left + r.width / 2 - w / 2, y: r.top - s0.top + r.height / 2 - h / 2, s };
+  }
+
+  const glitchDvd = (ms: number) => {
+    dvd?.classList.add('is-glitch');
+    setTimeout(() => dvd?.classList.remove('is-glitch'), ms);
+  };
+  const squash = (sx: number, sy: number) =>
+    gsap.fromTo(o, { sx, sy }, { sx: 1, sy: 1, duration: 0.75, ease: 'elastic.out(1, 0.35)', overwrite: 'auto' });
+
+  function burst(cx: number, cy: number) {
+    for (let i = 0; i < 42; i++) {
+      const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 7;
+      sparks.push({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, life: 1,
+        ch: GLYPHS[(Math.random() * GLYPHS.length) | 0], c: COLORS[(Math.random() * COLORS.length) | 0] });
+    }
+  }
+
+  function sleep() {
+    if (!saver || !dvd || !trail || reduce) return;
+    if (busy()) { arm(); return; }
+    sleeping = true; waking = false; moving = false;
+    sparks = []; echoes = []; corners = 0; ci = 0;
+    sleptAt = performance.now() - IDLE;
+    if (cornersEl) cornersEl.textContent = '';
+    dvd.textContent = NAME;
+    dvd.style.color = COLORS[0];
+    html.classList.add('egg-sleep');
+    saver.classList.add('is-on');
+    sound.hum(true);
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    trail.width = Math.round(saver.clientWidth * dpr);
+    trail.height = Math.round(saver.clientHeight * dpr);
+    requestAnimationFrame(() => saver.classList.add('is-shown'));
+
+    // peel off: the real name hides and its double lifts, shrinks to logo
+    // size and sets off — so it's the name itself that leaves
+    const W = saver.clientWidth, H = saver.clientHeight, w = dvd.offsetWidth, h = dvd.offsetHeight;
+    const spot = heroSpot(w, h);
+    Object.assign(o, spot ? { x: spot.x, y: spot.y, s: spot.s, a: 1 } : { x: (W - w) / 2, y: (H - h) / 2, s: 0, a: 1 }, { sx: 1, sy: 1 });
+    if (spot && heroName) heroName.style.visibility = 'hidden';
+    vx = 1.7 * (Math.random() < 0.5 ? -1 : 1);
+    vy = 1.3 * (Math.random() < 0.5 ? -1 : 1);
+    glitchDvd(260);
+    gsap.timeline()
+      .to(o, { y: o.y - 18, duration: 0.45, ease: 'power2.out' })
+      .to(o, { s: 1, x: Math.max(0, Math.min(W - w, o.x)), y: Math.max(0, Math.min(H - h, o.y - 18)),
+        duration: 0.9, ease: 'power3.inOut', onComplete: () => { moving = true; } });
+    cancelAnimationFrame(raf);
+    let last = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(3, (now - last) / 16.67);
+      last = now;
+      frame(now, dt);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  function frame(now: number, dt: number) {
+    if (!saver || !dvd || !tctx || !trail) return;
+    const W = saver.clientWidth, H = saver.clientHeight, w = dvd.offsetWidth, h = dvd.offsetHeight;
+    const s0 = saver.getBoundingClientRect();
+
+    if (moving) {
+      o.x += vx * dt; o.y += vy * dt;
+      let hx = false, hy = false;
+      if (o.x <= 0 || o.x >= W - w) { vx = -vx; o.x = Math.max(0, Math.min(W - w, o.x)); hx = true; hitX = now; }
+      if (o.y <= 0 || o.y >= H - h) { vy = -vy; o.y = Math.max(0, Math.min(H - h, o.y)); hy = true; hitY = now; }
+      if (hx || hy) {
+        ci = (ci + 1) % COLORS.length;
+        dvd.style.color = COLORS[ci];
+        if (hx) { squash(0.8, 1.16); shock(s0.left + (o.x <= 0 ? 0 : W), s0.top + o.y + h / 2, 0.7); }
+        if (hy) { squash(1.16, 0.8); shock(s0.left + o.x + w / 2, s0.top + (o.y <= 0 ? 0 : H), 0.7); }
+        tear((o.x + w / 2) * dpr, (o.y + h / 2) * dpr, 1.7);
+        // both walls within a few frames: the corner. everyone waits for the corner.
+        if (Math.abs(hitX - hitY) < 120) {
+          hitX = hitY = -1e9;
+          corners++;
+          if (cornersEl) cornersEl.textContent = `corners ${String(corners).padStart(2, '0')}`;
+          const cx = o.x + w / 2, cy = o.y + h / 2;
+          burst(cx * dpr, cy * dpr);
+          tear(cx * dpr, cy * dpr, 2.6);
+          shock(s0.left + cx, s0.top + cy, 2.6);
+          glitchDvd(700);
+          if (flashEl) gsap.fromTo(flashEl, { opacity: 0.14 }, { opacity: 0, duration: 0.6, ease: 'power2.out' });
+        }
+      }
+    }
+    // now and then the letters decode again, like the project names
+    if (moving && now > nextScramble) {
+      nextScramble = now + 3500 + Math.random() * 3000;
+      let f = 0;
+      const iv = setInterval(() => {
+        const lock = Math.floor((f++ / 8) * NAME.length);
+        dvd.textContent = NAME.split('').map((c, i) => (i < lock ? c : GLYPHS[(Math.random() * GLYPHS.length) | 0])).join('');
+        if (lock >= NAME.length) { clearInterval(iv); dvd.textContent = NAME; }
+      }, 45);
+    }
+
+    const jx = now < joltUntil ? jolt : 0;
+    dvd.style.transform = `translate(${o.x + jx}px, ${o.y}px) scale(${o.s * o.sx}, ${o.s * o.sy})`;
+    dvd.style.opacity = String(o.a);
+
+    tctx.clearRect(0, 0, trail.width, trail.height);
+    const cx = (o.x + w / 2) * dpr, cy = (o.y + h / 2) * dpr;
+    if (moving && now > nextTear) {
+      tear(cx, cy, 1);
+      nextTear = now + (Math.random() < 0.25 ? 90 : 500 + Math.random() * 1400); // sometimes a double
+    }
+    if (echoes.length) {
+      const fs = Math.round(parseFloat(getComputedStyle(dvd).fontSize) * dpr);
+      for (const e of echoes) {
+        const age = now - e.t0, step = Math.floor(age / 45);
+        if (step % 3 === 2) continue; // stepped flicker, never a smooth fade
+        const k = 1 - age / e.life;
+        for (const sl of e.slices) {
+          const spr = sprite(sl.c, fs);
+          const dx = sl.dx + (step % 2 ? 3 * dpr : 0);
+          tctx.globalAlpha = Math.max(0, 0.8 * k);
+          tctx.drawImage(spr, 0, sl.y, spr.width, sl.h,
+            e.x - (spr.width / 2) * e.s + dx, e.y - (spr.height / 2) * e.s + sl.y * e.s, spr.width * e.s, sl.h * e.s);
+        }
+      }
+      tctx.globalAlpha = 1;
+      echoes = echoes.filter((e) => now - e.t0 < e.life);
+    }
+    if (sparks.length) {
+      tctx.font = `500 ${13 * dpr}px "Geist Mono Variable", ui-monospace, monospace`;
+      tctx.textAlign = 'center';
+      for (const p of sparks) {
+        p.vy += 0.16 * dt; p.vx *= 0.99;
+        p.x += p.vx * dt * dpr; p.y += p.vy * dt * dpr; p.life -= 0.014 * dt;
+        tctx.globalAlpha = Math.max(0, p.life);
+        tctx.fillStyle = p.c;
+        tctx.fillText(p.ch, p.x, p.y);
+      }
+      tctx.globalAlpha = 1;
+      sparks = sparks.filter((p) => p.life > 0);
+    }
+
+    // the grain's lamp rides under the logo
+    dispatchEvent(new CustomEvent('nyhz:lamp', { detail: { x: s0.left + cx / dpr, y: s0.top + cy / dpr } }));
+    if (idleEl) {
+      const t = Math.floor((now - sleptAt) / 1000);
+      idleEl.textContent = `idle ${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+    }
+  }
+
+  // waking: the logo flies home into the hero name as the page comes back,
+  // and the real name takes over on the landing frame
+  function wake() {
+    if (!sleeping || waking || !saver || !dvd) return;
+    waking = true; moving = false;
+    sound.hum(false);
+    html.classList.remove('egg-sleep');
+    saver.classList.remove('is-shown');
+    gsap.killTweensOf(o);
+    const spot = heroSpot(dvd.offsetWidth, dvd.offsetHeight);
+    dvd.style.color = COLORS[0];
+    dvd.textContent = NAME;
+    const land = () => {
+      if (heroName) heroName.style.visibility = '';
+      cancelAnimationFrame(raf);
+      tctx?.clearRect(0, 0, trail!.width, trail!.height);
+      saver.classList.remove('is-on'); // kept catching the waking tap until now
+      sleeping = false; waking = false;
+      dispatchEvent(new Event('nyhz:glitch'));
+    };
+    if (spot) gsap.to(o, { x: spot.x, y: spot.y, s: spot.s, sx: 1, sy: 1, duration: 0.65, ease: 'power3.inOut', onComplete: land });
+    else gsap.to(o, { s: 0, a: 0, duration: 0.35, ease: 'power2.in', onComplete: land });
+    setTimeout(() => achieve('sleep'), 900);
+  }
+
+  ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((ev) =>
+    addEventListener(ev, () => { wake(); arm(); }, { passive: true }));
+  addEventListener('loaderdone', arm, { once: true });
+</script>

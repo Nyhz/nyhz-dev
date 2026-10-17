@@ -8,6 +8,9 @@ import Preview from '../components/Preview.astro';
 import Loader from '../components/Loader.astro';
 import Terminal from '../components/Terminal.astro';
 import Cursor from '../components/Cursor.astro';
+import Eggs from '../components/Eggs.astro';
+import Snake from '../components/Snake.astro';
+import Cert from '../components/Cert.astro';
 import { getContent } from '../scripts/content';
 const { profile, projects } = await getContent();
 ---
@@ -15,6 +18,9 @@ const { profile, projects } = await getContent();
   <Field slot="bg" />
   <Frame slot="frame" />
   <Terminal profile={profile} projects={projects} slot="overlay" />
+  <Eggs slot="overlay" />
+  <Snake slot="overlay" />
+  <Cert slot="overlay" />
   <Cursor slot="overlay" />
   <Loader name={profile.name} tagline={profile.role} slot="overlay" />
 

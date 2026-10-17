@@ -10,20 +10,30 @@ const ctx: TermContext = {
   name: profile.name,
   role: profile.role,
   location: profile.location,
-  projects: projects.slice(0, 10).map((p) => ({ slug: p.slug, title: p.title, status: statusOf(p) })),
+  projects: projects.slice(0, 10).map((p) => ({
+    slug: p.slug, title: p.title, status: statusOf(p), description: p.description, tags: p.tags,
+  })),
   socials: profile.socials,
 };
 ---
 <div class="term" data-term data-ctx={JSON.stringify(ctx)}>
-  <div class="term__out" data-term-out role="log" aria-live="polite"></div>
+  <section class="term__win" data-term-win aria-label="terminal" hidden>
+    <i class="term__tick tl"></i><i class="term__tick tr"></i><i class="term__tick bl"></i><i class="term__tick br"></i>
+    <header class="term__bar">
+      <span class="term__live" aria-hidden="true"></span>
+      <span class="term__title" data-term-title>{ctx.name || 'guest'}@nyhz.dev <span class="term__dim">~/work</span></span>
+      <span class="term__keys" aria-hidden="true"><kbd>tab</kbd> <kbd>↑</kbd> <kbd>esc</kbd></span>
+    </header>
+    <div class="term__out" data-term-out role="log" aria-live="polite"></div>
+    <form class="term__line" data-term-form>
+      <span class="term__p" aria-hidden="true">›</span>
+      <input data-term-input type="text" aria-label="terminal — type help" autocomplete="off"
+        autocapitalize="off" spellcheck="false" maxlength="120" />
+    </form>
+  </section>
   <button class="term__hint" type="button" data-term-hint>
     <span class="term__p" aria-hidden="true">›_</span> press <kbd>/</kbd> to type
   </button>
-  <form class="term__line" data-term-form hidden>
-    <span class="term__p" aria-hidden="true">›</span>
-    <input data-term-input type="text" aria-label="terminal — type help" autocomplete="off"
-      autocapitalize="off" spellcheck="false" maxlength="80" />
-  </form>
 </div>
 
 <style>
@@ -37,60 +47,214 @@ const ctx: TermContext = {
     transition: color var(--t-hover) ease; }
   .term__hint:hover, .term__hint:focus-visible { color: var(--fg); }
   .term__hint:focus-visible { outline: 1px solid var(--muted); outline-offset: 4px; }
-  .term__hint kbd { font: inherit; color: var(--fg); padding: 0.05em 0.4em; margin: 0 0.15em;
+  .term kbd { font: inherit; color: var(--fg); padding: 0.05em 0.4em; margin: 0 0.15em;
     border: 1px solid var(--line); border-radius: 3px; }
   .term__p { color: var(--accent); letter-spacing: 0; }
-  .term.is-open .term__hint { display: none; }
+  .term.is-open .term__hint { visibility: hidden; }
 
-  .term__line { display: flex; align-items: center; gap: 0.55em; }
-  .term__line[hidden] { display: none; }
-  .term__line input { width: 30ch; background: none; border: 0; outline: none; padding: 0;
-    font: 500 0.78rem var(--mono); color: var(--fg); caret-color: var(--accent); caret-shape: block; }
+  /* the window: a framed panel in the page's own language (corner ticks,
+     hairline border), glass over the field, faint scanlines. It opens like a
+     CRT — a line first, then the height — and grows with its content up to
+     a cap, after which the log scrolls under a fade. */
+  .term__win { position: relative; width: min(40rem, calc(100vw - 2 * clamp(26px, 2.6vw, 42px) - 2rem));
+    background: rgba(10, 10, 10, 0.82); border: 1px solid var(--line);
+    -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1);
+    box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(58, 210, 159, 0.03);
+    transform-origin: 0 100%; }
+  .term__win[hidden] { display: none; }
+  .term__win::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px); }
+  .term__tick { position: absolute; width: 9px; height: 9px; border: 1px solid var(--fg); }
+  .term__tick.tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .term__tick.tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+  .term__tick.bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+  .term__tick.br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
 
-  .term__out { display: none; max-width: min(46ch, calc(100vw - 6rem)); padding: 0.7rem 0.85rem;
-    background: var(--bg); border: 1px solid var(--line); line-height: 1.65; white-space: pre; overflow: hidden; }
-  .term__out:not(:empty) { display: block; }
-  .term__out .cmd { color: var(--muted); }
-  .term__out .res { color: var(--dim); }
-  .term__out .res.fresh { animation: termIn 0.22s var(--ease-out) both; }
-  @keyframes termIn { from { opacity: 0; transform: translateY(4px); } }
-  @media (prefers-reduced-motion: reduce) { .term__out .res.fresh { animation: none; } }
+  .term__bar { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--line); font: 500 0.66rem var(--mono); letter-spacing: 0.08em; color: var(--fg); }
+  .term__live { width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent); animation: termLive 2.4s ease-in-out infinite; }
+  @keyframes termLive { 50% { opacity: 0.35; box-shadow: 0 0 2px var(--accent); } }
+  .term__dim { color: var(--muted); }
+  .term__keys { margin-left: auto; color: var(--muted); font-size: 0.6rem; letter-spacing: 0.1em; }
+
+  .term__out { max-height: min(52vh, 26rem); overflow-y: auto; scrollbar-width: none;
+    padding: 0.85rem 1rem 0.2rem; font: 0.82rem/1.7 var(--mono); color: var(--dim);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 1.2rem);
+    mask-image: linear-gradient(180deg, transparent 0, #000 1.2rem); }
+  .term__out::-webkit-scrollbar { display: none; }
+  .term__out:empty { display: none; }
+  /* (rows are built in JS, hence :global) rows wrap — a long description or url breaks onto aligned lines under its
+     own column instead of running out of the window */
+  .term__out > :global(div) { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .term__out :global(.cmd) { color: var(--muted); margin-top: 0.55rem; }
+  .term__out :global(.cmd:first-child) { margin-top: 0; }
+  .term__out :global(.cmd b) { font-weight: 500; color: var(--accent); }
+  .term__out :global(.kv) { display: grid; grid-template-columns: 16ch minmax(0, 1fr); }
+  .term__out :global(.kv.tight) { grid-template-columns: 10ch minmax(0, 1fr); }
+  .term__out :global(.kv > :first-child), .term__out :global(.row > :nth-child(2)) { color: var(--fg); }
+  .term__out :global(.row) { display: grid; grid-template-columns: 4ch minmax(0, 1fr) auto; gap: 0 1ch; }
+  .term__out :global(.row > :first-child) { color: var(--muted); }
+  .term__out :global([data-s="live"]) { color: var(--accent); }
+  .term__out :global(.go) { color: var(--accent); }
+  .term__out :global(.lead) { color: var(--fg); }
+  .term__out :global(.cta) { color: var(--accent); }
+  .term__out :global([data-s="down"]) { color: #ff2e63; }
+  .term__out :global(.tilde) { color: #5f7fb0; }
+  /* inside the fake vim the window turns into an editor */
+  .term.is-vim .term__live { background: #ff2e63; box-shadow: 0 0 8px #ff2e63; }
+  .term.is-vim .term__line .term__p { color: #5f7fb0; text-shadow: none; }
+  .term.is-root .term__live { background: #ff2e63; box-shadow: 0 0 8px #ff2e63; }
+  .term.is-root .term__win { border-color: rgba(255, 46, 99, 0.45); }
+  .term__out :global(.fresh) { animation: termIn 0.28s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 28ms); }
+  @keyframes termIn { from { opacity: 0; transform: translateX(-6px); filter: blur(2px); } }
+
+  .term__line { display: flex; align-items: center; gap: 0.6em; padding: 0.55rem 1rem 0.8rem; }
+  .term__line .term__p { font-size: 0.9rem; text-shadow: 0 0 10px rgba(58, 210, 159, 0.6); }
+  .term__line input { flex: 1; min-width: 0; background: none; border: 0; outline: none; padding: 0;
+    font: 500 0.86rem var(--mono); color: var(--fg); caret-color: var(--accent); caret-shape: block; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .term__out .fresh, .term__live { animation: none; }
+  }
 </style>
 
 <script>
-  import { runCommand, complete, type TermContext } from '../scripts/terminal';
+  import { gsap } from 'gsap';
+  import { runCommand, complete, vimReply, sshReply, PRE, type TermContext } from '../scripts/terminal';
+  import { achievements } from '../scripts/eggs';
+  import { statusLine, type Ping } from '../scripts/status';
+  import { sound } from '../scripts/sound';
 
   const root = document.querySelector<HTMLElement>('[data-term]');
+  const win = root?.querySelector<HTMLElement>('[data-term-win]');
   const out = root?.querySelector<HTMLElement>('[data-term-out]');
   const hint = root?.querySelector<HTMLButtonElement>('[data-term-hint]');
   const form = root?.querySelector<HTMLFormElement>('[data-term-form]');
   const input = root?.querySelector<HTMLInputElement>('[data-term-input]');
 
-  if (root && out && hint && form && input) {
+  if (root && win && out && hint && form && input) {
     const ctx = JSON.parse(root.dataset.ctx || '{}') as TermContext;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const history: string[] = [];
     let hIdx = 0;
-    const MAX_LINES = 9;
+    const MAX_LINES = 200;
+    const span = (text: string, attrs: Record<string, string> = {}) => {
+      const s = document.createElement('span');
+      s.textContent = text;
+      Object.entries(attrs).forEach(([k, v]) => s.setAttribute(k, v));
+      return s;
+    };
 
-    const print = (text: string, cls: 'cmd' | 'res') => {
+    // terminal.ts speaks in padded strings; columns (2+ spaces apart) become a
+    // grid here so long values wrap inside their own column
+    function render(text: string, i: number) {
       const div = document.createElement('div');
-      div.className = `${cls} ${cls === 'res' ? 'fresh' : ''}`;
-      div.textContent = text;
+      div.className = 'res fresh';
+      div.style.setProperty('--i', String(i));
+      const cols = text.split(/\s{2,}/);
+      if (text.startsWith(PRE)) div.textContent = text.slice(PRE.length);
+      else if (text.startsWith('→ ') || text.startsWith('◆ ')) { div.classList.add('go'); div.textContent = text; }
+      else if (text.startsWith('~')) { div.classList.add('tilde'); div.textContent = text; }
+      else if (cols.length === 3) {
+        div.classList.add('row');
+        div.append(span(cols[0]), span(cols[1]), span(cols[2], { 'data-s': cols[2] }));
+      } else if (cols.length === 2 && cols[0]) {
+        div.classList.add('kv');
+        if (cols[0].length <= 8) div.classList.add('tight');
+        // `.secrets` invites you to read it: its hint is a command, in accent
+        const attrs: Record<string, string> = cols[0] === 'status' ? { 'data-s': cols[1] }
+          : cols[0] === '.secrets' ? { class: 'cta' }
+          : cols[1].startsWith('● up') ? { 'data-s': 'live' } : cols[1].startsWith('● down') ? { 'data-s': 'down' } : {};
+        div.append(span(cols[0]), span(cols[1], attrs));
+      } else div.textContent = text;
+      return div;
+    }
+
+    const trim = () => { while (out.childElementCount > MAX_LINES) out.firstElementChild?.remove(); };
+    const toEnd = () => { out.scrollTop = out.scrollHeight; };
+    const printCmd = (line: string) => {
+      const div = document.createElement('div');
+      div.className = 'cmd';
+      const p = document.createElement('b');
+      p.textContent = prompt();
+      div.append(p, ` ${ssh ? '•'.repeat(line.length) : line}`); // a password is never echoed
       out.append(div);
-      while (out.childElementCount > MAX_LINES) out.firstElementChild?.remove();
+    };
+    const printRes = (lines: string[]) => { lines.forEach((l, i) => out.append(render(l, i))); trim(); toEnd(); };
+
+    let tl: gsap.core.Timeline | null = null;
+    const open = () => {
+      if (root.classList.contains('is-open')) { input.focus(); return; }
+      root.classList.add('is-open');
+      win.hidden = false;
+      if (!out.childElementCount) {
+        printRes([`${ctx.name || 'nyhz'}.sh — ${ctx.projects.length} projects loaded`, 'type help to look around']);
+        out.firstElementChild?.classList.add('lead');
+      }
+      input.focus();
+      tl?.kill();
+      if (reduce) return;
+      // CRT on: a bright line draws out, then the window opens upward from it
+      tl = gsap.timeline()
+        .fromTo(win, { scaleX: 0.02, scaleY: 0.012, opacity: 0, filter: 'brightness(3)' },
+          { scaleX: 1, opacity: 1, duration: 0.24, ease: 'power3.out' })
+        .to(win, { scaleY: 1, filter: 'brightness(1)', duration: 0.42, ease: 'back.out(1.6)' });
+    };
+    // modes: the fake vim (only a quit command gets you out), the ssh password
+    // prompt (never right), and root (after the backdoor; `exit` leaves it)
+    const titleEl = root.querySelector<HTMLElement>('[data-term-title]');
+    const titleHTML = titleEl?.innerHTML ?? '';
+    const promptEl = form.querySelector<HTMLElement>('.term__p');
+    let vim = false, vimN = 0, isRoot = false;
+    let ssh: { target: string; n: number } | null = null;
+    const prompt = () => (vim ? ':' : ssh ? '*' : isRoot ? '#' : '›');
+    const chrome = () => {
+      root.classList.toggle('is-vim', vim);
+      root.classList.toggle('is-root', isRoot && !vim);
+      document.documentElement.classList.toggle('egg-root', isRoot);
+      input.type = ssh ? 'password' : 'text';
+      if (titleEl) {
+        titleEl.innerHTML = vim ? 'VIM <span class="term__dim">— [No Name]</span>'
+          : isRoot ? 'root@nyhz.dev <span class="term__dim">/ #</span>' : titleHTML;
+      }
+      if (promptEl) promptEl.textContent = prompt();
+    };
+    const setVim = (on: boolean) => { vim = on; vimN = 0; chrome(); };
+    const setRoot = (on: boolean) => { isRoot = on; chrome(); };
+
+    // rm -rf / and friends: a hex dump floods the window, then the machine panics
+    let panicking = false;
+    const panic = () => {
+      if (panicking) return;
+      panicking = true;
+      const hex = () => Array.from({ length: 8 }, () => ((Math.random() * 256) | 0).toString(16).padStart(2, '0')).join(' ');
+      let addr = 0x7f3a2c00;
+      const iv = setInterval(() => {
+        printRes([PRE + `0x${(addr += 16).toString(16)}  ${hex()}  ${hex()}`]);
+      }, 28);
+      setTimeout(() => {
+        clearInterval(iv);
+        dispatchEvent(new Event('nyhz:panic'));
+      }, reduce ? 200 : 1400);
     };
 
-    const open = () => {
-      root.classList.add('is-open');
-      form.hidden = false;
-      input.focus();
-      if (!out.childElementCount) print('type help', 'res');
-    };
     const close = () => {
-      root.classList.remove('is-open');
-      form.hidden = true;
-      input.value = '';
-      out.replaceChildren();
+      if (!root.classList.contains('is-open')) return;
+      ssh = null;
+      setVim(false);
+      const done = () => {
+        root.classList.remove('is-open');
+        win.hidden = true;
+        input.value = '';
+        out.replaceChildren();
+        gsap.set(win, { clearProps: 'all' });
+      };
+      tl?.kill();
+      if (reduce) { done(); return; }
+      tl = gsap.timeline({ onComplete: done })
+        .to(win, { scaleY: 0.012, duration: 0.2, ease: 'power3.in' })
+        .to(win, { scaleX: 0, opacity: 0, duration: 0.16, ease: 'power2.in' });
     };
 
     hint.addEventListener('click', open);
@@ -104,7 +268,10 @@ const ctx: TermContext = {
     });
 
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); hint.focus(); }
+      if (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace') sound.key();
+      if (e.key === 'Escape' && ssh) { e.preventDefault(); e.stopPropagation(); printRes(['^C']); ssh = null; chrome(); }
+      else if (e.key === 'Escape' && vim) { e.preventDefault(); e.stopPropagation(); printRes(["esc won't save you."]); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); hint.focus(); }
       else if (e.key === 'Tab') { e.preventDefault(); input.value = complete(input.value, ctx); }
       else if (e.key === 'ArrowUp' && history.length) {
         e.preventDefault(); hIdx = Math.max(0, hIdx - 1); input.value = history[hIdx];
@@ -112,23 +279,78 @@ const ctx: TermContext = {
         e.preventDefault(); hIdx = Math.min(history.length, hIdx + 1); input.value = history[hIdx] ?? '';
       }
     });
-    // leaving the prompt (a click elsewhere, the contact form taking focus) closes it
+    // leaving the prompt (a click elsewhere, the contact form taking focus) closes it;
+    // clicks inside the window just hand focus back to the input
+    win.addEventListener('pointerdown', (e) => { if (e.target !== input) { e.preventDefault(); input.focus(); } });
     input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) close(); }, 120));
 
-    form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', (e) => {
       e.preventDefault();
       const line = input.value;
       input.value = '';
+      if (panicking) return;
+      if (ssh) {
+        printCmd(line);
+        const r = sshReply(ssh.n++);
+        printRes(r.lines);
+        if (r.done) { ssh = null; chrome(); }
+        return;
+      }
       if (line.trim()) { history.push(line.trim()); hIdx = history.length; }
+      if (isRoot && !vim) {
+        const c = line.trim().toLowerCase();
+        const say = (l: string[]) => { printCmd(line); printRes(l); };
+        if (c === 'exit' || c === 'logout') { say(['logout. back to being a guest.']); setRoot(false); return; }
+        if (c === 'whoami') { say(['root. happy now?']); return; }
+        if (c.startsWith('sudo')) { say(["you're root. there's no one left to ask."]); return; }
+      }
+      if (vim) {
+        const r = vimReply(line, vimN++);
+        printCmd(line);
+        printRes(r.lines);
+        if (r.exit) {
+          setVim(false);
+          dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: 'vim' } }));
+        }
+        return;
+      }
       const { lines, action } = runCommand(line, ctx);
-      print(`› ${line}`, 'cmd');
-      lines.forEach((l) => print(l, 'res'));
+      printCmd(line);
+      printRes(lines);
 
       switch (action.type) {
         case 'open': dispatchEvent(new CustomEvent('nyhz:open', { detail: { slug: action.slug } })); break;
         case 'contact': dispatchEvent(new Event('nyhz:contact')); break;
         case 'url': window.open(action.url, '_blank', 'noopener'); break;
         case 'glitch': dispatchEvent(new Event('nyhz:glitch')); break;
+        case 'matrix': dispatchEvent(new Event('nyhz:matrix')); break;
+        case 'achieve': dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: action.id } })); break;
+        case 'achievements': printRes(achievements().lines()); break;
+        case 'vim': setVim(true); break;
+        case 'flash': dispatchEvent(new Event('nyhz:flash')); break;
+        case 'ssh':
+          printRes([`${action.target}'s password:`]);
+          ssh = { target: action.target, n: 0 };
+          chrome();
+          break;
+        case 'root':
+          setRoot(true);
+          dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: 'root' } }));
+          dispatchEvent(new Event('nyhz:glitch'));
+          break;
+        case 'panic': panic(); break;
+        case 'cert': {
+          const a = achievements();
+          if (a.complete()) { printRes(['opening your certificate…']); setTimeout(() => { close(); dispatchEvent(new Event('nyhz:cert')); }, 300); }
+          else printRes([`locked — ${a.count()}/${a.total} found. keep looking.`]);
+          break;
+        }
+        case 'status':
+          fetch('/api/status').then((r) => r.json()).then((pings: Ping[]) => {
+            printRes(pings.length ? pings.map(statusLine) : ['nothing live to ping.']);
+          }).catch(() => printRes(['status: network unreachable']));
+          break;
+        case 'snake': setTimeout(() => { close(); dispatchEvent(new Event('nyhz:snake')); }, 350); break;
         case 'clear': out.replaceChildren(); break;
         case 'exit': close(); hint.focus(); break;
       }
@@ -137,7 +359,7 @@ const ctx: TermContext = {
 
   // for whoever opens the devtools
   console.log(
-    '%c›_ nyhz%c\nhi, curious one. there is a terminal on the page — press / and type help.',
+    '%c›_ nyhz%c\nhi, curious one. there is a terminal on the page — press / and type help.\nand one right here: nyhz.help()',
     'font: 700 20px ui-monospace, monospace; color: #3ad29f', 'font: 12px ui-monospace, monospace; color: #b9b8b0',
   );
 

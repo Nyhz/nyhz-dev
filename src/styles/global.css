@@ -48,17 +48,14 @@ a { color: inherit; text-decoration: none; }
    balloon to its full height and snap while it's still growing */
 .page.projects-open.projects-reveal .prj--extra { display: block; }
 
-/* ---- expanded (desktop): 2 columns, list fills + scrolls, header collapsed (GSAP) ---- */
+/* ---- expanded (desktop): 2 columns, list fills (paged, never scrolls), header collapsed (GSAP) ---- */
 @media (min-width: 721px) {
   .page.projects-open .lower { min-height: 0; }
-  /* structural (fill + scroll) deferred to projects-reveal so the apply itself
+  /* structural (fill) deferred to projects-reveal so the apply itself
      causes no instant reflow — the rise is purely the GSAP flex-grow/collapse */
   .page.projects-open.projects-reveal .lower__track { height: 100%; min-height: 0; align-items: stretch; }
   .page.projects-open.projects-reveal .preview { align-self: start; }
   .page.projects-open.projects-reveal .projects { display: flex; flex-direction: column; min-height: 0; height: 100%; }
-  .page.projects-open.projects-reveal .projects ul { flex: 0 1 auto; min-height: 0; overflow-y: auto;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
-    mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); }
 }
 
 /* ---- short desktop screens: tighten the vertical rhythm ---- */
@@ -88,23 +85,16 @@ a { color: inherit; text-decoration: none; }
      the track taller than the list: the list panel stretches with it and
      keeps show-all pinned to the bottom */
   .lower__track > .projects { align-self: stretch; display: flex; flex-direction: column; }
-  .lower__track > .projects .prj-more { margin-top: auto; padding-top: 1.2rem; }
+  .lower__track > .projects .prj-foot { margin-top: auto; padding-top: 1.2rem; }
   .lower__track.is-preview { transform: translateX(-50%); }
 
-  /* expanded: header collapsed (GSAP), list fills + scrolls. The preview panel
-     stays offscreen in the slider (not display:none) so removing it can't jump
-     the lower's height the instant the class is applied. */
+  /* expanded: header collapsed (GSAP), the list fills the panel. No scroll —
+     it's paged, 4 rows at a time (Projects.astro). The preview panel stays
+     offscreen in the slider (not display:none) so removing it can't jump the
+     lower's height the instant the class is applied. */
   .page.projects-open .lower { min-height: 0; }
   .page.projects-open .lower__track { height: 100%; }
   .page.projects-open .lower__track > * { height: 100%; }
   .page.projects-open .projects { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-  /* scrolling only once the list has settled (projects-reveal, as on desktop):
-     while it grows/shrinks a scroll container would flash its scrollbar.
-     The bar itself stays hidden — the masked edges say there's more. */
-  .page.projects-open.projects-reveal .projects ul { flex: 0 1 auto; min-height: 0; overflow-y: auto;
-    scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
-    mask-image: linear-gradient(180deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%); }
-  .page.projects-open .projects ul::-webkit-scrollbar { display: none; }
 }
 

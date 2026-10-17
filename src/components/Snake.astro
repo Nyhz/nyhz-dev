@@ -1,0 +1,180 @@
+---
+// `snake` in the terminal: the page dims and the frame becomes the board.
+// The grain field stays alive underneath — every bite ripples it. Arrows or
+// WASD, Esc quits, Enter retries. Logic in scripts/snake.ts.
+---
+<div class="snake" data-snake aria-hidden="true" hidden>
+  <canvas class="snake__cv" data-snake-cv></canvas>
+  <div class="snake__hud">
+    <span class="snake__t">snake.exe</span>
+    <span>score <b data-snake-score>00</b></span>
+    <span>best <b data-snake-best>00</b></span>
+  </div>
+  <p class="snake__msg" data-snake-msg></p>
+  <p class="snake__keys">← ↑ ↓ → move · esc quit</p>
+</div>
+
+<style>
+  .snake { position: fixed; inset: clamp(14px, 1.6vw, 26px); z-index: 160; }
+  .snake[hidden] { display: none; }
+  .snake__cv { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .snake__hud { position: absolute; left: 1.1rem; top: 1rem; display: flex; gap: 1.4rem;
+    font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    font-variant-numeric: tabular-nums; }
+  .snake__hud b { font-weight: 500; color: var(--fg); }
+  .snake__t { color: var(--accent); }
+  .snake__keys { position: absolute; left: 0; right: 0; bottom: 1rem; text-align: center;
+    font: 500 0.62rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
+  .snake__msg { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center;
+    font: 500 0.8rem/1.9 var(--mono); color: var(--fg); white-space: pre-line; pointer-events: none; }
+  .snake__msg:empty { display: none; }
+  .snake.is-dead .snake__cv { animation: snakeDie 0.5s steps(2) 1; }
+  @keyframes snakeDie { 50% { filter: drop-shadow(-4px 0 #ff2e63) drop-shadow(4px 0 #2ee6ff); transform: translateX(3px); } }
+  :global(html.egg-game .page), :global(html.egg-game .term) { opacity: 0.07; transition: opacity 0.5s ease; }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { create, turn, step, speed, type Game, type P } from '../scripts/snake';
+  import { sound } from '../scripts/sound';
+
+  const root = document.querySelector<HTMLElement>('[data-snake]');
+  const cv = root?.querySelector<HTMLCanvasElement>('[data-snake-cv]');
+  const ctx = cv?.getContext('2d');
+  const scoreEl = root?.querySelector('[data-snake-score]');
+  const bestEl = root?.querySelector('[data-snake-best]');
+  const msgEl = root?.querySelector<HTMLElement>('[data-snake-msg]');
+  const html = document.documentElement;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const CELL = 22;
+  const KEYS: Record<string, P> = {
+    ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 }, ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 },
+    w: { x: 0, y: -1 }, s: { x: 0, y: 1 }, a: { x: -1, y: 0 }, d: { x: 1, y: 0 },
+  };
+  const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*+=';
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  if (root && cv && ctx) {
+    let g: Game | null = null;
+    let playing = false, raf = 0, lastStep = 0, dpr = 1, ox = 0, oy = 0, foodCh = '◆';
+    let best = 0;
+    try { best = Number(localStorage.getItem('nyhz:snake')) || 0; } catch { /* no memory */ }
+
+    const boardRect = () => cv.getBoundingClientRect();
+    const toScreen = (p: P) => {
+      const r = boardRect();
+      return { x: r.left + ox + (p.x + 0.5) * CELL, y: r.top + oy + (p.y + 0.5) * CELL };
+    };
+
+    function start() {
+      dpr = Math.min(devicePixelRatio || 1, 2);
+      cv!.width = Math.round(cv!.clientWidth * dpr);
+      cv!.height = Math.round(cv!.clientHeight * dpr);
+      const cols = Math.floor((cv!.clientWidth - 24) / CELL), rows = Math.floor((cv!.clientHeight - 90) / CELL);
+      ox = Math.round((cv!.clientWidth - cols * CELL) / 2);
+      oy = Math.round((cv!.clientHeight - rows * CELL) / 2) + 6;
+      g = create(cols, rows);
+      foodCh = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      if (scoreEl) scoreEl.textContent = '00';
+      if (bestEl) bestEl.textContent = pad(best);
+      if (msgEl) msgEl.textContent = '';
+      root!.classList.remove('is-dead');
+      playing = true;
+      lastStep = performance.now();
+    }
+
+    function open() {
+      if (!root!.hidden) return;
+      html.classList.add('egg-game');
+      root!.hidden = false;
+      if (!reduce) gsap.fromTo(root!, { opacity: 0 }, { opacity: 1, duration: 0.4 });
+      start();
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(loop);
+    }
+    function quit() {
+      playing = false;
+      cancelAnimationFrame(raf);
+      html.classList.remove('egg-game');
+      root!.hidden = true;
+    }
+
+    function die() {
+      if (!g) return;
+      playing = false;
+      root!.classList.remove('is-dead');
+      void root!.offsetWidth;
+      root!.classList.add('is-dead');
+      if (g.score > best) { best = g.score; try { localStorage.setItem('nyhz:snake', String(best)); } catch { /* no */ } }
+      if (bestEl) bestEl.textContent = pad(best);
+      sound.die();
+      if (msgEl) msgEl.textContent = `segmentation fault (core dumped)\nscore ${pad(g.score)} · best ${pad(best)}\nenter to retry · esc to quit`;
+      const h = toScreen(g.body[0]);
+      dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x: h.x, y: h.y, strength: 2.2 } }));
+    }
+
+    function draw(now: number) {
+      if (!g) return;
+      const W = cv!.width, H = cv!.height, c = CELL * dpr;
+      ctx!.clearRect(0, 0, W, H);
+      ctx!.save();
+      ctx!.translate(ox * dpr, oy * dpr);
+      // the board: a faint dot on every cell, the walls as a hairline
+      ctx!.fillStyle = 'rgba(242, 241, 234, 0.07)';
+      for (let x = 0; x < g.cols; x++) for (let y = 0; y < g.rows; y++) ctx!.fillRect((x + 0.5) * c - dpr, (y + 0.5) * c - dpr, 2 * dpr, 2 * dpr);
+      ctx!.strokeStyle = 'rgba(242, 241, 234, 0.12)';
+      ctx!.lineWidth = dpr;
+      ctx!.strokeRect(0, 0, g.cols * c, g.rows * c);
+      // food: a glyph that pulses
+      const pulse = 1 + Math.sin(now / 160) * 0.12;
+      ctx!.font = `700 ${Math.round(15 * dpr * pulse)}px "Geist Mono Variable", ui-monospace, monospace`;
+      ctx!.textAlign = 'center';
+      ctx!.textBaseline = 'middle';
+      ctx!.shadowColor = '#f2f1ea';
+      ctx!.shadowBlur = 10 * dpr;
+      ctx!.fillStyle = '#f2f1ea';
+      ctx!.fillText(foodCh, (g.food.x + 0.5) * c, (g.food.y + 0.5) * c + dpr);
+      // the snake: accent, fading toward the tail, the head glowing
+      const n = g.body.length;
+      g.body.forEach((p, i) => {
+        const k = 1 - (i / n) * 0.65;
+        ctx!.shadowBlur = i === 0 ? 14 * dpr : 0;
+        ctx!.shadowColor = '#3ad29f';
+        ctx!.fillStyle = g!.dead ? `rgba(255, 46, 99, ${k})` : `rgba(58, 210, 159, ${k})`;
+        const inset = i === 0 ? 2 : 3;
+        ctx!.fillRect(p.x * c + inset * dpr, p.y * c + inset * dpr, c - inset * 2 * dpr, c - inset * 2 * dpr);
+      });
+      ctx!.restore();
+    }
+
+    function loop(now: number) {
+      if (playing && g && now - lastStep >= speed(g.score)) {
+        lastStep = now;
+        const { ate } = step(g);
+        if (g.dead) die();
+        else if (ate) {
+          if (scoreEl) scoreEl.textContent = pad(g.score);
+          sound.blip();
+          foodCh = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+          const h = toScreen(g.body[0]);
+          dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x: h.x, y: h.y, strength: 0.9 } }));
+          if (g.score === 10) dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: 'snake' } }));
+        }
+      }
+      draw(now);
+      raf = requestAnimationFrame(loop);
+    }
+
+    addEventListener('nyhz:snake', open);
+    // capture: while playing, the arrows belong to the game (not the list pager, not konami)
+    addEventListener('keydown', (e) => {
+      if (root!.hidden) return;
+      e.stopImmediatePropagation();
+      if (e.key === 'Escape') { e.preventDefault(); quit(); return; }
+      if (e.key === 'Enter' && !playing) { e.preventDefault(); start(); return; }
+      const d = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+      if (d && g && playing) { e.preventDefault(); turn(g, d); }
+    }, { capture: true });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && playing) lastStep = Infinity; else lastStep = performance.now(); });
+  }
+</script>

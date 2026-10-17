@@ -1,0 +1,200 @@
+---
+// The root certificate: earned by finding every easter egg. Opens on its own
+// after the last one (and from the achievements panel or `cert` in the
+// terminal). Sign it, download it as a PNG, or copy a link — the link carries
+// the certificate in its hash (#cert=…), and opening it shows that person's.
+---
+<div class="cert" data-cert role="dialog" aria-modal="true" aria-label="root certificate" hidden>
+  <div class="cert__card" data-cert-card>
+    <i class="cert__tick tl"></i><i class="cert__tick tr"></i><i class="cert__tick bl"></i><i class="cert__tick br"></i>
+    <header class="cert__head"><span><b aria-hidden="true">◆</b> root certificate</span><span>nyhz.dev</span></header>
+    <p class="cert__big" data-c-big></p>
+    <p class="cert__sub" data-c-sub></p>
+    <dl class="cert__rows">
+      <div><dt>found</dt><dd data-c-found></dd></div>
+      <div><dt>first</dt><dd data-c-first></dd></div>
+      <div><dt>last</dt><dd data-c-last></dd></div>
+      <div><dt>took</dt><dd data-c-took></dd></div>
+      <div><dt>serial</dt><dd data-c-serial></dd></div>
+      <div class="cert__sign"><dt>signed</dt><dd>
+        <input data-c-name maxlength="32" placeholder="your name" autocomplete="off" spellcheck="false" aria-label="sign the certificate" />
+        <span data-c-name-ro></span>
+      </dd></div>
+    </dl>
+    <footer class="cert__foot">
+      <button type="button" data-c-png>download png</button>
+      <button type="button" data-c-link>copy link</button>
+      <button type="button" data-c-try hidden>try it yourself →</button>
+      <button type="button" class="cert__x" data-c-close>close</button>
+    </footer>
+  </div>
+</div>
+
+<style>
+  .cert { position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 1rem;
+    background: rgba(10, 10, 10, 0.78); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .cert[hidden] { display: none; }
+  .cert__card { position: relative; width: min(36rem, 100%); padding: 1.4rem 1.6rem 1.1rem;
+    background: rgba(12, 12, 11, 0.96); border: 1px solid var(--line); transform-origin: 50% 50%;
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9), 0 0 60px -20px rgba(58, 210, 159, 0.18); }
+  .cert__card::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 3px); }
+  .cert__tick { position: absolute; width: 11px; height: 11px; border: 1px solid var(--fg); }
+  .cert__tick.tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+  .cert__tick.tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+  .cert__tick.bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+  .cert__tick.br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+  .cert__head { display: flex; justify-content: space-between; padding-bottom: 0.9rem; border-bottom: 1px solid var(--line);
+    font: 500 0.62rem var(--mono); letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+  .cert__head b { color: var(--accent); font-weight: 500; text-shadow: 0 0 10px var(--accent); }
+  .cert__big { margin: 1.3rem 0 0.2rem; font: 700 clamp(1.8rem, 6vw, 2.6rem)/1.05 var(--mono); letter-spacing: -0.02em; color: var(--fg); }
+  .cert__sub { font: 0.82rem var(--mono); color: var(--dim); margin-bottom: 1.2rem; }
+  .cert__rows { font: 0.8rem/1.5 var(--mono); border-top: 1px solid var(--line); }
+  .cert__rows > div { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); align-items: baseline;
+    padding: 0.45rem 0; border-bottom: 1px solid var(--line); }
+  .cert__rows dt { font: 500 0.6rem var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+  .cert__rows dd { color: var(--fg); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .cert__sign dd { color: var(--accent); }
+  .cert__sign input { width: 100%; background: none; border: 0; outline: none; padding: 0;
+    font: 500 0.95rem var(--mono); color: var(--accent); caret-color: var(--accent); }
+  .cert__sign input::placeholder { color: var(--muted); opacity: 0.6; }
+  .cert__foot { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; padding-top: 1rem; }
+  .cert__foot button { background: none; border: 0; padding: 0.2rem 0; cursor: pointer;
+    font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg);
+    transition: color var(--t-hover) ease; }
+  .cert__foot button:hover { color: var(--accent); }
+  .cert__foot button[hidden] { display: none; }
+  .cert__foot .cert__x { margin-left: auto; color: var(--muted); }
+  @media (pointer: coarse) { .cert__sign input { font-size: 16px; } }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { achievements, encodeCert, decodeCert, serial, took, type Cert } from '../scripts/eggs';
+
+  const root = document.querySelector<HTMLElement>('[data-cert]');
+  const card = root?.querySelector<HTMLElement>('[data-cert-card]');
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => root?.querySelector<T>(s) ?? null;
+  const nameIn = $<HTMLInputElement>('[data-c-name]');
+  const nameRo = $('[data-c-name-ro]');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const NAME_KEY = 'nyhz:cert:name';
+  const when = (ms: number) => new Date(ms).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).toLowerCase();
+
+  if (root && card && nameIn && nameRo) {
+    let cert: Cert | null = null;
+    let shared = false;
+
+    const paint = () => {
+      if (!cert) return;
+      $('[data-c-big]')!.textContent = `all ${cert.c} found.`;
+      $('[data-c-sub]')!.textContent = shared ? `by ${cert.n || 'someone curious'}. can you?` : "you're one of us now.";
+      $('[data-c-found]')!.textContent = `${cert.c}/${cert.c}`;
+      $('[data-c-first]')!.textContent = when(cert.f);
+      $('[data-c-last]')!.textContent = when(cert.l);
+      $('[data-c-took]')!.textContent = took(cert.l - cert.f);
+      $('[data-c-serial]')!.textContent = serial(cert);
+      nameIn.hidden = shared;
+      nameRo.hidden = !shared;
+      nameRo.textContent = cert.n || '—';
+      $('[data-c-png]')!.hidden = shared;
+      $('[data-c-link]')!.hidden = shared;
+      $('[data-c-try]')!.hidden = !shared;
+    };
+
+    const open = (c: Cert, isShared: boolean) => {
+      cert = c;
+      shared = isShared;
+      if (!shared) { try { nameIn.value = localStorage.getItem(NAME_KEY) || ''; } catch { /* blank */ } cert.n = nameIn.value; }
+      paint();
+      root.hidden = false;
+      dispatchEvent(new Event('nyhz:glitch'));
+      if (!reduce) {
+        gsap.timeline()
+          .fromTo(card, { scaleX: 0.02, scaleY: 0.01, opacity: 0, filter: 'brightness(3)' }, { scaleX: 1, opacity: 1, duration: 0.28, ease: 'power3.out' })
+          .to(card, { scaleY: 1, filter: 'brightness(1)', duration: 0.5, ease: 'back.out(1.6)' });
+      }
+      if (!shared) setTimeout(() => nameIn.focus(), reduce ? 0 : 750);
+    };
+    const close = () => {
+      root.hidden = true;
+      if (location.hash.startsWith('#cert=')) history.replaceState(null, '', location.pathname + location.search);
+    };
+
+    // your own: only once every egg is found
+    const ach = achievements();
+    const openMine = () => {
+      const span = ach.span();
+      if (!ach.complete() || !span) return;
+      open({ n: '', f: span.first, l: span.last, c: ach.total }, false);
+    };
+    addEventListener('nyhz:cert', openMine);
+
+    nameIn.addEventListener('input', () => {
+      if (!cert) return;
+      cert.n = nameIn.value.slice(0, 32);
+      try { localStorage.setItem(NAME_KEY, cert.n); } catch { /* fine */ }
+      $('[data-c-serial]')!.textContent = serial(cert);
+    });
+
+    $('[data-c-link]')!.addEventListener('click', async (e) => {
+      if (!cert) return;
+      const btn = e.currentTarget as HTMLButtonElement;
+      const url = `${location.origin}/#cert=${encodeCert(cert)}`;
+      try { await navigator.clipboard.writeText(url); btn.textContent = 'copied ✓'; } catch { prompt('copy this link', url); }
+      setTimeout(() => { btn.textContent = 'copy link'; }, 1600);
+    });
+
+    $('[data-c-png]')!.addEventListener('click', () => { if (cert) png(cert); });
+    $('[data-c-close]')!.addEventListener('click', close);
+    $('[data-c-try]')!.addEventListener('click', close);
+    root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) { e.stopImmediatePropagation(); close(); } }, { capture: true });
+
+    // someone shared theirs: show it once the site has loaded
+    const fromHash = location.hash.startsWith('#cert=') ? decodeCert(location.hash.slice(6)) : null;
+    if (fromHash) addEventListener('loaderdone', () => setTimeout(() => open(fromHash, true), 900), { once: true });
+  }
+
+  // the certificate as a 1200×630 image, drawn in the site's own type
+  async function png(c: Cert) {
+    await document.fonts.ready;
+    const W = 1200, H = 630, cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const x = cv.getContext('2d')!;
+    const F = '"Geist Mono Variable", ui-monospace, monospace';
+    x.fillStyle = '#0a0a0a'; x.fillRect(0, 0, W, H);
+    for (let i = 0; i < 9000; i++) { x.fillStyle = `rgba(255,255,255,${Math.random() * 0.035})`; x.fillRect(Math.random() * W, Math.random() * H, 1, 1); }
+    for (let y = 0; y < H; y += 3) { x.fillStyle = 'rgba(255,255,255,0.012)'; x.fillRect(0, y, W, 1); }
+    const P = 44;
+    x.strokeStyle = '#2b2b29'; x.lineWidth = 1; x.strokeRect(P + 0.5, P + 0.5, W - 2 * P - 1, H - 2 * P - 1);
+    x.strokeStyle = '#f2f1ea'; x.lineWidth = 1.5;
+    const T = 16;
+    ([[P, P, 1, 1], [W - P, P, -1, 1], [P, H - P, 1, -1], [W - P, H - P, -1, -1]] as const).forEach(([cx, cy, dx, dy]) => {
+      x.beginPath(); x.moveTo(cx + T * dx, cy); x.lineTo(cx, cy); x.lineTo(cx, cy + T * dy); x.stroke();
+    });
+    const L = 96;
+    x.textBaseline = 'alphabetic';
+    x.font = `500 17px ${F}`;
+    x.fillStyle = '#3ad29f'; x.fillText('◆', L, 118);
+    x.fillStyle = '#8a8983'; x.fillText('R O O T   C E R T I F I C A T E', L + 30, 118);
+    x.textAlign = 'right'; x.fillText('N Y H Z . D E V', W - L, 118); x.textAlign = 'left';
+    x.fillStyle = '#2b2b29'; x.fillRect(L, 140, W - 2 * L, 1);
+    x.font = `700 76px ${F}`; x.fillStyle = '#f2f1ea'; x.fillText(`all ${c.c} found.`, L, 236);
+    x.font = `400 24px ${F}`; x.fillStyle = '#b9b8b0'; x.fillText("you're one of us now.", L, 280);
+    const rows: [string, string][] = [['found', `${c.c}/${c.c}`], ['first', when(c.f)], ['last', when(c.l)], ['took', took(c.l - c.f)]];
+    rows.forEach(([k, v], i) => {
+      const y = 350 + i * 44;
+      x.font = `500 14px ${F}`; x.fillStyle = '#6f6e68'; x.fillText(k.toUpperCase().split('').join(' '), L, y);
+      x.font = `400 22px ${F}`; x.fillStyle = '#f2f1ea'; x.fillText(v, L + 150, y);
+    });
+    x.font = `500 14px ${F}`; x.fillStyle = '#6f6e68'; x.textAlign = 'right';
+    x.fillText('S I G N E D', W - L, 350);
+    x.font = `700 34px ${F}`; x.fillStyle = '#3ad29f'; x.fillText(c.n || '—', W - L, 394);
+    x.font = `400 16px ${F}`; x.fillStyle = '#6f6e68'; x.fillText(`serial ${serial(c)}`, W - L, 482);
+    const a = document.createElement('a');
+    a.download = `nyhz-root-certificate-${serial(c).replace('·', '')}.png`;
+    a.href = cv.toDataURL('image/png');
+    a.click();
+  }
+</script>

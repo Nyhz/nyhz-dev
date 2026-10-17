@@ -16,6 +16,11 @@
         const { x, y, strength = 1.6 } = (e as CustomEvent).detail ?? {};
         grain.ripple(x ?? innerWidth / 2, y ?? innerHeight / 2, strength);
       });
+      // the screensaver's logo carries the lamp around
+      addEventListener('nyhz:lamp', (e) => {
+        const { x, y } = (e as CustomEvent).detail ?? {};
+        if (typeof x === 'number' && typeof y === 'number') grain.lamp(x, y);
+      });
     }
   }
 </script>
