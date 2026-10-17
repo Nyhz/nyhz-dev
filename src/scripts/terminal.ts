@@ -28,7 +28,9 @@ export type TermAction =
   | { type: 'panic' }
   | { type: 'snake' }
   | { type: 'status' }
-  | { type: 'cert' };
+  | { type: 'cert' }
+  | { type: 'bsod' }
+  | { type: 'sl' };
 
 /** a line the terminal prints as-is (no column layout) */
 export const PRE = '\u200b';
@@ -62,6 +64,7 @@ const DOTFILES: Record<string, string[]> = {
     '  ask for light mode: theme light',
     '  sudo. then follow the doors.',
     '  rm -rf /   (please don\'t)',
+    '  on windows? format c:',
     '  vim. if you dare',
     '  open the console',
     'achievements keeps score.',
@@ -79,7 +82,55 @@ export function findProject(ctx: TermContext, query: string) {
     ?? ctx.projects.find((p) => p.slug.startsWith(s) || slugify(p.title).startsWith(s));
 }
 
-export function runCommand(input: string, ctx: TermContext, now: Date = new Date()): TermResult {
+// fortune: a random line, every time
+export const FORTUNES = [
+  'it works on my machine.',
+  'there are 2 hard problems in computer science: cache invalidation, naming things, and off-by-one errors.',
+  'a good programmer looks both ways before crossing a one-way street.',
+  "99 little bugs in the code. take one down, patch it around. 127 little bugs in the code.",
+  "it's not a bug, it's an undocumented feature.",
+  'weeks of coding can save you hours of planning.',
+  'the best code is no code at all.',
+  'debugging is twice as hard as writing the code in the first place.',
+  'git commit -m "fix" — the most honest lie ever told.',
+  'there is no cloud. it\'s just someone else\'s computer.',
+  'first, solve the problem. then, write the code.',
+  'delete code, not features.',
+  'real programmers count from 0.',
+  'one does not simply exit vim.',
+  'the s in iot stands for security.',
+  'premature optimization is the root of all evil.',
+  'any sufficiently advanced bug is indistinguishable from a feature.',
+  'it compiled on the first try. be very afraid.',
+];
+
+/** cowsay: the text in a speech bubble, wrapped, said by a cow */
+export function cowsay(text: string, width = 34): string[] {
+  const words = (text.trim() || 'moo.').split(/\s+/);
+  const rows: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    if (cur && (cur + ' ' + w).length > width) { rows.push(cur); cur = w; } else cur = cur ? `${cur} ${w}` : w;
+  }
+  rows.push(cur);
+  const n = Math.max(...rows.map((r) => r.length));
+  const pad = (r: string) => r + ' '.repeat(n - r.length);
+  const body = rows.length === 1
+    ? [`< ${pad(rows[0])} >`]
+    : rows.map((r, i) => `${i === 0 ? '/' : i === rows.length - 1 ? '\\' : '|'} ${pad(r)} ${i === 0 ? '\\' : i === rows.length - 1 ? '/' : '|'}`);
+  return [
+    ` ${'_'.repeat(n + 2)}`,
+    ...body,
+    ` ${'-'.repeat(n + 2)}`,
+    '        \\   ^__^',
+    '         \\  (oo)\\_______',
+    '            (__)\\       )\\/\\',
+    '                ||----w |',
+    '                ||     ||',
+  ].map(pre);
+}
+
+export function runCommand(input: string, ctx: TermContext, now: Date = new Date(), rnd: () => number = Math.random): TermResult {
   const line = input.trim();
   if (!line) return { lines: [], action: none };
   const [rawCmd, ...rest] = line.split(/\s+/);
@@ -92,6 +143,32 @@ export function runCommand(input: string, ctx: TermContext, now: Date = new Date
     || /^:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:$/.test(line)
     || /^(sudo\s+)?(cat|head)\s+\/dev\/(u?random|zero)\b/i.test(line)) {
     return { lines: [], action: { type: 'panic' } };
+  }
+
+  // the windows way to break the machine: a blue screen
+  if (/^format\s+c:?/i.test(line) || /system32/i.test(line) || /^del\s+\/[sfq]/i.test(line)
+    || /^(rd|rmdir)\s+\/s/i.test(line) || /^shutdown(\.exe)?\s+[/-][srp]\b/i.test(line) || /^taskkill\b/i.test(line)) {
+    return { lines: [], action: { type: 'bsod' } };
+  }
+
+  // fortune, cowsay, and the classic: fortune | cowsay
+  if (/^fortune\s*\|\s*cowsay$/i.test(line)) return { lines: cowsay(FORTUNES[Math.floor(rnd() * FORTUNES.length)]), action: none };
+
+  // RFC 2324 / 7168: a teapot refuses to brew coffee
+  if (/^(sudo\s+)?(make\s+|brew\s+)?coffee$/i.test(line) || /^brew$/i.test(line)) {
+    return {
+      lines: [
+        'HTTP/1.1 418 I\'m a teapot',
+        pre('             ;,\''),
+        pre('     _o_    ;:;\''),
+        pre(' ,-.\'---`.__ ;'),
+        pre('((j`=====\',-\''),
+        pre(' `-\\     /'),
+        pre('    `-=-\''),
+        'this server refuses to brew coffee. it is, permanently, a teapot.',
+      ],
+      action: none,
+    };
   }
 
   if (social) return { lines: [`→ ${social.url.replace(/^https?:\/\/(www\.)?/, '')}`], action: { type: 'url', url: social.url } };
@@ -163,6 +240,12 @@ export function runCommand(input: string, ctx: TermContext, now: Date = new Date
     case 'uptime':
     case 'ping':
       return { lines: ['pinging the live ones…'], action: { type: 'status' } };
+    case 'fortune':
+      return { lines: [FORTUNES[Math.floor(rnd() * FORTUNES.length)]], action: none };
+    case 'cowsay':
+      return { lines: cowsay(arg), action: none };
+    case 'sl':
+      return { lines: [], action: { type: 'sl' } };
     case 'snake':
     case 'play':
     case 'game':
@@ -200,7 +283,10 @@ export function runCommand(input: string, ctx: TermContext, now: Date = new Date
     case 'q':
       return { lines: [], action: { type: 'exit' } };
     case 'sudo':
-      return { lines: [`${ctx.name || 'you'} is not in the sudoers file. this incident will be reported.`, '…root logs in over ssh, though.'], action: none };
+      return { lines: [`${ctx.name || 'you'} is not in the sudoers file. this incident will be reported.`, '» root logs in over ssh, though. try: ssh root@nyhz.dev'], action: none };
+    case 'su':
+    case 'root':
+      return { lines: ["you're not root. yet.", '» start with: sudo'], action: none };
     case 'rm':
       return { lines: ['nice try.'], action: none };
     // the road to root: sudo → ssh (locked) → nmap → nc on the backdoor
@@ -225,6 +311,7 @@ export function runCommand(input: string, ctx: TermContext, now: Date = new Date
           pre('1337/tcp   open      elite'),
           pre('31337/tcp  open      backdoor'),
           'Nmap done: 1 IP address (1 host up) scanned in 0.42 seconds',
+          '» 31337 is open, and it says backdoor. knock: nc nyhz.dev 31337',
         ],
         action: none,
       };
@@ -273,7 +360,7 @@ export function vimReply(input: string, n: number): { lines: string[]; exit: boo
 export function sshReply(attempt: number): { lines: string[]; done: boolean } {
   if (attempt < 2) return { lines: ['Permission denied, please try again.'], done: false };
   return {
-    lines: ['Permission denied (publickey,password).', 'too many attempts. port 22 locked.', "maybe there's another way in."],
+    lines: ['Permission denied (publickey,password).', 'too many attempts. port 22 locked.', "» there's always another way in. scan for open doors: nmap nyhz.dev"],
     done: true,
   };
 }

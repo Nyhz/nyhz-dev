@@ -30,7 +30,21 @@
 </section>
 <canvas class="egg-rain" data-egg-rain aria-hidden="true"></canvas>
 <div class="egg-veil" aria-hidden="true"></div>
-<div class="egg-panic" data-egg-panic aria-hidden="true" hidden><pre data-egg-panic-text></pre></div>
+<div class="egg-panic" data-egg-panic aria-hidden="true" hidden>
+  <div class="egg-panic__in">
+    <pre data-egg-panic-text></pre>
+    <div class="bsod" data-egg-bsod hidden>
+      <p class="bsod__face">:(</p>
+      <p class="bsod__lead">nyhz.dev ran into a problem and needs to restart. we're just collecting some error info, and then we'll restart for you.</p>
+      <p class="bsod__pct"><span data-bsod-pct>0</span>% complete</p>
+      <div class="bsod__foot">
+        <canvas class="bsod__qr" data-bsod-qr width="21" height="21"></canvas>
+        <p>for more information about this issue, visit nyhz.dev and maybe don't format it next time.<br /><br />
+          if you call a support person, give them this info:<br />stop code: CURIOSITY_NOT_HANDLED</p>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="egg-saver" data-egg-saver aria-hidden="true">
   <canvas class="egg-trail" data-egg-trail></canvas>
   <span class="egg-dvd" data-egg-dvd>nyhz</span>
@@ -153,8 +167,18 @@
   :global(html.egg-root) .egg-veil { opacity: 1; }
 
   /* kernel panic */
-  .egg-panic { position: fixed; inset: 0; z-index: 450; background: #0a0a0a; display: flex; align-items: center;
-    padding: clamp(1.5rem, 8vw, 6rem); }
+  /* kept to the page's own column (same max width and gutters as .page) */
+  .egg-panic { position: fixed; inset: 0; z-index: 450; background: #0a0a0a; display: flex; align-items: center; }
+  .egg-panic__in { width: 100%; max-width: 900px; margin: 0 auto; padding: 0 clamp(1.5rem, 4vw, 3rem); }
+  .egg-panic.is-bsod { background: #0078d7; }
+  .egg-panic.is-bsod pre { display: none; }
+  .bsod[hidden] { display: none; }
+  .bsod { color: #fff; font: 0.95rem/1.6 var(--mono); }
+  .bsod__face { font: 400 clamp(5rem, 12vw, 8rem)/1 var(--mono); margin-bottom: 1.6rem; }
+  .bsod__lead { font-size: clamp(1.05rem, 2.2vw, 1.4rem); line-height: 1.45; max-width: 34em; margin-bottom: 1.4rem; }
+  .bsod__pct { font-size: clamp(1.05rem, 2.2vw, 1.4rem); margin-bottom: 2.2rem; }
+  .bsod__foot { display: flex; gap: 1.2rem; align-items: flex-start; font-size: 0.78rem; line-height: 1.55; }
+  .bsod__qr { flex: none; width: 84px; height: 84px; image-rendering: pixelated; background: #fff; }
   .egg-panic[hidden] { display: none; }
   .egg-panic pre { font: 0.8rem/1.7 var(--mono); color: #b9b8b0; white-space: pre-wrap; max-width: 70ch; }
   .egg-panic :global(.big) { display: block; font: 700 clamp(1.6rem, 5vw, 3rem)/1.1 var(--mono); color: #ff2e63;
@@ -241,6 +265,13 @@
       .fromTo(toastEl, { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'back.out(2.4)' })
       .to(toastEl, { y: 14, opacity: 0, duration: 0.3, ease: 'power2.in' }, '+=3.2');
   }
+
+  // any other part of the site can say something through the toast
+  addEventListener('nyhz:toast', (e) => {
+    const { k = '', t = '', n = '' } = (e as CustomEvent<{ k?: string; t?: string; n?: string }>).detail ?? {};
+    queue.push([k, t, n]);
+    flush();
+  });
 
   // ---------- the counter + hints panel (desktop) ----------
   const desktop = matchMedia('(hover: hover) and (min-width: 721px)');
@@ -495,39 +526,67 @@
     if (on) shock(innerWidth / 2, innerHeight / 2, 2);
   });
 
-  // ---------- kernel panic: the terminal's rm -rf / ----------
-  // the page breaks, a panic screen counts down, and the site really reboots
+  // ---------- crashes: the terminal's rm -rf / (kernel panic) or format c: (blue screen) ----------
+  // the page breaks, a crash screen counts down, and the site really reboots
   // (reload); the achievement lands after the new loader
   const panicEl = document.querySelector<HTMLElement>('[data-egg-panic]');
   const panicText = panicEl?.querySelector('[data-egg-panic-text]');
+  const bsodEl = panicEl?.querySelector<HTMLElement>('[data-egg-bsod]');
   const PANIC = 'nyhz:panic';
-  addEventListener('nyhz:panic', () => {
-    try { sessionStorage.setItem(PANIC, '1'); } catch { /* the reboot still happens */ }
+  function kernelPanic() {
+    if (!panicEl || !panicText) return;
+    panicText.innerHTML = [
+      '<span class="big">KERNEL PANIC</span>not syncing: too curious',
+      '',
+      '<span class="dim">CPU: 0 PID: 1337 Comm: nyhz.sh Tainted: G     O  6.6.6-nyhz</span>',
+      '<span class="dim">Call Trace:</span>',
+      '<span class="dim"> &lt;TASK&gt;</span>',
+      ' curiosity+0x1f/0x80',
+      ' rm_rf_root+0x42/0x42',
+      ' do_syscall_64+0x3b/0x90',
+      '<span class="dim"> &lt;/TASK&gt;</span>',
+      '<span class="dim">---[ end Kernel panic - not syncing: too curious ]---</span>',
+      '',
+      'rebooting in <span class="cd" data-cd>3</span>…',
+    ].join('\n');
+    panicEl.hidden = false;
+    const cd = panicText.querySelector('[data-cd]');
+    [2, 1, 0].forEach((n, i) => setTimeout(() => { if (cd) cd.textContent = String(n); }, (i + 1) * 900));
+    setTimeout(() => location.reload(), 3000);
+  }
+  function blueScreen() {
+    if (!panicEl || !bsodEl) return;
+    panicEl.classList.add('is-bsod');
+    bsodEl.hidden = false;
+    // a QR code that is just noise, the size of a real one
+    const qr = bsodEl.querySelector<HTMLCanvasElement>('[data-bsod-qr]')?.getContext('2d');
+    if (qr) {
+      qr.fillStyle = '#fff'; qr.fillRect(0, 0, 21, 21); qr.fillStyle = '#0078d7';
+      for (let y = 0; y < 21; y++) for (let x = 0; x < 21; x++) if (Math.random() < 0.5) qr.fillRect(x, y, 1, 1);
+      for (const [fx, fy] of [[0, 0], [14, 0], [0, 14]]) { // the three finder squares
+        qr.fillStyle = '#0078d7'; qr.fillRect(fx, fy, 7, 7);
+        qr.fillStyle = '#fff'; qr.fillRect(fx + 1, fy + 1, 5, 5);
+        qr.fillStyle = '#0078d7'; qr.fillRect(fx + 2, fy + 2, 3, 3);
+      }
+    }
+    panicEl.hidden = false;
+    const pct = bsodEl.querySelector('[data-bsod-pct]');
+    const o = { p: 0 };
+    gsap.to(o, { p: 100, duration: reduce ? 0.5 : 4.2, ease: 'steps(14)',
+      onUpdate: () => { if (pct) pct.textContent = String(Math.round(o.p)); },
+      onComplete: () => setTimeout(() => location.reload(), 500) });
+  }
+  addEventListener('nyhz:panic', (e) => {
+    const kind = (e as CustomEvent<{ kind?: string }>).detail?.kind === 'bsod' ? 'bsod' : 'panic';
+    try { sessionStorage.setItem(PANIC, kind); } catch { /* the reboot still happens */ }
     if (!reduce) { html.classList.remove('egg-broken'); void html.offsetWidth; html.classList.add('egg-broken'); }
     setTimeout(() => {
-      if (!panicEl || !panicText) { location.reload(); return; }
-      panicText.innerHTML = [
-        '<span class="big">KERNEL PANIC</span>not syncing: too curious',
-        '',
-        '<span class="dim">CPU: 0 PID: 1337 Comm: nyhz.sh Tainted: G     O  6.6.6-nyhz</span>',
-        '<span class="dim">Call Trace:</span>',
-        '<span class="dim"> &lt;TASK&gt;</span>',
-        ' curiosity+0x1f/0x80',
-        ' rm_rf_root+0x42/0x42',
-        ' do_syscall_64+0x3b/0x90',
-        '<span class="dim"> &lt;/TASK&gt;</span>',
-        '<span class="dim">---[ end Kernel panic - not syncing: too curious ]---</span>',
-        '',
-        'rebooting in <span class="cd" data-cd>3</span>…',
-      ].join('\n');
-      panicEl.hidden = false;
-      const cd = panicText.querySelector('[data-cd]');
-      [2, 1, 0].forEach((n, i) => setTimeout(() => { if (cd) cd.textContent = String(n); }, (i + 1) * 900));
-      setTimeout(() => location.reload(), 3000);
+      if (!panicEl) { location.reload(); return; }
+      if (kind === 'bsod') blueScreen(); else kernelPanic();
     }, reduce ? 0 : 900);
   });
   let panicked = false;
-  try { panicked = sessionStorage.getItem(PANIC) === '1'; } catch { /* no */ }
+  try { panicked = !!sessionStorage.getItem(PANIC); } catch { /* no */ }
   if (panicked) {
     addEventListener('loaderdone', () => {
       try { sessionStorage.removeItem(PANIC); } catch { /* no */ }

@@ -32,7 +32,7 @@ const ctx: TermContext = {
     </form>
   </section>
   <button class="term__hint" type="button" data-term-hint>
-    <span class="term__p" aria-hidden="true">›_</span> press <kbd>/</kbd> to type
+    <span class="term__p" aria-hidden="true">›_</span> press <kbd data-term-key>`</kbd> to type
   </button>
 </div>
 
@@ -99,6 +99,9 @@ const ctx: TermContext = {
   .term__out :global(.go) { color: var(--accent); }
   .term__out :global(.lead) { color: var(--fg); }
   .term__out :global(.cta) { color: var(--accent); }
+  .term__out :global(.sl) { position: relative; overflow: hidden; height: 10.2em; }
+  .term__out :global(.sl pre) { position: absolute; left: 0; top: 0; margin: 0; font: inherit; line-height: 1.02;
+    width: max-content; color: var(--fg); white-space: pre; will-change: transform; }
   .term__out :global([data-s="down"]) { color: #ff2e63; }
   .term__out :global(.tilde) { color: #5f7fb0; }
   /* inside the fake vim the window turns into an editor */
@@ -125,6 +128,8 @@ const ctx: TermContext = {
   import { achievements } from '../scripts/eggs';
   import { statusLine, type Ping } from '../scripts/status';
   import { sound } from '../scripts/sound';
+
+  const UNDER_ESC = ['`', 'º', '²', '§'];
 
   const root = document.querySelector<HTMLElement>('[data-term]');
   const win = root?.querySelector<HTMLElement>('[data-term-win]');
@@ -156,6 +161,7 @@ const ctx: TermContext = {
       if (text.startsWith(PRE)) div.textContent = text.slice(PRE.length);
       else if (text.startsWith('→ ') || text.startsWith('◆ ')) { div.classList.add('go'); div.textContent = text; }
       else if (text.startsWith('~')) { div.classList.add('tilde'); div.textContent = text; }
+      else if (text.startsWith('» ')) { div.classList.add('cta'); div.textContent = text; } // a hint: the next thing to type
       else if (cols.length === 3) {
         div.classList.add('row');
         div.append(span(cols[0]), span(cols[1]), span(cols[2], { 'data-s': cols[2] }));
@@ -189,7 +195,11 @@ const ctx: TermContext = {
       root.classList.add('is-open');
       win.hidden = false;
       if (!out.childElementCount) {
-        printRes([`${ctx.name || 'nyhz'}.sh — ${ctx.projects.length} projects loaded`, 'type help to look around']);
+        const back = Date.now() - lyricAt < 10000;
+        lyricAt = 0;
+        printRes(back
+          ? ['…but you can never leave.']
+          : [`${ctx.name || 'nyhz'}.sh — ${ctx.projects.length} projects loaded`, 'type help to look around']);
         out.firstElementChild?.classList.add('lead');
       }
       input.focus();
@@ -207,6 +217,11 @@ const ctx: TermContext = {
     const titleHTML = titleEl?.innerHTML ?? '';
     const promptEl = form.querySelector<HTMLElement>('.term__p');
     let vim = false, vimN = 0, isRoot = false;
+    // exit, the bash way: the first one warns about stopped jobs (and says to
+    // type it again); the second leaves on the first half of the hotel
+    // california line, and coming back within seconds finishes it
+    let exits = 0, lyricAt = 0;
+    let train = false;    // sl: you wait for it to pass
     let ssh: { target: string; n: number } | null = null;
     const prompt = () => (vim ? ':' : ssh ? '*' : isRoot ? '#' : '›');
     const chrome = () => {
@@ -225,7 +240,7 @@ const ctx: TermContext = {
 
     // rm -rf / and friends: a hex dump floods the window, then the machine panics
     let panicking = false;
-    const panic = () => {
+    const panic = (kind: 'panic' | 'bsod' = 'panic') => {
       if (panicking) return;
       panicking = true;
       const hex = () => Array.from({ length: 8 }, () => ((Math.random() * 256) | 0).toString(16).padStart(2, '0')).join(' ');
@@ -235,7 +250,7 @@ const ctx: TermContext = {
       }, 28);
       setTimeout(() => {
         clearInterval(iv);
-        dispatchEvent(new Event('nyhz:panic'));
+        dispatchEvent(new CustomEvent('nyhz:panic', { detail: { kind } }));
       }, reduce ? 200 : 1400);
     };
 
@@ -243,6 +258,7 @@ const ctx: TermContext = {
       if (!root.classList.contains('is-open')) return;
       ssh = null;
       setVim(false);
+      exits = 0;
       const done = () => {
         root.classList.remove('is-open');
         win.hidden = true;
@@ -258,8 +274,20 @@ const ctx: TermContext = {
     };
 
     hint.addEventListener('click', open);
+
+    // show the key this keyboard actually has under esc
+    const keyEl = hint.querySelector('[data-term-key]');
+    const lang = (navigator.language || '').slice(0, 2);
+    const guess = ['es', 'ca', 'gl', 'eu'].includes(lang) ? 'º' : lang === 'fr' ? '²' : '`';
+    if (keyEl) keyEl.textContent = guess;
+    (navigator as Navigator & { keyboard?: { getLayoutMap(): Promise<Map<string, string>> } }).keyboard?.getLayoutMap()
+      .then((m) => { const k = m.get('Backquote'); if (keyEl && k && UNDER_ESC.includes(k)) keyEl.textContent = k; })
+      .catch(() => {});
     addEventListener('keydown', (e) => {
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      // the key under esc — the game console key — opens it, on any layout
+      // (` º ² §, or a dead key there); / still works too
+      const consoleKey = UNDER_ESC.includes(e.key) || (e.code === 'Backquote' && e.key === 'Dead');
+      if ((e.key !== '/' && !consoleKey) || e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement;
       if (t.closest('input, textarea, [contenteditable]')) return;
       if (getComputedStyle(root).display === 'none') return;
@@ -288,7 +316,7 @@ const ctx: TermContext = {
       e.preventDefault();
       const line = input.value;
       input.value = '';
-      if (panicking) return;
+      if (panicking || train) return;
       if (ssh) {
         printCmd(line);
         const r = sshReply(ssh.n++);
@@ -315,6 +343,7 @@ const ctx: TermContext = {
         return;
       }
       const { lines, action } = runCommand(line, ctx);
+      if (action.type !== 'exit') exits = 0;
       printCmd(line);
       printRes(lines);
 
@@ -352,24 +381,84 @@ const ctx: TermContext = {
           break;
         case 'snake': setTimeout(() => { close(); dispatchEvent(new Event('nyhz:snake')); }, 350); break;
         case 'clear': out.replaceChildren(); break;
-        case 'exit': close(); hint.focus(); break;
+        case 'exit':
+          if (++exits === 1) { printRes(['exit: there are stopped jobs.', '» type exit again to leave anyway']); break; }
+          printRes(['you can check out any time you like,']);
+          setTimeout(() => { close(); lyricAt = Date.now(); hint.focus(); }, 900);
+          break;
+        case 'bsod': panic('bsod'); break;
+        case 'sl': {
+          // a steam locomotive crosses the window; nothing to do but watch
+          const box = document.createElement('div');
+          box.className = 'sl';
+          const pre = document.createElement('pre');
+          pre.textContent = [
+            '                         (  ) (@@) ( )  (@)  ()    @@    O     @',
+            '                    (@@@)',
+            '                (    )',
+            '             (@@@@)',
+            '           (   )',
+            '      ====        ________                ___________',
+            '  _D _|  |_______/        \\__I_I_____===__|_________|',
+            '   |(_)---  |   H\\________/ |   |        =|___ ___|',
+            '   /     |  |   H  |  |     |   |         ||_| |_||',
+            '  |      |  |   H  |__--------------------| [___] |',
+            '  | ________|___H__/__|_____/[][]~\\_______|       |',
+            '  |/ |   |-----------I_____I [][] []  D   |=======|__',
+            '__/ =| o |=-~~\\  /~~\\  /~~\\  /~~\\ ____Y___________|__',
+            ' |/-=|___|=    ||    ||    ||    |_____/~\\___/',
+            '  \\_/      \\O=====O=====O=====O_/      \\_/',
+          ].join('\n');
+          box.append(pre);
+          out.append(box);
+          toEnd();
+          train = true;
+          const W = out.clientWidth;
+          requestAnimationFrame(() => {
+            const w = pre.offsetWidth;
+            box.style.height = `${pre.offsetHeight}px`;
+            toEnd();
+            gsap.fromTo(pre, { x: W }, { x: -w, duration: reduce ? 0.01 : (W + w) / 260, ease: 'none',
+              onComplete: () => { box.remove(); train = false; printRes(['choo choo. (you meant ls)']); } });
+          });
+          break;
+        }
       }
     });
   }
 
   // for whoever opens the devtools
   console.log(
-    '%c›_ nyhz%c\nhi, curious one. there is a terminal on the page — press / and type help.\nand one right here: nyhz.help()',
+    '%c›_ nyhz%c\nhi, curious one. there is a terminal on the page — the key under esc (or /) — type help.\nand one right here: nyhz.help()',
     'font: 700 20px ui-monospace, monospace; color: #3ad29f', 'font: 12px ui-monospace, monospace; color: #b9b8b0',
   );
 
-  // the tab keeps a prompt blinking while you're away
+  // the tab keeps a prompt blinking while you're away — the title, and the
+  // favicon's cursor with it (public/favicon.svg, drawn here with/without it)
   const title = document.title;
+  const iconEl = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+  const iconHref = iconEl?.href ?? '';
+  const icon = (cursor: boolean) => 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#0b0b0b"/>'
+    + '<g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M9.4 9 L15.4 16 L9.4 23" stroke="#ff2e63" transform="translate(-0.8 0)"/>'
+    + '<path d="M9.4 9 L15.4 16 L9.4 23" stroke="#2ee6ff" transform="translate(0.8 0)"/>'
+    + '<path d="M9.4 9 L15.4 16 L9.4 23" stroke="#f1efe9"/></g>'
+    + (cursor ? '<rect x="17.5" y="20.4" width="6.4" height="2.8" fill="#3ad29f"/>' : '') + '</svg>');
+  const frames = [icon(true), icon(false)];
   let blink = 0;
   document.addEventListener('visibilitychange', () => {
     clearInterval(blink);
-    if (!document.hidden) { document.title = title; return; }
+    if (!document.hidden) {
+      document.title = title;
+      if (iconEl) iconEl.href = iconHref;
+      return;
+    }
     let on = false;
-    blink = window.setInterval(() => { on = !on; document.title = on ? '›_ still here' : '› still here'; }, 900);
+    blink = window.setInterval(() => {
+      on = !on;
+      document.title = on ? '›_ still here' : '› still here';
+      if (iconEl) iconEl.href = frames[on ? 0 : 1];
+    }, 900);
   });
 </script>

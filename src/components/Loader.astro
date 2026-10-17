@@ -138,11 +138,13 @@ const { name, tagline = 'creative developer' } = Astro.props;
     addEventListener('loaderdone', () => dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: 'return' } })), { once: true });
   }
   // back from a kernel panic (the terminal's rm -rf /): the boot owns up to it
-  let panicked = false;
-  try { panicked = sessionStorage.getItem('nyhz:panic') === '1'; } catch { /* no */ }
+  let panicked = '';
+  try { panicked = sessionStorage.getItem('nyhz:panic') || ''; } catch { /* no */ }
   if (panicked) {
     const line = document.createElement('div');
-    line.innerHTML = '› fsck /dev/nyhz <span class="hx">0xdead</span><span class="ok"> recovered</span>';
+    line.innerHTML = panicked === 'bsod'
+      ? '› chkdsk /f c: <span class="hx">0x0000007b</span><span class="ok"> recovered</span>'
+      : '› fsck /dev/nyhz <span class="hx">0xdead</span><span class="ok"> recovered</span>';
     logEl.prepend(line);
   }
   const logLines = Array.from(logEl.children) as HTMLElement[];

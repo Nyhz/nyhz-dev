@@ -1,6 +1,6 @@
 // tests/terminal.test.ts
 import { describe, it, expect } from 'vitest';
-import { runCommand, complete, findProject, vimReply, sshReply, PRE, type TermContext } from '../src/scripts/terminal';
+import { runCommand, complete, findProject, vimReply, sshReply, cowsay, FORTUNES, PRE, type TermContext } from '../src/scripts/terminal';
 
 const ctx: TermContext = {
   name: 'nyhz', role: 'creative developer', location: 'somewhere on earth',
@@ -71,7 +71,7 @@ describe('runCommand', () => {
     expect(runCommand('echo hello  there', ctx).lines).toEqual(['hello there']);
   });
   it('falls back to command not found', () => {
-    expect(runCommand('make coffee', ctx).lines[0]).toBe('command not found: make — try help');
+    expect(runCommand('make sandwich', ctx).lines[0]).toBe('command not found: make — try help');
   });
 });
 
@@ -99,13 +99,16 @@ describe('easter eggs', () => {
     expect(runCommand('rm -rf node_modules', ctx).action).toEqual({ type: 'none' });
   });
   it('leads from sudo to ssh to nmap to the backdoor', () => {
-    expect(runCommand('sudo make', ctx).lines[1]).toBe('…root logs in over ssh, though.');
+    expect(runCommand('sudo make', ctx).lines[1]).toBe('» root logs in over ssh, though. try: ssh root@nyhz.dev');
+    expect(runCommand('root', ctx).lines[1]).toBe('» start with: sudo');
     expect(runCommand('ssh root@nyhz.dev', ctx).action).toEqual({ type: 'ssh', target: 'root@nyhz.dev' });
     expect(runCommand('ssh example.com', ctx).lines[0]).toMatch(/Connection refused/);
     expect(sshReply(0).done).toBe(false);
-    expect(sshReply(2)).toEqual({ lines: ['Permission denied (publickey,password).', 'too many attempts. port 22 locked.', "maybe there's another way in."], done: true });
+    expect(sshReply(2).lines.at(-1)).toBe("» there's always another way in. scan for open doors: nmap nyhz.dev");
+    expect(sshReply(2).done).toBe(true);
     const scan = runCommand('nmap nyhz.dev', ctx).lines;
     expect(scan).toContain(`${PRE}31337/tcp  open      backdoor`);
+    expect(scan.at(-1)).toBe('» 31337 is open, and it says backdoor. knock: nc nyhz.dev 31337');
     expect(runCommand('nc nyhz.dev 31337', ctx).action).toEqual({ type: 'root' });
     expect(runCommand('nc nyhz.dev 22', ctx).action).toEqual({ type: 'none' });
   });
@@ -126,6 +129,34 @@ describe('vim and light mode', () => {
   it('refuses light mode', () => {
     expect(runCommand('theme light', ctx)).toEqual({ lines: ['no.'], action: { type: 'flash' } });
     expect(runCommand('theme dark', ctx).action).toEqual({ type: 'none' });
+  });
+});
+
+describe('unix toys', () => {
+  it('tells a fortune', () => {
+    expect(runCommand('fortune', ctx, new Date(), () => 0).lines).toEqual([FORTUNES[0]]);
+  });
+  it('has a cow say things, wrapped in a bubble', () => {
+    const one = cowsay('moo').map((l) => l.slice(PRE.length));
+    expect(one.slice(0, 3)).toEqual([' _____', '< moo >', ' -----']);
+    const many = cowsay('a fairly long sentence that has to wrap onto more than one line', 20).map((l) => l.slice(PRE.length));
+    expect(many[1].startsWith('/ ')).toBe(true);
+    expect(many.some((l) => l.startsWith('\\ '))).toBe(true);
+    expect(runCommand('fortune | cowsay', ctx, new Date(), () => 0).lines.join('\n')).toContain('it works on my machine.');
+  });
+  it('runs the train and blue-screens on windows commands', () => {
+    expect(runCommand('sl', ctx).action).toEqual({ type: 'sl' });
+    for (const l of ['format c:', 'del /s /q c:\\windows\\system32', 'rd /s c:\\', 'shutdown /s', 'taskkill /im explorer.exe']) {
+      expect(runCommand(l, ctx).action, l).toEqual({ type: 'bsod' });
+    }
+  });
+});
+
+describe('coffee', () => {
+  it('is a teapot', () => {
+    for (const l of ['coffee', 'make coffee', 'sudo make coffee', 'brew']) {
+      expect(runCommand(l, ctx).lines[0], l).toBe("HTTP/1.1 418 I'm a teapot");
+    }
   });
 });
 

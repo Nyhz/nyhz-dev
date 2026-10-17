@@ -1,0 +1,85 @@
+---
+// 404: a segfault, in the site's frame and grain. Anyone poking at /admin,
+// /wp-admin, /.env and friends gets a 403 instead — "this incident will be
+// reported", a trace that types itself out, and then "just kidding".
+import Base from '../layouts/Base.astro';
+import Field from '../components/Field.astro';
+import Frame from '../components/Frame.astro';
+---
+<Base title="404 — nyhz" description="Nothing here but grain." robots="noindex">
+  <Field slot="bg" />
+  <Frame slot="frame" />
+  <div class="nf">
+    <p class="nf__code" data-nf-code data-text="404">404</p>
+    <p class="nf__title" data-nf-title>segmentation fault</p>
+    <div class="nf__log" data-nf-log aria-live="polite"></div>
+    <a class="nf__home" href="/" data-nf-home><span class="nf__p">›</span> cd /<i class="nf__caret" aria-hidden="true"></i></a>
+  </div>
+</Base>
+
+<style>
+  .nf { margin: auto; width: min(36rem, 100%); font: 0.85rem/1.8 var(--mono); color: var(--dim); }
+  .nf__code { position: relative; width: max-content; font: 700 clamp(4.5rem, 16vw, 9rem)/0.95 var(--mono);
+    letter-spacing: -0.03em; color: var(--fg); margin-bottom: 1.2rem; }
+  /* the hero name's chromatic glitch, on a loop */
+  .nf__code::before, .nf__code::after { content: attr(data-text); position: absolute; inset: 0; opacity: 0; }
+  .nf__code::before { color: #ff2e63; animation: nfR 3.2s steps(1) infinite; }
+  .nf__code::after { color: #2ee6ff; animation: nfC 3.2s steps(1) infinite; }
+  @keyframes nfR { 0%, 86%, 100% { opacity: 0; } 88% { opacity: 0.9; transform: translate(-5px, 0); clip-path: inset(0 0 60% 0); }
+    92% { opacity: 0.8; transform: translate(4px, 0); clip-path: inset(50% 0 0 0); } }
+  @keyframes nfC { 0%, 86%, 100% { opacity: 0; } 89% { opacity: 0.9; transform: translate(5px, 0); clip-path: inset(30% 0 30% 0); }
+    93% { opacity: 0.8; transform: translate(-3px, 0); clip-path: inset(0 0 70% 0); } }
+  .nf__title { font: 700 1.05rem var(--mono); color: var(--fg); margin-bottom: 0.6rem; }
+  .nf__log { min-height: 1.8em; white-space: pre-wrap; }
+  .nf__log :global(.ok) { color: var(--accent); }
+  .nf__home { display: inline-flex; align-items: center; gap: 0.5em; margin-top: 1.4rem; color: var(--fg);
+    font-size: 0.95rem; }
+  .nf__home:hover { color: var(--accent); }
+  .nf__p { color: var(--accent); }
+  .nf__caret { display: inline-block; width: 0.55em; height: 1.1em; background: var(--accent);
+    animation: nfBlink 0.9s steps(1) infinite; }
+  @keyframes nfBlink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .nf__code::before, .nf__code::after, .nf__caret { animation: none; }
+  }
+</style>
+
+<script>
+  const path = location.pathname;
+  const code = document.querySelector<HTMLElement>('[data-nf-code]');
+  const title = document.querySelector<HTMLElement>('[data-nf-title]');
+  const log = document.querySelector<HTMLElement>('[data-nf-log]');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const poking = /^\/(wp-admin|wp-login|admin|administrator|phpmyadmin|\.env|\.git|config|backup|login|dashboard|cpanel)/i.test(path);
+
+  // print lines one by one, each typed out; `ok` lines end in a green ok
+  async function type(lines: [string, boolean?][]) {
+    if (!log) return;
+    for (const [text, ok] of lines) {
+      const row = document.createElement('div');
+      log.append(row);
+      if (reduce) { row.textContent = text; }
+      else {
+        for (let i = 1; i <= text.length; i++) { row.textContent = text.slice(0, i); await new Promise((r) => setTimeout(r, 22)); }
+        await new Promise((r) => setTimeout(r, 260));
+      }
+      if (ok) { const s = document.createElement('span'); s.className = 'ok'; s.textContent = ' ok'; row.append(s); }
+    }
+  }
+
+  if (poking && code && title) {
+    code.textContent = '403';
+    code.dataset.text = '403';
+    title.textContent = /\.(env|git)/i.test(path) ? 'nice try.' : 'access denied.';
+    type([
+      ['this incident will be reported.'],
+      ['› tracing connection…', true],
+      ['› resolving 10.13.37.1…', true],
+      ['› locating your keyboard…', true],
+      ['› notifying the authorities…'],
+      ["› just kidding. nobody's coming. there's no admin here."],
+    ]);
+  } else {
+    type([[`${path} not found (core dumped).`], ['nothing here but grain.']]);
+  }
+</script>

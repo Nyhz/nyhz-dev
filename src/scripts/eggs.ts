@@ -13,13 +13,13 @@ export const EGGS = [
   { id: 'leet', title: 'right on time', hint: 'be here at 13:37' },
   // a bonus: phones only (motion sensor), so it never counts toward the total
   { id: 'shake', title: 'earthquake', hint: 'on your phone: shake it', bonus: true },
-  { id: 'snake', title: 'ssssnake', hint: 'press / — play a game. eat ten.' },
-  { id: 'secrets', title: 'curious one', hint: 'press / and look for hidden files' },
-  { id: 'matrix', title: 'follow the white rabbit', hint: 'press / — wake up, neo' },
-  { id: 'light', title: 'no light mode', hint: 'press / — ask for light mode' },
-  { id: 'vim', title: 'how do i exit vim', hint: 'press / — open an editor. try leaving.' },
-  { id: 'panic', title: 'kernel panic', hint: 'press / — break everything' },
-  { id: 'root', title: 'root access', hint: 'press / — become root. start with sudo' },
+  { id: 'snake', title: 'ssssnake', hint: 'terminal — play a game. eat ten.' },
+  { id: 'secrets', title: 'curious one', hint: 'in the terminal, look for hidden files' },
+  { id: 'matrix', title: 'follow the white rabbit', hint: 'terminal — wake up, neo' },
+  { id: 'light', title: 'no light mode', hint: 'terminal — ask for light mode' },
+  { id: 'vim', title: 'how do i exit vim', hint: 'terminal — open an editor. try leaving.' },
+  { id: 'panic', title: 'crash test dummy', hint: 'terminal — break everything (linux or windows)' },
+  { id: 'root', title: 'root access', hint: 'terminal — become root. start with sudo' },
   { id: 'console', title: 'devtools dweller', hint: 'open the browser console' },
 ] as const;
 
