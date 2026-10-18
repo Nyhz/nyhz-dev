@@ -12,6 +12,7 @@ import Eggs from '../components/Eggs.astro';
 import Snake from '../components/Snake.astro';
 import Cert from '../components/Cert.astro';
 import Season from '../components/Season.astro';
+import Peek from '../components/Peek.astro';
 import { getContent } from '../scripts/content';
 const { profile, projects } = await getContent();
 ---
@@ -23,6 +24,7 @@ const { profile, projects } = await getContent();
   <Snake slot="overlay" />
   <Cert slot="overlay" />
   <Season slot="overlay" />
+  <Peek slot="overlay" />
   <Cursor slot="overlay" />
   <Loader name={profile.name} tagline={profile.role} slot="overlay" />
 

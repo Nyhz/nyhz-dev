@@ -82,6 +82,11 @@
   .snd[aria-pressed="true"] .snd__bars i:nth-child(4) { animation-delay: -0.15s; }
   @keyframes sndBar { from { height: 2px; } to { height: 9px; } }
   :global(html.egg-sleep) .snd, :global(html.egg-game) .snd { opacity: 0.15; }
+  /* phones: when the hero folds away the content reaches the top corner — step aside */
+  @media (max-width: 720px) {
+    :global(html:has(.page.pv-focus)) .snd, :global(html:has(.page.projects-open)) .snd { opacity: 0; pointer-events: none; }
+    .snd { transition: opacity 0.3s ease, color var(--t-hover) ease; }
+  }
   @media (prefers-reduced-motion: reduce) { .snd[aria-pressed="true"] .snd__bars i { animation: none; height: 6px; } }
 
   /* the counter sits just above the corner clock; the panel opens over it.

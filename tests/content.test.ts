@@ -35,6 +35,11 @@ describe('mapProjects', () => {
     expect(out[0].order).toBe(0);
     expect(out[0].tags).toEqual([]);
   });
+  it('carries year and role, empty when missing', () => {
+    const [p] = mapProjects([{ slug: 'a', entry: { title: 'A', year: '2026' } }]);
+    expect(p.year).toBe('2026');
+    expect(p.role).toBe('');
+  });
 });
 
 describe('mapSkills', () => {

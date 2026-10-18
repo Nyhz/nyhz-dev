@@ -87,6 +87,11 @@ a { color: inherit; text-decoration: none; }
   .lower__track > .projects { align-self: stretch; display: flex; flex-direction: column; }
   .lower__track > .projects .prj-foot { margin-top: auto; padding-top: 1.2rem; }
   .lower__track.is-preview { transform: translateX(-50%); }
+  /* the preview panel lays over its half of the slider instead of sizing it:
+     it never stretches the list, and with the hero folded (pv-focus) it gets
+     the whole lower area to itself */
+  .lower__track { position: relative; }
+  .page .lower__track > .preview { position: absolute; top: 0; left: 50%; width: 50%; } /* beats the component's own rules */
 
   /* expanded: header collapsed (GSAP), the list fills the panel. No scroll —
      it's paged, 4 rows at a time (Projects.astro). The preview panel stays

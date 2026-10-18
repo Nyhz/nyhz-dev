@@ -9,6 +9,7 @@ export type ProfileProps = {
 export type ProjectProps = {
   slug: string; title: string; description: string;
   tags: string[]; repoUrl: string; deployUrl: string; downloadUrl: string; coverUrl: string; order: number;
+  year: string; role: string;
 };
 export type SkillProps = {
   slug: string; title: string; items: string[]; level: number; order: number;
@@ -43,6 +44,8 @@ export function mapProjects(items: { slug: string; entry: any }[]): ProjectProps
       downloadUrl: str(entry?.downloadUrl),
       coverUrl: str(entry?.coverUrl),
       order: num(entry?.order),
+      year: str(entry?.year),
+      role: str(entry?.role),
     }))
     .sort((a, b) => a.order - b.order);
 }

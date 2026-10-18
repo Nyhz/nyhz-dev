@@ -1,0 +1,162 @@
+---
+// The project cover, carried by the cursor (desktop, fine pointers only):
+// hovering a project in the list brings up its cover beside the pointer — it
+// trails with a little inertia and leans into the motion, glitches in, swaps
+// with a channel-change between rows, and starts monochrome, "developing"
+// into colour after a moment. No cursor (phones, tablets): the cover lives in
+// the card instead (Preview.astro).
+---
+<div class="peek" data-peek aria-hidden="true">
+  <div class="peek__in" data-peek-in>
+    <img class="peek__img" data-peek-a alt="" decoding="async" />
+    <img class="peek__img" data-peek-b alt="" decoding="async" />
+    <span class="peek__cap" data-peek-cap></span>
+  </div>
+</div>
+
+<style>
+  .peek { position: fixed; left: 0; top: 0; z-index: 9; pointer-events: none; display: none;
+    width: clamp(230px, 22vw, 340px); aspect-ratio: 16 / 10; will-change: transform; }
+  .peek.is-on { display: block; }
+  .peek__in { position: absolute; inset: 0; overflow: hidden; opacity: 0; background: #0e0e0d;
+    border: 1px solid var(--line); box-shadow: 0 30px 70px -25px rgba(0, 0, 0, 0.9); transform-origin: 50% 60%; }
+  .peek__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%;
+    opacity: 0; filter: grayscale(1) contrast(1.15) brightness(0.9); transition: filter 1.2s var(--ease-out); }
+  .peek__img.is-top { opacity: 1; }
+  .peek.is-dev .peek__img { filter: none; }
+  /* scanlines + the corner ticks of the page frame */
+  .peek__in::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.2) 0 1px, transparent 1px 3px); }
+  .peek__in::before { content: ''; position: absolute; inset: 6px; z-index: 1; pointer-events: none;
+    background:
+      linear-gradient(var(--fg), var(--fg)) left top / 9px 1px no-repeat, linear-gradient(var(--fg), var(--fg)) left top / 1px 9px no-repeat,
+      linear-gradient(var(--fg), var(--fg)) right top / 9px 1px no-repeat, linear-gradient(var(--fg), var(--fg)) right top / 1px 9px no-repeat,
+      linear-gradient(var(--fg), var(--fg)) left bottom / 9px 1px no-repeat, linear-gradient(var(--fg), var(--fg)) left bottom / 1px 9px no-repeat,
+      linear-gradient(var(--fg), var(--fg)) right bottom / 9px 1px no-repeat, linear-gradient(var(--fg), var(--fg)) right bottom / 1px 9px no-repeat;
+    opacity: 0.7; }
+  .peek__cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 1.4rem 0.75rem 0.55rem;
+    font: 500 0.6rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg);
+    background: linear-gradient(transparent, rgba(10, 10, 10, 0.85)); }
+  .peek.is-glitch .peek__in { filter: drop-shadow(-3px 0 rgba(255, 46, 99, 0.85)) drop-shadow(3px 0 rgba(46, 230, 255, 0.85)); }
+  @media (hover: none), (max-width: 720px) { .peek { display: none !important; } }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+
+  const root = document.querySelector<HTMLElement>('[data-peek]');
+  const inner = root?.querySelector<HTMLElement>('[data-peek-in]');
+  const imgs = Array.from(root?.querySelectorAll<HTMLImageElement>('.peek__img') ?? []);
+  const cap = root?.querySelector('[data-peek-cap]');
+  const fine = matchMedia('(hover: hover) and (pointer: fine) and (min-width: 721px)');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rows = Array.from(document.querySelectorAll<HTMLElement>('.prj[data-proj]'));
+  const list = document.querySelector('.projects');
+
+  if (root && inner && imgs.length === 2) {
+    const pos = { x: 0, y: 0, r: 0 }, to = { x: 0, y: 0 };
+    let top = 0, current = '', raf = 0, hideT = 0, devT = 0;
+    const OFF = 26; // gap between the pointer and the picture
+
+    // beside the pointer — but never over the hovered project's name — flipped
+    // to its left near the right edge, and kept on screen
+    let clearOf = 0; // right edge of the hovered row's name
+    const aim = (x: number, y: number) => {
+      const w = root.offsetWidth, h = root.offsetHeight;
+      const right = Math.max(x + OFF, clearOf + OFF);
+      to.x = right + w > innerWidth - 16 ? x - OFF - w : right;
+      to.y = Math.min(Math.max(16, y - h * 0.5), innerHeight - h - 16);
+    };
+    const loop = () => {
+      const k = reduce ? 1 : 0.16;
+      const vx = (to.x - pos.x) * k;
+      pos.x += vx; pos.y += (to.y - pos.y) * k;
+      pos.r += ((reduce ? 0 : Math.max(-7, Math.min(7, vx * 0.35))) - pos.r) * 0.2; // leans into the motion
+      root.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) rotate(${pos.r}deg)`;
+      raf = requestAnimationFrame(loop);
+    };
+
+    const glitch = (ms: number) => {
+      if (reduce) return;
+      root.classList.add('is-glitch');
+      setTimeout(() => root.classList.remove('is-glitch'), ms);
+    };
+    // the picture starts monochrome and develops into colour if you linger
+    const develop = () => {
+      root.classList.remove('is-dev');
+      clearTimeout(devT);
+      devT = window.setTimeout(() => root.classList.add('is-dev'), reduce ? 0 : 650);
+    };
+
+    function present(r: HTMLElement) {
+      const d = r.dataset;
+      if (!d.cover) { conceal(); return; }
+      clearTimeout(hideT);
+      if (cap) cap.textContent = `${r.querySelector('.prj__idx')?.textContent ?? ''} · ${d.proj}`;
+      if (d.proj === current && root.classList.contains('is-on')) return;
+      const wasOn = root.classList.contains('is-on') && current;
+      current = d.proj || '';
+      // load into the back image, then flip it to the front
+      const next = imgs[1 - top];
+      next.src = d.cover;
+      const swap = () => {
+        imgs[top].classList.remove('is-top');
+        next.classList.add('is-top');
+        top = 1 - top;
+      };
+      if (next.complete) swap(); else next.onload = swap;
+      develop();
+      if (wasOn) {
+        // a channel change: a hard slice and a jolt
+        glitch(180);
+        if (!reduce) gsap.fromTo(inner!, { clipPath: 'inset(42% 0 38% 0)', x: -8 }, { clipPath: 'inset(0% 0 0% 0)', x: 0, duration: 0.28, ease: 'steps(4)' });
+        return;
+      }
+      root.classList.add('is-on');
+      pos.x = to.x; pos.y = to.y; pos.r = 0;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(loop);
+      gsap.killTweensOf(inner!);
+      if (reduce) { gsap.set(inner!, { opacity: 1, scale: 1, clipPath: 'none' }); return; }
+      glitch(240);
+      gsap.fromTo(inner!, { opacity: 0, scale: 0.9, clipPath: 'inset(48% 0 48% 0)' },
+        { opacity: 1, scale: 1, clipPath: 'inset(0% 0 0% 0)', duration: 0.42, ease: 'power3.out' });
+    }
+    function conceal() {
+      clearTimeout(hideT);
+      hideT = window.setTimeout(() => {
+        gsap.killTweensOf(inner!);
+        gsap.to(inner!, { opacity: 0, scale: 0.94, duration: reduce ? 0 : 0.2, ease: 'power2.in', onComplete: () => {
+          root.classList.remove('is-on', 'is-dev');
+          cancelAnimationFrame(raf);
+          current = '';
+        } });
+      }, 60); // moving straight to the next row doesn't blink
+    }
+
+    rows.forEach((r) => {
+      const t = r.querySelector('.prj__trigger');
+      t?.addEventListener('pointerenter', (e) => {
+        if (!fine.matches || (e as PointerEvent).pointerType !== 'mouse') return;
+        if (list?.classList.contains('is-busy')) return; // rows moving under the pointer
+        clearOf = r.querySelector('.prj__name')?.getBoundingClientRect().right ?? 0;
+        aim((e as PointerEvent).clientX, (e as PointerEvent).clientY);
+        present(r);
+      });
+      t?.addEventListener('pointerleave', conceal);
+    });
+    addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      aim(e.clientX, e.clientY);
+    }, { passive: true });
+    // paging or folding the list moves the rows out from under the pointer
+    new MutationObserver(() => { if (list?.classList.contains('is-busy')) conceal(); })
+      .observe(list ?? document.body, { attributes: true, attributeFilter: ['class'] });
+    addEventListener('blur', conceal);
+
+    // warm the covers once the pointer heads for the list
+    list?.addEventListener('pointerenter', () => {
+      rows.forEach((r) => { if (r.dataset.cover) { const i = new Image(); i.decoding = 'async'; i.src = r.dataset.cover; } });
+    }, { once: true });
+  }
+</script>

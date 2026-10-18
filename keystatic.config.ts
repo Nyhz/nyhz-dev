@@ -37,6 +37,8 @@ export default config({
         deployUrl: fields.url({ label: 'Live / deploy URL' }),
         downloadUrl: fields.url({ label: 'Download URL' }),
         coverUrl: fields.text({ label: 'Cover image URL or /public path' }),
+        year: fields.text({ label: 'Year (e.g. 2026)' }),
+        role: fields.text({ label: 'Role (e.g. solo · design + code) — optional' }),
         order: fields.integer({ label: 'Order', defaultValue: 0 }),
       },
     }),

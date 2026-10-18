@@ -13,7 +13,8 @@ const canExpand = shown.length > HIGHLIGHT;
     {shown.map((p, i) => (
       <li class:list={['prj', i >= HIGHLIGHT && 'prj--extra']} data-proj={p.slug}
         data-title={p.title} data-desc={p.description} data-cover={p.coverUrl} data-repo={p.repoUrl}
-        data-live={p.deployUrl} data-download={p.downloadUrl} data-tags={p.tags.join(' · ')}>
+        data-live={p.deployUrl} data-download={p.downloadUrl} data-tags={p.tags.join(' · ')}
+        data-year={p.year} data-role={p.role} data-status={statusOf(p)}>
         <div class="prj__trigger" tabindex="0" role="button" aria-label={`Preview ${p.title}`}>
           <span class="prj__bar"></span>
           <span class="prj__inner">
@@ -318,6 +319,20 @@ const canExpand = shown.length > HIGHLIGHT;
   }
 
   btn?.addEventListener('click', () => setExpanded(!page?.classList.contains('projects-open')));
+
+  // phones: an open project or contact card takes the screen — the hero folds
+  // away exactly like it does for the expanded list (unless it already has)
+  let focused = false, foldedHere = false;
+  addEventListener('nyhz:focus', (e) => {
+    const on = !!(e as CustomEvent<{ on: boolean }>).detail?.on;
+    if (on === focused || !page) return;
+    focused = on;
+    if (on && page.classList.contains('projects-open')) { foldedHere = false; return; } // already folded
+    if (!on && !foldedHere) return;
+    foldedHere = on;
+    page.classList.toggle('pv-focus', on);
+    animateLayout(on, reduce);
+  });
 
   // when expanded, a click outside the 900px column collapses (like show less)
   document.addEventListener('click', (e) => {
