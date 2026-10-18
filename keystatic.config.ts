@@ -39,6 +39,12 @@ export default config({
         coverUrl: fields.text({ label: 'Cover image URL or /public path' }),
         year: fields.text({ label: 'Year (e.g. 2026)' }),
         role: fields.text({ label: 'Role (e.g. solo · design + code) — optional' }),
+        status: fields.select({
+          label: 'Status',
+          description: 'Leave on auto to derive it from the links (live / download / personal).',
+          options: [{ label: 'auto (from the links)', value: '' }, { label: 'in progress', value: 'in progress' }],
+          defaultValue: '',
+        }),
         order: fields.integer({ label: 'Order', defaultValue: 0 }),
       },
     }),

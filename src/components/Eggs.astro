@@ -234,6 +234,7 @@
   };
   paintSound();
   sndBtn?.addEventListener('click', () => { sound.set(!sound.on); paintSound(); });
+  addEventListener('nyhz:sound', paintSound); // the tv remote's volume can switch it too
   addEventListener('nyhz:glitch', () => sound.glitch());
 
   // ---------- toast ----------
@@ -823,6 +824,7 @@
     html.classList.add('egg-sleep');
     saver.classList.add('is-on');
     sound.hum(true);
+    dispatchEvent(new CustomEvent('nyhz:power', { detail: { on: false } })); // the tv goes off too
     dpr = Math.min(devicePixelRatio || 1, 2);
     trail.width = Math.round(saver.clientWidth * dpr);
     trail.height = Math.round(saver.clientHeight * dpr);

@@ -103,6 +103,7 @@ const ctx: TermContext = {
   .term__out :global(.sl pre) { position: absolute; left: 0; top: 0; margin: 0; font: inherit; line-height: 1.02;
     width: max-content; color: var(--fg); white-space: pre; will-change: transform; }
   .term__out :global([data-s="down"]) { color: #ff2e63; }
+  .term__out :global([data-s="in progress"]) { color: #f5c542; }
   .term__out :global(.tilde) { color: #5f7fb0; }
   /* inside the fake vim the window turns into an editor */
   .term.is-vim .term__live { background: #ff2e63; box-shadow: 0 0 8px #ff2e63; }

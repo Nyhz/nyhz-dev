@@ -10,13 +10,20 @@
 // Phones: the screen goes full width; swipe it (or ◀ ▶) to change channels,
 // and the details sit under it.
 import Contact from './Contact.astro';
-import { statusOf, type ProjectProps } from '../scripts/content';
+import { statusOf, type ProjectProps, type ProfileProps, type SkillProps } from '../scripts/content';
+import type { TxtContext } from '../scripts/tv';
 
-const { projects } = Astro.props as { projects: ProjectProps[] };
+const { projects, profile, skills = [] } = Astro.props as { projects: ProjectProps[]; profile: ProfileProps; skills?: SkillProps[] };
 const shown = projects.slice(0, 10);
 const pad = (n: number) => String(n).padStart(2, '0');
+// what the teletext pages are made of
+const txt: TxtContext = {
+  name: profile.name, role: profile.role, location: profile.location, socials: profile.socials,
+  projects: shown.map((p) => ({ title: p.title, status: statusOf(p) })),
+  skills: skills.map((s) => ({ title: s.title, items: s.items })),
+};
 ---
-<div class="tv is-off" data-tv data-anim>
+<div class="tv is-off" data-tv data-anim data-txt={JSON.stringify(txt)}>
   <div class="tv__set">
     <div class="tv__screen" data-tv-screen>
       <i class="tv__tick tl"></i><i class="tv__tick tr"></i><i class="tv__tick bl"></i><i class="tv__tick br"></i>
@@ -35,6 +42,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
         <p class="tv__big" data-tv-big aria-hidden="true"></p>
         <!-- phones: the whole description, read on the screen itself -->
         <div class="tv__read" data-tv-read hidden><p data-tv-read-t></p><span class="tv__read-x">tap to close</span></div>
+        <!-- the channels that aren't in the list: no signal, 42, 13, the ads -->
+        <div class="tv__special" data-tv-special hidden></div>
+        <!-- teletext -->
+        <div class="tv__ttx" data-tv-ttx hidden><div class="tv__ttx-in" data-tv-ttx-in></div></div>
+        <p class="tv__vol" data-tv-vol aria-hidden="true"></p>
         <i class="tv__bar" data-tv-bar aria-hidden="true"></i>
       </div>
 
@@ -43,6 +55,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
         <button type="button" class="tv__navbtn" data-tv-prev aria-label="previous channel">◀</button>
         <span class="tv__navn">CH <b data-tv-n>01</b> / {pad(shown.length)}</span>
         <button type="button" class="tv__navbtn" data-tv-next aria-label="next channel">▶</button>
+        <button type="button" class="tv__navbtn tv__navbtn--sm" data-tv-txt aria-pressed="false">txt</button>
+        <button type="button" class="tv__navbtn tv__navbtn--sm" data-tv-power aria-label="power">⏻</button>
       </div>
 
       <!-- the lower third: over the picture on desktop, under it on phones -->
@@ -87,6 +101,12 @@ const pad = (n: number) => String(n).padStart(2, '0');
         </li>
       ))}
     </ul>
+    <!-- the remote: power, teletext, and what the keyboard does -->
+    <div class="tv__remote">
+      <button type="button" class="tv__rbtn" data-tv-power aria-label="power">⏻</button>
+      <button type="button" class="tv__rbtn" data-tv-txt aria-pressed="false">txt</button>
+      <span class="tv__keys" aria-hidden="true">0–9 · + −</span>
+    </div>
   </div>
 </div>
 
@@ -145,6 +165,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .tv__ch { color: var(--accent); }
   .tv__state[data-s="live"]::before { content: '● '; color: var(--accent); }
   .tv__state[data-s="download"]::before { content: '↓ '; }
+  .tv__state[data-s="in progress"]::before { content: '◐ '; color: #f5c542; }
   .tv__big { position: absolute; z-index: 3; top: 50%; left: 50%; translate: -50% -50%; margin: 0; opacity: 0; pointer-events: none;
     font: 700 clamp(2.4rem, 7vw, 4.6rem)/1 var(--mono); letter-spacing: 0.02em; color: #f2f1ea;
     text-shadow: -3px 0 rgba(255, 46, 99, 0.85), 3px 0 rgba(46, 230, 255, 0.85), 0 0 24px rgba(0, 0, 0, 0.8); }
@@ -225,12 +246,83 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .tv__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
   .tv__dot[data-s="live"] { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
   .tv__dot[data-s="download"] { background: var(--dim); }
+  .tv__dot[data-s="in progress"] { background: #f5c542; box-shadow: 0 0 6px rgba(245, 197, 66, 0.6); }
   .tv__chbtn:hover, .tv__chbtn:focus-visible { color: var(--fg); padding-left: 0.6rem; outline: none; }
   .tv__chbtn.is-on { color: var(--fg); padding-left: 0.6rem; }
   .tv__chbtn.is-on .tv__chn { color: var(--accent); }
   .tv__chbtn.is-locked .tv__chname::after { content: '  ●'; color: var(--accent); font-size: 0.6em; vertical-align: 0.2em; }
 
   .tv__nav { display: none; }
+
+  /* the remote under the channels */
+  .tv__remote { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.9rem; }
+  .tv__rbtn { background: none; border: 1px solid var(--line); padding: 0.32rem 0.6rem; cursor: pointer; color: var(--fg);
+    font: 500 0.62rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+    transition: color var(--t-hover) ease, border-color var(--t-hover) ease; }
+  .tv__rbtn:hover, .tv__rbtn:focus-visible, .tv__rbtn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); outline: none; }
+  .tv__keys { margin-left: auto; font: 500 0.58rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+  .tv__glass { touch-action: manipulation; } /* a double-tap smacks it, it doesn't zoom */
+
+  /* ---- the channels that aren't in the list ---- */
+  .tv__special { position: absolute; inset: 0; z-index: 2; overflow: hidden; }
+  .tv__special[hidden] { display: none; }
+  .tv.is-special .tv__img, .tv.is-special .tv__fill { opacity: 0 !important; }
+  .tv.is-special .tv__links, .tv.is-ttx .tv__links { visibility: hidden; }
+  /* no signal: the colour bars */
+  .tv__special :global(.sp-bars) { position: absolute; inset: 0; display: grid; grid-template-rows: 66% 8% 26%; }
+  .tv__special :global(.sp-bars > div) { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .tv__special :global(.sp-bars > div:last-child) { grid-template-columns: 5fr 5fr 5fr 15fr; }
+  .tv__special :global(.sp-label) { position: absolute; left: 50%; top: 38%; translate: -50% -50%; margin: 0;
+    padding: 0.45rem 1rem; background: #000; color: #fff; font: 700 clamp(0.8rem, 1.6vw, 1.1rem) var(--mono); letter-spacing: 0.24em; }
+  /* 42: the answer */
+  .tv__special :global(.sp-donut) { position: absolute; inset: 0; display: grid; place-items: center; background: #020b07; margin: 0;
+    color: #3ad29f; font: 700 var(--fs, 9px)/1 var(--mono); white-space: pre; text-shadow: 0 0 6px rgba(58, 210, 159, 0.6); }
+  /* 13 */
+  .tv__special :global(.sp-horror) { position: absolute; inset: 0; display: grid; place-items: center; margin: 0;
+    background: radial-gradient(circle, #3a0008, #000 72%); color: #ff2e63; text-align: center;
+    font: 700 clamp(0.9rem, 2.4vw, 1.7rem) var(--mono); letter-spacing: 0.12em; text-shadow: 0 0 14px #ff0033;
+    animation: spFlick 0.11s steps(2) infinite; }
+  @keyframes spFlick { 50% { opacity: 0.55; transform: translateX(2px); } }
+  /* the ad break */
+  .tv__special :global(.sp-ad) { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.6rem; padding: 1rem 1rem 34%; text-align: center; cursor: pointer; /* clear of the lower third */
+    background: repeating-linear-gradient(45deg, #ffd400 0 24px, #ff2e63 24px 48px); }
+  .tv__special :global(.sp-ad b) { background: #000; color: #ffd400; padding: 0.3rem 0.8rem; rotate: -2deg;
+    font: 700 clamp(1rem, 2.8vw, 1.9rem)/1.15 var(--mono); }
+  .tv__special :global(.sp-ad span) { background: #fff; color: #000; padding: 0.25rem 0.7rem; letter-spacing: 0.12em;
+    font: 700 clamp(0.62rem, 1.2vw, 0.8rem) var(--mono); animation: spBlink 0.5s steps(1) infinite; }
+  @keyframes spBlink { 50% { opacity: 0; } }
+
+  /* ---- teletext ---- */
+  .tv__ttx { position: absolute; inset: 0; z-index: 4; background: #000; overflow: hidden; padding: 0.35em 0.5em; }
+  .tv__ttx[hidden] { display: none; }
+  .tv.is-ttx .tv__l3, .tv.is-ttx .tv__osd { visibility: hidden; }
+  .tv__ttx-in { position: relative; height: 100%; font: 700 var(--ttx, 14px)/1.12 var(--mono); color: #fff; letter-spacing: 0; }
+  .tv__ttx-in :global(.tr) { display: block; min-height: 1.12em; white-space: pre; overflow: hidden; }
+  .tv__ttx-in :global(.tr.dh) { font-size: 1.9em; line-height: 1.18; }
+  .tv__ttx-in :global(.tr[data-go]) { cursor: pointer; }
+  .tv__ttx-in :global(.tr[data-go]:hover) { background: #0000ff; }
+  .tv__ttx-in :global(.k-w) { color: #fff; } .tv__ttx-in :global(.k-y) { color: #ffff00; }
+  .tv__ttx-in :global(.k-c) { color: #00ffff; } .tv__ttx-in :global(.k-g) { color: #00ff00; }
+  .tv__ttx-in :global(.k-r) { color: #ff3b3b; } .tv__ttx-in :global(.k-m) { color: #ff00ff; }
+  .tv__ttx-in :global(.bg-b) { background: #0000ff; }
+  .tv__ttx-in :global(.fast) { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 0.6em; }
+  .tv__ttx-in :global(.fast span) { flex: 1; cursor: pointer; }
+  .tv__ttx-in :global(.fast span:hover) { text-decoration: underline; }
+
+  /* volume on screen */
+  .tv__vol { position: absolute; z-index: 6; left: 50%; bottom: 24%; translate: -50% 0; margin: 0; padding: 0.35rem 0.85rem;
+    background: rgba(0, 0, 0, 0.75); color: var(--accent); font: 700 0.9rem var(--mono); letter-spacing: 0.06em;
+    opacity: 0; pointer-events: none; white-space: nowrap; }
+
+  /* bad reception: the picture rolls, ghosts and splits until it's smacked */
+  .tv__glass.is-bad .tv__img.is-top { animation: tvBad 1.3s steps(6) infinite; }
+  @keyframes tvBad {
+    0%, 100% { transform: none; }
+    30% { transform: translateY(-7%) skewX(2deg); filter: drop-shadow(16px 0 rgba(255, 255, 255, 0.35)); }
+    60% { transform: translateY(5%); filter: drop-shadow(-10px 0 rgba(255, 46, 99, 0.55)) drop-shadow(10px 0 rgba(46, 230, 255, 0.55)); }
+  }
 
   /* ---- phones: full-width screen, details under it, ◀ ▶ and swipe ---- */
   @media (max-width: 720px) {
@@ -247,6 +339,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .tv__navbtn { background: none; border: 1px solid var(--line); padding: 0.45rem 0.9rem; color: var(--fg);
       font: inherit; cursor: pointer; }
     .tv__navbtn:active { transform: translateY(1px); }
+    .tv__navbtn--sm { padding: 0.45rem 0.55rem; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
+    .tv__navbtn--sm[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+    .tv__navn { margin-right: auto; margin-left: 0.6rem; }
     .tv.is-contact .tv__l3, .tv.is-contact .tv__nav { display: none; }
     .tv__more:not([hidden]) { display: block; position: absolute; right: 0; bottom: 0; padding: 0 0 0 1.4rem;
       background: linear-gradient(90deg, transparent, var(--bg) 1.2rem); border: 0; cursor: pointer;
@@ -266,6 +361,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
   import { gsap } from 'gsap';
   import { sound } from '../scripts/sound';
   import { leet } from '../scripts/eggs';
+  import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextPage, FASTEXT, TXT_HOME, type TxtContext } from '../scripts/tv';
 
   const root = document.querySelector<HTMLElement>('[data-tv]');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -338,6 +434,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     // ---- tuning ----
     let shown = -1, locked: number | null = null, hovering = false, top = 0;
     let on = false, powering = false, pending = 0;
+    let afterOn: (() => void) | null = null;
     const line = $('[data-tv-line]');
 
     // standby: what the screen says before it's switched on
@@ -360,18 +457,24 @@ const pad = (n: number) => String(n).padStart(2, '0');
     }
 
     // switch on, CRT style: the picture collapses to a bright line and opens out
-    function powerOn(i: number) {
+    function powerOn(i: number | (() => void)) {
+      if (typeof i === 'function') {
+        if (on) { i(); return; }
+        afterOn = i;
+        i = shown >= 0 ? shown : 0;
+      }
       pending = i;
       if (on) { if (!powering) tune(i); return; }
       on = true;
       root!.classList.remove('is-off');
       sound.glitch();
-      if (reduce) { tune(i, true); surf(); return; }
+      const then = () => { const f = afterOn; afterOn = null; if (f) f(); else tune(pending, true); };
+      if (reduce) { then(); surf(); return; }
       powering = true;
       gsap.timeline({ onComplete: () => { powering = false; surf(); } })
         .set(glass, { clipPath: 'inset(50% 0 50% 0)' })
         .fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.2, ease: 'power3.out' })
-        .add(() => tune(pending, true))
+        .add(then)
         .to(glass, { clipPath: 'inset(0% 0 0% 0)', duration: 0.42, ease: 'power3.out' })
         .to(line, { opacity: 0, duration: 0.3, ease: 'power2.out' }, '<')
         .add(() => { burst(260, 0.5); })
@@ -382,7 +485,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     function paintDetails(i: number) {
       const d = data(i);
       chEl.textContent = `CH ${pad(i + 1)}`;
-      stateEl.textContent = d.status === 'live' ? 'live' : d.status === 'download' ? 'download' : 'personal';
+      stateEl.textContent = d.status || 'personal';
       stateEl.dataset.s = d.status || '';
       titleEl.textContent = say(d.title || '');
       yearEl.textContent = d.year || '';
@@ -416,7 +519,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     function tune(i: number, quiet = false) {
       i = (i + chans.length) % chans.length;
-      if (i === shown) return;
+      const covered = clearOverlays();
+      if (i === shown) { if (covered) paintDetails(i); return; }
       shown = i;
       const d = data(i);
       // the next picture loads into the back layer, then swaps to the front
@@ -448,11 +552,23 @@ const pad = (n: number) => String(n).padStart(2, '0');
     // ---- left alone, it channel-surfs ----
     const ATTRACT = 7;
     let attract: gsap.core.Tween | null = null;
+    let hops = 0, adT = 0;
     function surf() {
       attract?.kill();
-      if (!on || reduce || locked !== null || hovering || root.classList.contains('is-contact')) { gsap.set(bar, { scaleX: 0 }); return; }
+      if (!on || reduce || locked !== null || hovering || root.classList.contains('is-contact') || root.classList.contains('is-ttx')
+        || (root.classList.contains('is-special') && specialKind !== 'ad')) { gsap.set(bar, { scaleX: 0 }); return; }
       attract = gsap.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: ATTRACT, ease: 'none',
-        onComplete: () => { if (!document.hidden) tune(shown + 1); surf(); } });
+        onComplete: () => {
+          if (document.hidden) { surf(); return; }
+          // every fourth hop: a word from our sponsor
+          if (++hops % 4 === 0) {
+            special('ad');
+            adT = window.setTimeout(() => { if (root!.classList.contains('is-special')) tune(shown + 1); surf(); }, 4500);
+            return;
+          }
+          tune(shown + 1);
+          surf();
+        } });
     }
 
     const lock = (i: number | null) => {
@@ -494,7 +610,15 @@ const pad = (n: number) => String(n).padStart(2, '0');
       lock(shown);
     };
     // a click (or tap) on the switched-off screen turns it on
-    hit.addEventListener('click', (e) => { if (!on) { e.preventDefault(); powerOn(0); } });
+    let openT = 0;
+    hit.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!on) { powerOn(0); return; }
+      const href = hit.getAttribute('href');
+      clearTimeout(openT);
+      if (href) openT = window.setTimeout(() => window.open(href, '_blank', 'noopener'), 260);
+    });
+    hit.addEventListener('dblclick', (e) => { e.preventDefault(); clearTimeout(openT); smack(); });
     $('[data-tv-prev]').addEventListener('click', () => step(-1));
     $('[data-tv-next]').addEventListener('click', () => step(1));
     let tx = 0, ty = 0;
@@ -518,6 +642,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     function openContact() {
       if (root!.classList.contains('is-contact')) return;
       readBox.hidden = true;
+      clearOverlays();
       root!.classList.add('is-contact');
       contact.hidden = false;
       chEl.textContent = 'CH 00';
@@ -567,6 +692,313 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     // warm every cover, then switch on: the first channel, quietly, and start surfing
     chans.forEach((c) => { if (c.dataset.cover) { const im = new Image(); im.decoding = 'async'; im.src = c.dataset.cover; } });
+
+    // ===================== the remote and its channels =====================
+    const txtCtx = JSON.parse(root.dataset.txt || '{}') as TxtContext;
+    const special$ = $('[data-tv-special]');
+    const ttx = $('[data-tv-ttx]');
+    const ttxIn = $('[data-tv-ttx-in]');
+    const vol = $('[data-tv-vol]');
+    const txtBtns = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-tv-txt]'));
+    const powerBtns = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-tv-power]'));
+    const achieve = (id: string) => dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id } }));
+    let specialKind: 'nosignal' | 'secret' | 'horror' | 'ad' | null = null;
+    let specialRaf = 0;
+
+    // put the screen back to the plain channel (or standby); true if anything was covering it
+    function clearOverlays() {
+      let had = false;
+      if (root!.classList.contains('is-special')) {
+        had = true;
+        root!.classList.remove('is-special');
+        special$.hidden = true;
+        special$.replaceChildren();
+        cancelAnimationFrame(specialRaf);
+        clearTimeout(adT);
+        specialKind = null;
+      }
+      if (root!.classList.contains('is-ttx')) {
+        had = true;
+        root!.classList.remove('is-ttx');
+        ttx.hidden = true;
+        clearInterval(ttxClock);
+        txtBtns.forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      }
+      return had;
+    }
+    const restore = () => { if (on && shown >= 0) paintDetails(shown); else paintStandby(); surf(); };
+
+    // a lower third for the screens that aren't projects
+    function caption(ch: string, title: string, desc: string) {
+      chEl.textContent = ch;
+      stateEl.textContent = '';
+      stateEl.dataset.s = '';
+      titleEl.textContent = title;
+      yearEl.textContent = '';
+      descEl.textContent = desc;
+      descEl.classList.add('is-whole');
+      moreBtn.hidden = true;
+      stackEl.textContent = '';
+      hit.removeAttribute('href');
+      chans.forEach((c) => c.classList.remove('is-on'));
+    }
+
+    function special(kind: 'nosignal' | 'secret' | 'horror' | 'ad', n = 0) {
+      const show = () => {
+        clearOverlays();
+        root!.classList.add('is-special');
+        specialKind = kind;
+        special$.hidden = false;
+        burst(300);
+        sound.glitch();
+        if (kind === 'nosignal') {
+          const bars = [
+            ['#c0c0c0', '#c0c000', '#00c0c0', '#00c000', '#c000c0', '#c00000', '#0000c0'],
+            ['#0000c0', '#131313', '#c000c0', '#131313', '#00c0c0', '#131313', '#c0c0c0'],
+            ['#00214c', '#ffffff', '#32006a', '#131313'],
+          ];
+          special$.innerHTML = `<div class="sp-bars">${bars.map((r) => `<div>${r.map((c) => `<i style="background:${c}"></i>`).join('')}</div>`).join('')}</div><p class="sp-label">NO SIGNAL</p>`;
+          caption(`CH ${String(n).padStart(2, '0')}`, 'no signal', `there's nothing on channel ${String(n).padStart(2, '0')}. there are ${chans.length} channels — or are there?`);
+          sound.beep(1.4);
+          achieve('channel');
+        } else if (kind === 'secret') {
+          const pre = document.createElement('pre');
+          pre.className = 'sp-donut';
+          special$.append(pre);
+          donut(pre);
+          caption('CH 42', 'the answer', "channel 42. you weren't supposed to find this. don't panic.");
+          achieve('channel');
+        } else if (kind === 'horror') {
+          special$.innerHTML = `<p class="sp-horror">don't look<br/>behind you</p>`;
+          caption('CH 13', '▓▒░ ▒▓▒ ░▓', 'channel 13 is not available in your region.');
+          dispatchEvent(new Event('nyhz:glitch'));
+          const html = document.documentElement;
+          html.classList.remove('egg-broken');
+          void html.offsetWidth;
+          html.classList.add('egg-broken');
+          setTimeout(() => html.classList.remove('egg-broken'), 1150);
+          achieve('channel');
+        } else {
+          special$.innerHTML = '<div class="sp-ad" role="button" tabindex="0"><b>TIRED OF BORING<br/>WEBSITES?</b><span>☎ CALL NOW · OPERATORS STANDING BY</span></div>';
+          special$.querySelector('.sp-ad')?.addEventListener('click', () => openContact());
+          caption('AD', 'commercial break', 'a word from our sponsor: nyhz is available for work. click to call.');
+        }
+      };
+      if (!on) powerOn(show); else show();
+    }
+
+    // CH 42: the classic spinning ascii donut (a1k0n's donut.c), in green
+    function donut(pre: HTMLElement) {
+      const W = 44, H = 22;
+      let A = 1, B = 1, last = 0;
+      pre.style.setProperty('--fs', `${Math.max(6, Math.min(glass.clientWidth / (W * 0.62), glass.clientHeight / (H * 1.02)))}px`);
+      const frame = (t: number) => {
+        if (t - last > 50) {
+          last = t;
+          const b: string[] = new Array(W * H).fill(' ');
+          const z: number[] = new Array(W * H).fill(0);
+          const cA = Math.cos(A), sA = Math.sin(A), cB = Math.cos(B), sB = Math.sin(B);
+          for (let j = 0; j < 6.28; j += 0.07) {
+            const ct = Math.cos(j), st = Math.sin(j);
+            for (let i = 0; i < 6.28; i += 0.02) {
+              const sp = Math.sin(i), cp = Math.cos(i), h = ct + 2;
+              const D = 1 / (sp * h * sA + st * cA + 5);
+              const tt = sp * h * cA - st * sA;
+              const x = (W / 2 + (W * 0.36) * D * (cp * h * cB - tt * sB)) | 0;
+              const y = (H / 2 + (H * 0.6) * D * (cp * h * sB + tt * cB)) | 0;
+              const o = x + W * y;
+              const N = (8 * ((st * sA - sp * ct * cA) * cB - sp * ct * sA - st * cA - cp * ct * sB)) | 0;
+              if (y >= 0 && y < H && x >= 0 && x < W && D > z[o]) { z[o] = D; b[o] = '.,-~:;=!*#$@'[N > 0 ? N : 0]; }
+            }
+          }
+          let out = '';
+          for (let k = 0; k < H; k++) out += b.slice(k * W, k * W + W).join('') + '\n';
+          pre.textContent = out;
+          A += 0.07; B += 0.03;
+        }
+        specialRaf = requestAnimationFrame(frame);
+      };
+      specialRaf = requestAnimationFrame(frame);
+    }
+
+    // ---- the number keys: type a channel (or a teletext page) ----
+    let digits = '', digitT = 0;
+    function tuneNumber(n: number) {
+      const c = channelFor(n, chans.length);
+      if (c.kind === 'project') {
+        closeContact();
+        if (on && c.index === shown && !root!.classList.contains('is-special')) paintDetails(shown); // same channel: just clear "CH 0_"
+        powerOn(c.index);
+        lock(c.index);
+      }
+      else if (c.kind === 'contact') openContact();
+      else { closeContact(); lock(null); special(c.kind, c.kind === 'nosignal' ? c.n : 0); }
+    }
+    const typing = (e: KeyboardEvent) => !!(e.target as HTMLElement | null)?.closest?.('input, textarea, [contenteditable]')
+      || e.metaKey || e.ctrlKey || e.altKey
+      || !!document.querySelector('.term.is-open') || document.documentElement.classList.contains('egg-game')
+      || !!document.querySelector('[data-cert]:not([hidden])');
+    addEventListener('keydown', (e) => {
+      if (typing(e) || isPhone()) return;
+      const k = e.key;
+      if (/^[0-9]$/.test(k)) {
+        const inTtx = root!.classList.contains('is-ttx');
+        const max = inTtx ? 3 : 2;
+        const r = remoteDigit(digits, k, max);
+        digits = r.buffer;
+        clearTimeout(digitT);
+        if (inTtx) { ttxHeader(`P${remoteLabel(digits, 3)}`); }
+        else chEl.textContent = `CH ${remoteLabel(digits)}`;
+        const go = () => {
+          const n = Number(digits);
+          digits = '';
+          if (inTtx) page(n); else tuneNumber(n);
+        };
+        if (r.ready) go(); else digitT = window.setTimeout(go, inTtx ? 1500 : 1000);
+        return;
+      }
+      if (k === 't' || k === 'T') { toggleTtx(); return; }
+      if (k === '+' || k === '=' || k === '-' || k === '_') { volumeStep(k === '+' || k === '=' ? 1 : -1); return; }
+      if (root!.classList.contains('is-ttx')) {
+        if (k === 'Escape') { e.preventDefault(); toggleTtx(false); }
+        else if (k === 'ArrowRight' || k === 'ArrowLeft') { e.preventDefault(); stepPage(k === 'ArrowRight' ? 1 : -1); }
+      } else if (k === 'Escape' && root!.classList.contains('is-special')) { clearOverlays(); restore(); }
+    });
+
+    // ---- volume: + / − on the remote ----
+    let volT = 0;
+    function volumeStep(dir: number) {
+      const level = clampVolume(sound.level + dir);
+      sound.volume(level);
+      vol.textContent = volumeBar(level);
+      gsap.killTweensOf(vol);
+      gsap.set(vol, { opacity: 1 });
+      clearTimeout(volT);
+      volT = window.setTimeout(() => gsap.to(vol, { opacity: 0, duration: 0.3 }), 1300);
+    }
+
+    // ---- teletext ----
+    let ttxPage = TXT_HOME, ttxClock = 0, ttxLabel = '';
+    const PAGES = [100, 101, 102, 103, 104, 888];
+    const esc = (t: string) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+    function ttxHeader(label?: string) {
+      if (label !== undefined) ttxLabel = label;
+      const h = ttxIn.querySelector('[data-ttx-head]');
+      if (!h) return;
+      const d = new Date();
+      const p = (x: number) => String(x).padStart(2, '0');
+      const day = d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' }).replace(',', '');
+      h.innerHTML = `<span class="k-w">${esc(ttxLabel.padEnd(5))}</span> <span class="k-c">NYHZ TEXT</span> <span class="k-w">${ttxPage}</span> <span class="k-y">${esc(day)} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}</span>`;
+    }
+    function page(n: number) {
+      const rows = teletextPage(n, txtCtx);
+      ttxPage = n;
+      const body = rows
+        ? rows.map((r) => `<span class="tr${r.dh ? ' dh' : ''}${r.bg ? ` bg-${r.bg}` : ''}"${r.link ? ` data-go="p${r.link}"` : r.ch !== undefined ? ` data-go="c${r.ch}"` : ''}>${r.segs.map(([c, t]) => `<span class="k-${c}">${esc(t)}</span>`).join('')}</span>`).join('')
+        : `<span class="tr"> </span><span class="tr k-r"> PAGE ${n} NOT FOUND</span><span class="tr k-w"> nothing on this page. try 100.</span><span class="tr" data-go="p100"><span class="k-y"> 100 </span><span class="k-w">index</span></span>`;
+      const fast = `<div class="fast">${FASTEXT.map(([c, t, p]) => `<span class="k-${c}" data-go="p${p}">${t}</span>`).join('')}</div>`;
+      ttxIn.innerHTML = `<span class="tr" data-ttx-head></span>${body}${fast}`;
+      ttxHeader(`P${n}`);
+    }
+    function stepPage(dir: number) {
+      const i = PAGES.indexOf(ttxPage);
+      page(PAGES[(i < 0 ? 0 : i + dir + PAGES.length) % PAGES.length]);
+    }
+    ttxIn.addEventListener('click', (e) => {
+      const go = (e.target as HTMLElement).closest<HTMLElement>('[data-go]')?.dataset.go;
+      if (!go) return;
+      if (go[0] === 'p') page(Number(go.slice(1)));
+      else { toggleTtx(false); tuneNumber(Number(go.slice(1))); }
+    });
+    // fit teletext's 40 columns into whatever size the screen is
+    const fitTtx = () => ttxIn.style.setProperty('--ttx',
+      `${Math.max(7, Math.min(glass.clientWidth / (40 * 0.62), glass.clientHeight / (15 * 1.12)))}px`);
+    function toggleTtx(force?: boolean) {
+      const open = force ?? !root!.classList.contains('is-ttx');
+      if (!open) { if (clearOverlays()) restore(); return; }
+      const show = () => {
+        closeContact();
+        clearOverlays();
+        root!.classList.add('is-ttx');
+        ttx.hidden = false;
+        txtBtns.forEach((b) => b.setAttribute('aria-pressed', 'true'));
+        attract?.kill();
+        gsap.set(bar, { scaleX: 0 });
+        fitTtx();
+        page(TXT_HOME);
+        ttxClock = window.setInterval(() => ttxHeader(), 1000);
+        burst(200, 0.6);
+        sound.tick();
+      };
+      if (!on) powerOn(show); else show();
+    }
+    txtBtns.forEach((b) => b.addEventListener('click', () => toggleTtx()));
+    addEventListener('resize', () => { if (root!.classList.contains('is-ttx')) fitTtx(); });
+
+    // ---- bad reception, and a smack to fix it ----
+    let shake = 0, lastMv = 0, lx = 0, ly = 0;
+    glass.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse' || !on || root!.classList.contains('is-ttx')) return;
+      const now = performance.now(), dt = Math.min(100, now - lastMv);
+      if (lastMv) {
+        const v = Math.hypot(e.clientX - lx, e.clientY - ly) / Math.max(1, dt);
+        shake = Math.max(0, shake + (v > 2.4 ? dt : -dt * 0.4));
+        if (shake > 900 && !glass.classList.contains('is-bad')) {
+          glass.classList.add('is-bad');
+          stateEl.textContent = 'weak signal';
+          staticCv.style.opacity = '0.35';
+          staticUntil = performance.now() + 60000;
+          if (!staticRaf) staticRaf = requestAnimationFrame(paintStatic);
+        }
+      }
+      lastMv = now; lx = e.clientX; ly = e.clientY;
+    });
+    function smack() {
+      if (!on) return;
+      const wasBad = glass.classList.contains('is-bad');
+      if (!reduce) gsap.fromTo(screen, { x: 0, rotation: 0 }, { keyframes: [{ x: -9, rotation: -0.8 }, { x: 7, rotation: 0.6 }, { x: -4, rotation: -0.3 }, { x: 0, rotation: 0 }], duration: 0.35, ease: 'power2.out' });
+      sound.glitch();
+      shake = 0;
+      if (wasBad) {
+        glass.classList.remove('is-bad');
+        staticUntil = 0;
+        burst(220, 0.9);
+        if (shown >= 0 && !root!.classList.contains('is-special')) paintDetails(shown);
+        achieve('smack');
+      }
+    }
+
+    // ---- power ----
+    function powerOff() {
+      if (!on || powering) return;
+      closeContact();
+      clearOverlays();
+      lock(null);
+      attract?.kill();
+      gsap.set(bar, { scaleX: 0 });
+      glass.classList.remove('is-bad');
+      sound.glitch();
+      const done = () => {
+        on = false;
+        shown = -1;
+        root!.classList.add('is-off');
+        paintStandby();
+      };
+      if (reduce) { done(); return; }
+      powering = true;
+      // the picture squeezes to a line, the line to a dot, and the dot fades
+      gsap.timeline({ onComplete: () => { powering = false; } })
+        .to(glass, { clipPath: 'inset(49.6% 0 49.6% 0)', duration: 0.22, ease: 'power3.in' })
+        .set(line, { scaleX: 1, opacity: 1 })
+        .add(done)
+        .set(glass, { clearProps: 'clipPath' })
+        .to(line, { scaleX: 0.004, duration: 0.2, ease: 'power3.in' })
+        .to(line, { opacity: 0, duration: 0.5, ease: 'power2.out' });
+    }
+    powerBtns.forEach((b) => b.addEventListener('click', () => (on ? powerOff() : powerOn(0))));
+    // the screensaver switches the set off too
+    addEventListener('nyhz:power', (e) => { if ((e as CustomEvent<{ on: boolean }>).detail?.on === false) powerOff(); });
+
     paintStandby();
   }
 </script>

@@ -3,8 +3,16 @@
 // and the choice is remembered. Every call is a no-op while it's off.
 
 const KEY = 'nyhz:sound';
+const VOL = 'nyhz:vol';
 let on = false;
-try { on = localStorage.getItem(KEY) === '1'; } catch { /* stays off */ }
+let level = 5; // 0..8, the tv remote's + / -
+try {
+  on = localStorage.getItem(KEY) === '1';
+  const v = Number(localStorage.getItem(VOL));
+  if (v >= 1 && v <= 8) level = v;
+} catch { /* stays off */ }
+const gainFor = (l: number) => (l / 8) * 0.8;
+const changed = () => dispatchEvent(new Event('nyhz:sound')); // toggles repaint
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
@@ -16,7 +24,7 @@ function audio() {
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.5;
+    master.gain.value = gainFor(level);
     master.connect(ctx.destination);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0);
@@ -61,12 +69,26 @@ function noise(dur: number, vol: number, hp: number, at = 0) {
 
 export const sound = {
   get on() { return on; },
+  get level() { return on ? level : 0; },
   set(v: boolean) {
     on = v;
     try { localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* session only */ }
     if (v) { audio(); tone('square', 660, 660, 0.06, 0.05); tone('square', 990, 990, 0.08, 0.05, 0.07); }
     else this.hum(false);
+    changed();
   },
+  /** the remote's volume: 0 is off; anything above switches sound on */
+  volume(l: number) {
+    const was = on;
+    level = Math.max(0, Math.min(8, l));
+    if (level === 0) { if (was) this.set(false); return; }
+    try { localStorage.setItem(VOL, String(level)); } catch { /* fine */ }
+    if (!was) { this.set(true); } else { audio(); changed(); }
+    if (master && ctx) master.gain.setTargetAtTime(gainFor(level), ctx.currentTime, 0.02);
+    tone('square', 880, 880, 0.04, 0.04);
+  },
+  /** the test card's 1 kHz tone */
+  beep(dur = 1.2) { if (on) tone('sine', 1000, 1000, dur, 0.05); },
   /** a terminal keystroke: a dry tick, never quite the same twice */
   key() { if (on) noise(0.018, 0.12, 2500 + Math.random() * 2500); },
   /** hovering a project: barely there */

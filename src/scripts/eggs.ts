@@ -21,6 +21,8 @@ export const EGGS = [
   { id: 'panic', title: 'crash test dummy', hint: 'terminal — break everything (linux or windows)' },
   { id: 'root', title: 'root access', hint: 'terminal — become root. start with sudo' },
   { id: 'console', title: 'devtools dweller', hint: 'open the browser console' },
+  { id: 'channel', title: 'off the air', hint: 'tune the tv to a channel that isn\'t listed (number keys)' },
+  { id: 'smack', title: 'percussive maintenance', hint: 'when the picture goes bad, smack the tv (double-click)' },
 ] as const;
 
 export type EggId = (typeof EGGS)[number]['id'];

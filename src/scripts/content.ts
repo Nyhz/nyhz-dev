@@ -10,14 +10,15 @@ export type ProjectProps = {
   slug: string; title: string; description: string;
   tags: string[]; repoUrl: string; deployUrl: string; downloadUrl: string; coverUrl: string; order: number;
   year: string; role: string;
+  status: string; // optional override of statusOf's guess, e.g. 'in progress'
 };
 export type SkillProps = {
   slug: string; title: string; items: string[]; level: number; order: number;
 };
 
 /** how a project ships: a live deploy, a download, or just the repo */
-export const statusOf = (p: { deployUrl: string; downloadUrl: string }) =>
-  (p.deployUrl ? 'live' : p.downloadUrl ? 'download' : 'personal');
+export const statusOf = (p: { deployUrl: string; downloadUrl: string; status?: string }) =>
+  (p.status || (p.deployUrl ? 'live' : p.downloadUrl ? 'download' : 'personal'));
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
@@ -46,6 +47,7 @@ export function mapProjects(items: { slug: string; entry: any }[]): ProjectProps
       order: num(entry?.order),
       year: str(entry?.year),
       role: str(entry?.role),
+      status: str(entry?.status),
     }))
     .sort((a, b) => a.order - b.order);
 }

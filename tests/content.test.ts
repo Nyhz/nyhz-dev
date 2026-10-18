@@ -1,6 +1,6 @@
 // tests/content.test.ts
 import { describe, it, expect } from 'vitest';
-import { mapProfile, mapProjects, mapSkills } from '../src/scripts/content';
+import { statusOf, mapProfile, mapProjects, mapSkills } from '../src/scripts/content';
 
 describe('mapProfile', () => {
   it('maps a full profile', () => {
@@ -54,5 +54,14 @@ describe('mapSkills', () => {
     const out = mapSkills([{ slug: 'a', entry: { title: 'A' } }]);
     expect(out[0].order).toBe(0);
     expect(out[0].items).toEqual([]);
+  });
+});
+
+describe('statusOf', () => {
+  it('derives it from the links unless one is set', () => {
+    expect(statusOf({ deployUrl: 'x', downloadUrl: '' })).toBe('live');
+    expect(statusOf({ deployUrl: '', downloadUrl: 'x' })).toBe('download');
+    expect(statusOf({ deployUrl: '', downloadUrl: '' })).toBe('personal');
+    expect(statusOf({ deployUrl: '', downloadUrl: '', status: 'in progress' })).toBe('in progress');
   });
 });
