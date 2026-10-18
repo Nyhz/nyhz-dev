@@ -962,6 +962,12 @@ const txt: TxtContext = {
     let digits = '', digitT = 0;
     function tuneNumber(n: number) {
       const c = channelFor(n, chans.length);
+      // a clicked channel keeps focus, and once keys are typed :focus-visible
+      // keeps it indented: focus follows the channel, or lets go of the list
+      const held = chans.find((b) => b === document.activeElement);
+      if (held && !(c.kind === 'project' && chans[c.index] === held)) {
+        if (c.kind === 'project') chans[c.index].focus({ preventScroll: true }); else held.blur();
+      }
       if (c.kind === 'project') {
         closeContact();
         if (on && c.index === shown && !root!.classList.contains('is-special')) paintDetails(shown); // same channel: just clear "CH 0_"
