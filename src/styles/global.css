@@ -13,104 +13,45 @@ a { color: inherit; text-decoration: none; }
 .field-canvas { position: absolute; display: block; width: 100vw; height: 100vh;
   top: calc(-1 * clamp(14px, 1.6vw, 26px)); left: calc(-1 * clamp(14px, 1.6vw, 26px)); }
 
-/* Flexible spacers center the content; on expand GSAP collapses the header
-   (height + opacity) and grows the list to fill — the list rises into the
-   header's place. Gap lives as the hero's padding-bottom so it collapses too. */
+/* One screen, no scroll: the hero on top and the tv filling the rest — Tv.astro
+   sizes its screen to whatever room this leaves (always 16:10). The column
+   widens on big screens so the set grows with them. */
 .page {
   position: relative; z-index: 1;
-  width: 100%; max-width: 900px; margin: 0 auto; height: 100vh;
+  width: 100%; max-width: clamp(900px, 64vw, 1180px); margin: 0 auto; height: 100vh;
   padding: clamp(3rem, 8vh, 6rem) clamp(1.5rem, 4vw, 3rem) clamp(3rem, 7vh, 5rem);
   display: flex; flex-direction: column; justify-content: flex-start;
 }
-.spacer { flex: 1 1 0; min-height: 0; }
-/* the middle spacer is mobile-only (distributes space between hero and projects) */
+.spacer { min-height: 0; }
+[data-spacer-top] { flex: 0 1 clamp(0px, 4vh, 48px); }
+/* the middle spacer is phones-only (splits the free space above and below the hero) */
 [data-spacer-mid] { display: none; }
 
-/* flex-shrink:0 — on short viewports the hero used to shrink under its
-   overflow:hidden and clip the socials + contact chip; the gap below it now
-   gives way instead (it scales with height, not width). */
+/* flex-shrink:0 — on short viewports the hero must never shrink and clip the
+   socials + contact chip; the gap below it gives way instead */
 .hero { display: flex; flex-direction: column; gap: 1.2rem; overflow: hidden; flex-shrink: 0;
-  margin-bottom: clamp(2.5rem, 22vh - 4rem, 11rem); }
+  margin-bottom: clamp(1.5rem, 6vh, 3.5rem); }
 .eyebrow { font: 500 0.72rem var(--mono); letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted);
   text-wrap: balance; }
-
-/* minmax(0,1fr) so a long (nowrap) project description can't blow the column out
-   to max-content and shove the preview off-screen — it truncates with ellipsis. */
-.lower__track { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(2rem, 5vw, 4rem); align-items: start; }
+.lower { flex: 1 1 0; min-height: 0; }
 
 .sec-label { font: 500 0.66rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase;
   color: var(--muted); margin-bottom: 1.3rem; display: block; }
 .sec-count { color: var(--fg); }
 
-.prj--extra { display: none; }
-/* extras appear only AFTER the rise (separate class), so the list doesn't
-   balloon to its full height and snap while it's still growing */
-.page.projects-open.projects-reveal .prj--extra { display: block; }
-
-/* ---- expanded (desktop): 2 columns, list fills (paged, never scrolls), header collapsed (GSAP) ---- */
-@media (min-width: 721px) {
-  .page.projects-open .lower { min-height: 0; }
-  /* structural (fill) deferred to projects-reveal so the apply itself
-     causes no instant reflow — the rise is purely the GSAP flex-grow/collapse */
-  .page.projects-open.projects-reveal .lower__track { height: 100%; min-height: 0; align-items: stretch; }
-  .page.projects-open.projects-reveal .preview { align-self: start; }
-  .page.projects-open.projects-reveal .projects { display: flex; flex-direction: column; min-height: 0; height: 100%; }
-}
-
 /* ---- short desktop screens: tighten the vertical rhythm ---- */
 @media (min-width: 721px) and (max-height: 760px) {
   .page { padding-top: clamp(2.25rem, 6vh, 3rem); padding-bottom: clamp(2rem, 5vh, 3rem); }
-  .hero { margin-bottom: clamp(2rem, 9vh, 4rem); }
 }
 
-/* ---- mobile ---- */
+/* ---- phones ---- */
 @media (max-width: 720px) {
   :root { --name-size: clamp(3.2rem, 24vw, 7rem); }
-  /* no scroll on mobile — fit one viewport (dvh = no hiding behind the toolbar).
-     Free space is split by two flex spacers (top + between hero and projects),
-     so show-all sits at the very bottom. */
+  /* fit one viewport (dvh = no hiding behind the toolbar); the free space is
+     split by two flex spacers, above the hero and between it and the tv */
   [data-spacer-top], [data-spacer-mid] { display: block; flex: 1 1 0; }
-  [data-spacer-bottom] { display: none; }
-  .page { height: 100vh; height: 100dvh; justify-content: flex-start;
+  .page { height: 100vh; height: 100dvh;
     padding: clamp(1.75rem, 5vh, 3rem) clamp(1.25rem, 5vw, 2rem) clamp(1.75rem, 4vh, 2.5rem); }
-  .hero { flex: 0 0 auto; justify-content: flex-start; margin-bottom: 0; }
+  .hero { flex: 0 0 auto; margin-bottom: 0; }
   .lower { flex: 0 0 auto; overflow: hidden; }
-
-  /* preview slider */
-  .lower__track { display: flex; width: 200%; gap: 0;
-    transform: translateX(0); transition: transform 0.5s cubic-bezier(.4,0,.2,1); }
-  .lower__track > * { flex: 0 0 50%; width: 50%; align-self: flex-start; }
-  /* the preview reserves its tallest state (no layout shift), which can make
-     the track taller than the list: the list panel stretches with it and
-     keeps show-all pinned to the bottom */
-  .lower__track > .projects { align-self: stretch; display: flex; flex-direction: column; }
-  .lower__track > .projects .prj-foot { margin-top: auto; padding-top: 1.2rem; }
-  .lower__track.is-preview { transform: translateX(-50%); }
-  /* the preview panel lays over its half of the slider instead of sizing it:
-     it never stretches the list, and with the hero folded (pv-focus) it gets
-     the whole lower area to itself */
-  .lower__track { position: relative; }
-  .page .lower__track > .preview { position: absolute; top: 0; left: 50%; width: 50%; } /* beats the component's own rules */
-
-  /* expanded: header collapsed (GSAP), the list fills the panel. No scroll —
-     it's paged, 4 rows at a time. (Legacy of the list layout: the tv in
-     Tv.astro doesn't use these.) The preview panel stays
-     offscreen in the slider (not display:none) so removing it can't jump the
-     lower's height the instant the class is applied. */
-  .page.projects-open .lower { min-height: 0; }
-  .page.projects-open .lower__track { height: 100%; }
-  .page.projects-open .lower__track > * { height: 100%; }
-  .page.projects-open .projects { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-}
-
-
-/* ---- the tv layout: hero on top, the set fills the rest (Tv.astro sizes the
-   screen to whatever room this leaves, always 16:10) ---- */
-@media (min-width: 721px) {
-  .page:has(.lower--tv) { max-width: clamp(900px, 64vw, 1180px); }
-  .page:has(.lower--tv) [data-spacer-top] { flex: 0 1 clamp(0px, 4vh, 48px); }
-  .page:has(.lower--tv) [data-spacer-bottom] { display: none; }
-  .page:has(.lower--tv) .hero { margin-bottom: clamp(1.5rem, 6vh, 3.5rem); }
-  .lower--tv { flex: 1 1 0; min-height: 0; }
 }
