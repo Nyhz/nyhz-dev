@@ -5,7 +5,7 @@
 //   gravity five quick clicks on the name drop its letters to the frame floor
 //   secrets `cat .secrets` in the terminal (terminal.ts)
 //   matrix  `matrix` / `hack` / `sudo rm -rf /`: glyph rain behind the page
-//   sleep   15s idle: the name peels off the hero and bounces like a DVD logo
+//   sleep   30s idle: the name peels off the hero and bounces like a DVD logo
 //   leet    13:37 / 03:33: the whole page turns to l33t for that minute
 //   …and more (see EGGS in scripts/eggs.ts). Desktop gets a counter by the
 //   clock once the first one is found, with a hint for each one left.
@@ -48,7 +48,7 @@
 <div data-nosnippet class="egg-saver" data-egg-saver aria-hidden="true">
   <canvas class="egg-trail" data-egg-trail></canvas>
   <span class="egg-dvd" data-egg-dvd>nyhz</span>
-  <div class="egg-hud"><span class="egg-hud__rec">sleep mode</span><span data-egg-idle>idle 00:15</span><span class="egg-hud__c" data-egg-corners></span></div>
+  <div class="egg-hud"><span class="egg-hud__rec">sleep mode</span><span data-egg-idle>idle 00:30</span><span class="egg-hud__c" data-egg-corners></span></div>
   <p class="egg-wake"><span>move to wake</span></p>
   <i class="egg-flash" data-egg-flash></i>
 </div>
@@ -713,7 +713,7 @@
       .add(() => { rainEl.classList.remove('is-on'); raining = false; });
   });
 
-  // ---------- sleep: 15s idle and the name peels off the hero to bounce like a DVD logo ----------
+  // ---------- sleep: 30s idle and the name peels off the hero to bounce like a DVD logo ----------
   const saver = document.querySelector<HTMLElement>('[data-egg-saver]');
   const dvd = saver?.querySelector<HTMLElement>('[data-egg-dvd]');
   const trail = saver?.querySelector<HTMLCanvasElement>('[data-egg-trail]');
@@ -722,7 +722,7 @@
   const cornersEl = saver?.querySelector('[data-egg-corners]');
   const flashEl = saver?.querySelector<HTMLElement>('[data-egg-flash]');
   const dbg = import.meta.env.DEV ? Number(new URLSearchParams(location.search).get('idle')) : 0;
-  const IDLE = dbg > 0 ? dbg * 1000 : 15000;
+  const IDLE = dbg > 0 ? dbg * 1000 : 30000;
   const COLORS = ['#f2f1ea', '#3ad29f', '#ff2e63', '#2ee6ff', '#f5c542'];
   let idleT = 0, sleeping = false, waking = false, moving = false, raf = 0;
   const busy = () => document.hidden || falling || raining || html.classList.contains('egg-game')
@@ -819,7 +819,6 @@
     dvd.style.color = COLORS[0];
     html.classList.add('egg-sleep');
     saver.classList.add('is-on');
-    sound.hum(true);
     dispatchEvent(new CustomEvent('nyhz:power', { detail: { on: false } })); // the tv goes off too
     dpr = Math.min(devicePixelRatio || 1, 2);
     trail.width = Math.round(saver.clientWidth * dpr);
@@ -831,7 +830,7 @@
     const W = saver.clientWidth, H = saver.clientHeight, w = dvd.offsetWidth, h = dvd.offsetHeight;
     const spot = heroSpot(w, h);
     // lifts off a hair (3%) smaller than the name: anything bigger than it,
-    // painted for the first time, would become the page's LCP (at 15s+)
+    // painted for the first time, would become the page's LCP (at 30s+)
     Object.assign(o, spot ? { x: spot.x, y: spot.y, s: spot.s * 0.97, a: 1 } : { x: (W - w) / 2, y: (H - h) / 2, s: 0, a: 1 }, { sx: 1, sy: 1 });
     if (spot && heroName) heroName.style.visibility = 'hidden';
     vx = 1.7 * (Math.random() < 0.5 ? -1 : 1);
@@ -947,7 +946,6 @@
   function wake() {
     if (!sleeping || waking || !saver || !dvd) return;
     waking = true; moving = false;
-    sound.hum(false);
     html.classList.remove('egg-sleep');
     saver.classList.remove('is-shown');
     gsap.killTweensOf(o);

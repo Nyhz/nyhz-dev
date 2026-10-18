@@ -16,7 +16,6 @@ const changed = () => dispatchEvent(new Event('nyhz:sound')); // toggles repaint
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
-let hum: { stop: () => void } | null = null;
 
 function audio() {
   if (!ctx) {
@@ -74,7 +73,6 @@ export const sound = {
     on = v;
     try { localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* session only */ }
     if (v) { audio(); tone('square', 660, 660, 0.06, 0.05); tone('square', 990, 990, 0.08, 0.05, 0.07); }
-    else this.hum(false);
     changed();
   },
   /** the remote's volume: 0 is off; anything above switches sound on */
@@ -106,34 +104,4 @@ export const sound = {
   die() { if (on) { tone('sawtooth', 420, 55, 0.45, 0.06); noise(0.3, 0.05, 300); } },
   /** the transmission packet */
   send() { if (on) tone('sine', 300, 1600, 0.5, 0.05); },
-  /** the screensaver: a low CRT hum with a little crackle on top */
-  hum(start: boolean) {
-    if (!start || !on) { hum?.stop(); hum = null; return; }
-    const a = audio();
-    if (!a || !master || hum) return;
-    const g = a.createGain();
-    g.gain.setValueAtTime(0.0001, a.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.02, a.currentTime + 1.2);
-    g.connect(master);
-    const os = [60, 120, 15750].map((f, i) => {
-      const o = a.createOscillator();
-      o.frequency.value = f;
-      const og = a.createGain();
-      og.gain.value = [1, 0.5, 0.04][i];
-      o.connect(og).connect(g);
-      o.start();
-      return o;
-    });
-    const crackle = window.setInterval(() => { if (Math.random() < 0.3) noise(0.01, 0.015, 4000); }, 400);
-    hum = {
-      stop() {
-        clearInterval(crackle);
-        const t = a.currentTime;
-        g.gain.cancelScheduledValues(t);
-        g.gain.setValueAtTime(g.gain.value, t);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-        os.forEach((o) => o.stop(t + 0.35));
-      },
-    };
-  },
 };
