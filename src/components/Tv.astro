@@ -295,19 +295,27 @@ const txt: TxtContext = {
   @keyframes spBlink { 50% { opacity: 0; } }
 
   /* ---- teletext ---- */
-  .tv__ttx { position: absolute; inset: 0; z-index: 4; background: #000; overflow: hidden; padding: 0.35em 0.5em; }
+  .tv__ttx { position: absolute; inset: 0; z-index: 4; background: #000; overflow: hidden; }
   .tv__ttx[hidden] { display: none; }
   .tv.is-ttx .tv__l3, .tv.is-ttx .tv__osd { visibility: hidden; }
-  .tv__ttx-in { position: relative; height: 100%; font: 700 var(--ttx, 14px)/1.12 var(--mono); color: #fff; letter-spacing: 0; }
-  .tv__ttx-in :global(.tr) { display: block; min-height: 1.12em; white-space: pre; overflow: hidden; }
-  .tv__ttx-in :global(.tr.dh) { font-size: 1.9em; line-height: 1.18; }
+  /* sized to a 46 × 19 grid with room around it, lit like phosphor */
+  .tv__ttx-in { position: absolute; inset: 1.1em 1.3em; font: 600 var(--ttx, 13px)/1.22 var(--mono); color: #fff;
+    letter-spacing: 0.02em; text-shadow: 0 0 0.4em rgba(255, 255, 255, 0.22); }
+  .tv__ttx-in :global(.tr) { display: block; min-height: 1.22em; white-space: pre; overflow: hidden; }
+  .tv__ttx-in :global(.tr[data-ttx-head]) { margin-bottom: 0.7em; opacity: 0.9; }
+  .tv__ttx-in :global(.tr.dh) { font-size: 1.55em; line-height: 1.15; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 0.35em; }
+  /* a row of mosaic blocks under the double-height titles, in their colour */
+  .tv__ttx-in :global(.tr.dh:not(.bg-b) > span:first-child::after) { content: ''; display: block; height: 0.14em; margin-top: 0.18em; width: 60%;
+    background: repeating-linear-gradient(90deg, currentColor 0 0.42em, transparent 0.42em 0.56em); opacity: 0.55; }
+  .tv__ttx-in :global(.tr.bg-b) { padding: 0.1em 0.4em; margin: 0 -0.4em 0.35em; }
   .tv__ttx-in :global(.tr[data-go]) { cursor: pointer; }
   .tv__ttx-in :global(.tr[data-go]:hover) { background: #0000ff; }
   .tv__ttx-in :global(.k-w) { color: #fff; } .tv__ttx-in :global(.k-y) { color: #ffff00; }
   .tv__ttx-in :global(.k-c) { color: #00ffff; } .tv__ttx-in :global(.k-g) { color: #00ff00; }
   .tv__ttx-in :global(.k-r) { color: #ff3b3b; } .tv__ttx-in :global(.k-m) { color: #ff00ff; }
   .tv__ttx-in :global(.bg-b) { background: #0000ff; }
-  .tv__ttx-in :global(.fast) { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 0.6em; }
+  .tv__ttx-in :global(.fast) { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 0.6em;
+    padding-top: 0.45em; border-top: 1px solid rgba(255, 255, 255, 0.12); }
   .tv__ttx-in :global(.fast span) { flex: 1; cursor: pointer; }
   .tv__ttx-in :global(.fast span:hover) { text-decoration: underline; }
 
@@ -917,7 +925,7 @@ const txt: TxtContext = {
     });
     // fit teletext's 40 columns into whatever size the screen is
     const fitTtx = () => ttxIn.style.setProperty('--ttx',
-      `${Math.max(7, Math.min(glass.clientWidth / (40 * 0.62), glass.clientHeight / (15 * 1.12)))}px`);
+      `${Math.max(6.5, Math.min(glass.clientWidth / (46 * 0.62), glass.clientHeight / (19 * 1.22)))}px`);
     function toggleTtx(force?: boolean) {
       const open = force ?? !root!.classList.contains('is-ttx');
       if (!open) { if (clearOverlays()) restore(); return; }
