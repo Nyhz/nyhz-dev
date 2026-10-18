@@ -48,6 +48,12 @@ const txt: TxtContext = {
         <div class="tv__ttx" data-tv-ttx hidden><div class="tv__ttx-in" data-tv-ttx-in></div></div>
         <p class="tv__vol" data-tv-vol aria-hidden="true"></p>
         <i class="tv__bar" data-tv-bar aria-hidden="true"></i>
+        <!-- the news ticker: what's actually going on (the deploys answering,
+             the last push, the secrets) — filled in and scrolled by the script -->
+        <div data-nosnippet class="tv__news" data-tv-news aria-hidden="true">
+          <span class="tv__news-tag">news</span>
+          <div class="tv__news-run"><div class="tv__news-track" data-tv-news-track></div></div>
+        </div>
       </div>
 
       <!-- phones only: change channels right under the picture -->
@@ -187,8 +193,42 @@ const txt: TxtContext = {
   .tv__big { position: absolute; z-index: 3; top: 50%; left: 50%; translate: -50% -50%; margin: 0; opacity: 0; pointer-events: none;
     font: 700 clamp(2.4rem, 7vw, 4.6rem)/1 var(--mono); letter-spacing: 0.02em; color: #f2f1ea;
     text-shadow: -3px 0 rgba(255, 46, 99, 0.85), 3px 0 rgba(46, 230, 255, 0.85), 0 0 24px rgba(0, 0, 0, 0.8); }
-  .tv__bar { position: absolute; z-index: 3; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--accent);
+  .tv__bar { position: absolute; z-index: 4; left: 0; bottom: var(--news-h); height: 2px; width: 100%; background: var(--accent);
     transform: scaleX(0); transform-origin: left; opacity: 0.8; pointer-events: none; }
+  .tv.is-special .tv__bar { bottom: 0; }
+
+  /* ---- the news ticker, along the bottom of the picture ---- */
+  .tv { --news-h: 1.6rem; }
+  .tv__news { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: var(--news-h); display: flex;
+    background: rgba(6, 6, 6, 0.92); border-top: 1px solid rgba(242, 241, 234, 0.1);
+    font: 500 0.6rem/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: #f2f1ea;
+    transition: opacity 0.3s ease, visibility 0.3s; }
+  /* scanlines, like the rest of the picture */
+  .tv__news::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px); }
+  /* only on a channel: not in standby, the form, teletext or the special channels */
+  .tv.is-off .tv__news, .tv.is-contact .tv__news, .tv.is-ttx .tv__news, .tv.is-special .tv__news { opacity: 0; visibility: hidden; }
+  .tv__news-tag { flex: none; display: flex; align-items: center; gap: 0.5em; padding: 0 0.75rem;
+    background: var(--accent); color: #04140d; font-weight: 700; letter-spacing: 0.2em; }
+  .tv__news-tag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor;
+    animation: newsDot 1.2s steps(1) infinite; }
+  @keyframes newsDot { 50% { opacity: 0.25; } }
+  .tv__news-run { flex: 1; min-width: 0; overflow: hidden; display: flex; align-items: center;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 1.2rem, #000 calc(100% - 1.6rem), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 1.2rem, #000 calc(100% - 1.6rem), transparent); }
+  /* the run is in the track twice: scrolling it by half loops it seamlessly */
+  .tv__news-track { display: flex; flex: none; white-space: nowrap; animation: newsRun var(--news-dur, 40s) linear infinite; }
+  .tv__news-run:hover .tv__news-track,
+  .tv.is-off .tv__news-track, .tv.is-contact .tv__news-track, .tv.is-ttx .tv__news-track, .tv.is-special .tv__news-track { animation-play-state: paused; }
+  @keyframes newsRun { to { transform: translateX(-50%); } }
+  .tv__news-track :global(.ni) { position: relative; display: inline-flex; align-items: center; gap: 0.6em; padding-right: 2.6rem; }
+  .tv__news-track :global(.ni)::after { content: '■'; position: absolute; right: 1.15rem; font-size: 0.5em; color: rgba(242, 241, 234, 0.3); }
+  .tv__news-track :global(.ni[data-tune]) { cursor: pointer; }
+  .tv__news-track :global(.ni[data-tune]:hover .n-k) { color: var(--accent); }
+  .tv__news-track :global(.n-d) { color: rgba(242, 241, 234, 0.58); }
+  .tv__news-track :global(.n-up) { color: var(--accent); }
+  .tv__news-track :global(.n-down) { color: #ff2e63; }
+  .tv__news-track :global(.n-hl) { color: #f5c542; font-weight: 700; }
 
   /* changing channels: the picture rolls and splits */
   .tv__glass.is-roll .tv__img.is-top { animation: tvRoll 0.32s steps(4) 1; }
@@ -200,7 +240,7 @@ const txt: TxtContext = {
   }
 
   /* lower third: over the bottom of the picture */
-  .tv__l3 { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; padding: 2.6rem 1.1rem 0.95rem;
+  .tv__l3 { position: absolute; z-index: 3; left: 0; right: 0; bottom: var(--news-h); padding: 2.6rem 1.1rem 0.95rem;
     background: linear-gradient(transparent, rgba(8, 8, 8, 0.82) 38%, rgba(8, 8, 8, 0.94));
     pointer-events: none; }
   .tv__l3 a { pointer-events: auto; }
@@ -355,6 +395,9 @@ const txt: TxtContext = {
     .tv { display: block; height: auto; }
     .tv__side { display: none; }
     .tv__screen { width: 100%; height: auto; }
+    .tv { --news-h: 1.35rem; }
+    .tv__news { font-size: 0.56rem; }
+    .tv__news-tag { padding: 0 0.55rem; }
     .tv__glass { position: relative; inset: auto; aspect-ratio: 16 / 10; }
     .tv__screen[style*="--tv-gh"] .tv__glass { aspect-ratio: auto; height: var(--tv-gh); } /* squeezed by fitPhone() */
     .tv__l3 { position: static; padding: 0.9rem 0 0; background: none; pointer-events: auto; }
@@ -382,13 +425,18 @@ const txt: TxtContext = {
   @media (prefers-reduced-motion: reduce) {
     .tv__glass.is-roll .tv__img.is-top { animation: none; }
     .tv__chbtn, .tv__btn { transition: none; }
+    .tv__news-track, .tv__news-tag::before { animation: none; } /* one headline at a time instead (script) */
   }
 </style>
 
 <script>
   import { gsap } from 'gsap';
   import { sound } from '../scripts/sound';
-  import { leet } from '../scripts/eggs';
+  import { leet, achievements } from '../scripts/eggs';
+  import { newsItems, newsHTML } from '../scripts/news';
+  import { activity, pings } from '../scripts/feed';
+  import type { Activity } from '../scripts/activity';
+  import type { Ping } from '../scripts/status';
   import { afterLoader } from '../scripts/loaded';
   import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextHTML, esc, TXT_HOME, type TxtContext } from '../scripts/tv';
 
@@ -923,6 +971,72 @@ const txt: TxtContext = {
       else if (c.kind === 'contact') openContact();
       else { closeContact(); lock(null); special(c.kind, c.kind === 'nosignal' ? c.n : 0); }
     }
+    // ---- the news ticker ----
+    // Real headlines (scripts/news.ts) scrolling along the bottom of the
+    // picture. New data never jumps the strip: while it's on screen, changes
+    // wait for the end of the lap, where the loop is back at its start.
+    const news = $('[data-tv-news]');
+    const newsTrack = $('[data-tv-news-track]');
+    const newsRun = newsTrack.parentElement!;
+    const feed: { pings: Ping[] | null; activity: Activity | null } = { pings: null, activity: null };
+    const newsProjects = chans.map((c) => ({
+      slug: c.dataset.slug || '', title: c.dataset.title || '', status: c.dataset.status || '', repo: c.dataset.repo || '',
+    }));
+    const NEWS_SPEED = isPhone() ? 42 : 55; // px per second
+    const headlines = () => newsItems({
+      projects: newsProjects, ...feed, found: achievements().count(), total: achievements().total,
+      location: txtCtx.location, touch: matchMedia('(hover: none)').matches, now: Date.now(),
+    });
+    const newsOnScreen = () => getComputedStyle(news).visibility === 'visible';
+    let newsRz = 0;
+    let newsHtml = '', newsAt = 0;
+    function paintNews() {
+      const items = headlines();
+      if (reduce) { // no scrolling: one headline at a time
+        newsAt %= items.length;
+        newsTrack.innerHTML = newsHTML([items[newsAt]], say);
+        return;
+      }
+      const html = newsHTML(items, say);
+      if (html === newsHtml) return;
+      newsHtml = html;
+      // enough laps of the headlines to fill the strip, then all of it twice
+      newsTrack.innerHTML = html;
+      const lap = newsTrack.scrollWidth || 1;
+      const half = html.repeat(Math.max(1, Math.ceil(newsRun.clientWidth / lap)));
+      newsTrack.innerHTML = half + half;
+      newsTrack.style.setProperty('--news-dur', `${(newsTrack.scrollWidth / 2 / NEWS_SPEED).toFixed(1)}s`);
+      newsTrack.style.animation = 'none'; // restart from the top of the loop
+      void newsTrack.offsetWidth;
+      newsTrack.style.removeProperty('animation');
+    }
+    // new data: straight in while nobody's watching, otherwise at the end of the lap
+    const freshNews = () => { if (reduce || !newsOnScreen()) paintNews(); };
+    newsTrack.addEventListener('animationiteration', paintNews); // also keeps "2h ago" current
+    if (reduce) setInterval(() => { newsAt++; paintNews(); }, 5000);
+    paintNews();
+    // the widths change with the fonts and the window: measure again
+    const remeasure = () => { newsHtml = ''; freshNews(); };
+    document.fonts.ready.then(remeasure);
+    addEventListener('resize', () => { clearTimeout(newsRz); newsRz = window.setTimeout(remeasure, 150); });
+    afterLoader(() => {
+      activity().then((a) => { feed.activity = a; freshNews(); });
+      const poll = () => {
+        if (document.hidden) return;
+        pings().then((p) => { feed.pings = p; freshNews(); });
+      };
+      poll();
+      setInterval(poll, 120_000);
+    });
+    // a secret found, the l33t minute: the headlines change with them
+    addEventListener('nyhz:achieve', () => setTimeout(freshNews));
+    addEventListener('nyhz:leet', () => setTimeout(freshNews, 300));
+    // a headline about a project tunes to it
+    news.addEventListener('click', (e) => {
+      const ch = (e.target as HTMLElement).closest<HTMLElement>('[data-tune]')?.dataset.tune;
+      if (ch !== undefined) tuneNumber(Number(ch) + 1);
+    });
+
     const typing = (e: KeyboardEvent) => !!(e.target as HTMLElement | null)?.closest?.('input, textarea, [contenteditable]')
       || e.metaKey || e.ctrlKey || e.altKey
       || !!document.querySelector('.term.is-open') || document.documentElement.classList.contains('egg-game')

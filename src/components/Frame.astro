@@ -59,16 +59,16 @@
 
 <script>
   import { clockNote } from '../scripts/eggs';
-  import { relTime, type Activity } from '../scripts/activity';
+  import { relTime } from '../scripts/activity';
+  import { activity } from '../scripts/feed';
   import { afterLoader } from '../scripts/loaded';
 
   // last push: fetched once the loader is done (it never competes with the boot)
   const act = document.querySelector<HTMLElement>('[data-activity]');
   if (act) {
     afterLoader(async () => {
-      let a: Activity | null = null;
-      try { a = await (await fetch('/api/activity')).json(); } catch { /* stays hidden */ }
-      if (!a?.repo) return;
+      const a = await activity(); // shared with the tv's ticker
+      if (!a?.repo) return; // no data: stays hidden
       const when = act.querySelector('[data-act-when]');
       const msg = act.querySelector('[data-act-msg]');
       const at = Date.parse(a.at);
