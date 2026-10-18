@@ -407,10 +407,10 @@ const txt: TxtContext = {
     // ---- size: as big as the room allows, always 16:10 ----
     function fit() {
       if (isPhone()) { screen.style.removeProperty('--tv-w'); screen.style.removeProperty('--tv-h'); return; }
-      const side = root.querySelector<HTMLElement>('.tv__side')!;
-      const gap = parseFloat(getComputedStyle(root).columnGap) || 32;
-      const w = root.clientWidth - side.offsetWidth - gap;
-      const h = root.clientHeight - 12;
+      const side = root!.querySelector<HTMLElement>('.tv__side')!;
+      const gap = parseFloat(getComputedStyle(root!).columnGap) || 32;
+      const w = root!.clientWidth - side.offsetWidth - gap;
+      const h = root!.clientHeight - 12;
       const W = Math.max(240, Math.min(w, h * 1.6));
       screen.style.setProperty('--tv-w', `${Math.round(W)}px`);
       screen.style.setProperty('--tv-h', `${Math.round(W / 1.6)}px`);
@@ -563,8 +563,8 @@ const txt: TxtContext = {
     let hops = 0, adT = 0;
     function surf() {
       attract?.kill();
-      if (!on || reduce || locked !== null || hovering || root.classList.contains('is-contact') || root.classList.contains('is-ttx')
-        || (root.classList.contains('is-special') && specialKind !== 'ad')) { gsap.set(bar, { scaleX: 0 }); return; }
+      if (!on || reduce || locked !== null || hovering || root!.classList.contains('is-contact') || root!.classList.contains('is-ttx')
+        || (root!.classList.contains('is-special') && specialKind !== 'ad')) { gsap.set(bar, { scaleX: 0 }); return; }
       attract = gsap.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: ATTRACT, ease: 'none',
         onComplete: () => {
           if (document.hidden) { surf(); return; }

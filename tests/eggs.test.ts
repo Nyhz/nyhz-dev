@@ -96,6 +96,9 @@ describe('certificate', () => {
     expect(h).toMatch(/^[\w-]+$/);
     expect(decodeCert(h)).toEqual(c);
     expect(decodeCert('garbage!!')).toBeNull();
+    // a link made by the first version still opens
+    expect(decodeCert('eyJuIjoiQWRhIExvdmVsYWNlIiwiZiI6MTc5MjAwMTk4ODU2NSwibCI6MTc5MjI3OTIwMDY2OCwiYyI6MTZ9'))
+      .toEqual({ n: 'Ada Lovelace', f: 1792001988565, l: 1792279200668, c: 16 });
   });
   it('has a stable serial and a readable duration', () => {
     expect(serial({ n: 'a', f: 1, l: 2, c: 16 })).toBe(serial({ n: 'a', f: 1, l: 2, c: 16 }));

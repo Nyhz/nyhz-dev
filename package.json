@@ -8,7 +8,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check": "astro check"
   },
   "keywords": [],
   "author": "",
@@ -29,9 +30,11 @@
     "three": "~0.184.0"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@types/node": "^26.0.0",
     "@types/three": "~0.184.1",
     "playwright": "^1.61.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   }
 }

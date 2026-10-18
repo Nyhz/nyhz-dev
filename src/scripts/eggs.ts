@@ -93,11 +93,14 @@ export function konamiStep(progress: number, key: string): number {
 
 /** the certificate's data, shareable as a URL hash (#cert=…) */
 export type Cert = { n: string; f: number; l: number; c: number };
+// UTF-8 bytes → base64url (names can be anything, emoji included)
 export const encodeCert = (c: Cert) =>
-  btoa(unescape(encodeURIComponent(JSON.stringify(c)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(c))))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 export function decodeCert(s: string): Cert | null {
   try {
-    const c = JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/')))));
+    const bytes = Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (ch) => ch.charCodeAt(0));
+    const c = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
     if (typeof c?.f !== 'number' || typeof c?.l !== 'number' || typeof c?.c !== 'number') return null;
     return { n: String(c.n ?? '').slice(0, 32), f: c.f, l: c.l, c: c.c };
   } catch { return null; }
