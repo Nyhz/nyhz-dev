@@ -94,7 +94,8 @@ a { color: inherit; text-decoration: none; }
   .page .lower__track > .preview { position: absolute; top: 0; left: 50%; width: 50%; } /* beats the component's own rules */
 
   /* expanded: header collapsed (GSAP), the list fills the panel. No scroll —
-     it's paged, 4 rows at a time (Projects.astro). The preview panel stays
+     it's paged, 4 rows at a time. (Legacy of the list layout: the tv in
+     Tv.astro doesn't use these.) The preview panel stays
      offscreen in the slider (not display:none) so removing it can't jump the
      lower's height the instant the class is applied. */
   .page.projects-open .lower { min-height: 0; }
