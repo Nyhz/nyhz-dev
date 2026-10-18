@@ -6,3 +6,8 @@ dist/
 .superpowers/
 
 .env
+
+# local agent / skill installer files
+.agents/
+.claude/
+skills-lock.json

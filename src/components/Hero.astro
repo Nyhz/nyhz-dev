@@ -124,27 +124,6 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 </style>
 
 <script>
-  // DEV ONLY — try display faces on the name: ?font=martian | doto | vt323 | space | major | silkscreen | jersey
-  if (import.meta.env.DEV) {
-    const FACES: Record<string, [string, string]> = {
-      martian: ['Martian Mono', 'Martian+Mono:wdth,wght@75..112.5,100..800'],
-      doto: ['Doto', 'Doto:wght@100..900'],
-      vt323: ['VT323', 'VT323'],
-      space: ['Space Mono', 'Space+Mono:wght@700'],
-      major: ['Major Mono Display', 'Major+Mono+Display'],
-      silkscreen: ['Silkscreen', 'Silkscreen:wght@400;700'],
-      jersey: ['Jersey 10', 'Jersey+10'],
-    };
-    const f = FACES[new URLSearchParams(location.search).get('font') || ''];
-    if (f) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = `https://fonts.googleapis.com/css2?family=${f[1]}&display=swap`;
-      document.head.append(link);
-      document.querySelectorAll<HTMLElement>('.hero-name, .loader__center').forEach((n) => { n.style.fontFamily = `"${f[0]}", monospace`; });
-    }
-  }
-
   const el = document.querySelector<HTMLElement>('.hero-name');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (el && !reduce) {
