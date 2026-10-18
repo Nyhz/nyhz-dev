@@ -338,8 +338,9 @@ const txt: TxtContext = {
     .tv__side { display: none; }
     .tv__screen { width: 100%; height: auto; }
     .tv__glass { position: relative; inset: auto; aspect-ratio: 16 / 10; }
+    .tv__screen[style*="--tv-gh"] .tv__glass { aspect-ratio: auto; height: var(--tv-gh); } /* squeezed by fitPhone() */
     .tv__l3 { position: static; padding: 0.9rem 0 0; background: none; pointer-events: auto; }
-    .tv__desc { max-height: calc(1.6em * 3); min-height: calc(1.6em * 3); } /* steady height across channels */
+    .tv__desc { max-height: calc(1.6em * 3); min-height: calc(1.6em * 3); margin-bottom: 0.95rem; } /* steady height across channels */
     .tv__meta { min-height: 2.05rem; } /* the link buttons' height, even in standby */
     .tv__nav { display: flex; align-items: center; justify-content: space-between; margin-top: 0.7rem;
       font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
@@ -355,7 +356,8 @@ const txt: TxtContext = {
       background: linear-gradient(90deg, transparent, var(--bg) 1.2rem); border: 0; cursor: pointer;
       font: 500 0.7rem/1.6 var(--mono); color: var(--accent); }
     .tv__contact { position: static; inset: auto; padding: 0.9rem 0 0; background: none; }
-    .tv.is-contact .tv__glass { aspect-ratio: auto; height: 3.2rem; }
+    .tv.is-contact .tv__screen { display: flex; flex-direction: column; }
+    .tv.is-contact .tv__glass { aspect-ratio: auto; height: auto; flex: 1 1 3.2rem; min-height: 3.2rem; }
   }
   @media (max-width: 720px) and (max-height: 700px) { .tv__desc { max-height: calc(1.6em * 2); min-height: calc(1.6em * 2); } }
 
@@ -406,7 +408,8 @@ const txt: TxtContext = {
 
     // ---- size: as big as the room allows, always 16:10 ----
     function fit() {
-      if (isPhone()) { screen.style.removeProperty('--tv-w'); screen.style.removeProperty('--tv-h'); return; }
+      if (isPhone()) { screen.style.removeProperty('--tv-w'); screen.style.removeProperty('--tv-h'); fitPhone(); return; }
+      screen.style.removeProperty('--tv-gh');
       const side = root!.querySelector<HTMLElement>('.tv__side')!;
       const gap = parseFloat(getComputedStyle(root!).columnGap) || 32;
       const w = root!.clientWidth - side.offsetWidth - gap;
@@ -414,6 +417,26 @@ const txt: TxtContext = {
       const W = Math.max(240, Math.min(w, h * 1.6));
       screen.style.setProperty('--tv-w', `${Math.round(W)}px`);
       screen.style.setProperty('--tv-h', `${Math.round(W / 1.6)}px`);
+    }
+    // phones stack everything in one column: when it's taller than the screen
+    // (short phones, a browser's toolbars), the picture gives up height — down
+    // to a 2.5:1 crop — so the links never run into the frame
+    function fitPhone() {
+      if (root!.classList.contains('is-contact')) return; // the form changes the stack; keep the last fit
+      const page = root!.closest<HTMLElement>('.page');
+      if (!page) return;
+      screen.style.removeProperty('--tv-gh');
+      const cs = getComputedStyle(page);
+      const room = page.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const used = Array.from(page.children).reduce((sum, el) => {
+        if (el.classList.contains('spacer')) return sum;
+        const m = getComputedStyle(el);
+        return sum + (el as HTMLElement).offsetHeight + parseFloat(m.marginTop) + parseFloat(m.marginBottom);
+      }, 0);
+      const over = used - room;
+      if (over <= 0) return;
+      const w = glass.clientWidth;
+      screen.style.setProperty('--tv-gh', `${Math.round(Math.max(w / 2.5, w / 1.6 - over))}px`);
     }
     fit();
     let fitT = 0;
@@ -656,6 +679,9 @@ const txt: TxtContext = {
       if (root!.classList.contains('is-contact')) return;
       readBox.hidden = true;
       clearOverlays();
+      // phones: the form takes the details' place at the same height (the
+      // static fills what's left), so nothing above it moves
+      if (isPhone()) screen.style.height = `${screen.offsetHeight}px`;
       root!.classList.add('is-contact');
       contact.hidden = false;
       chEl.textContent = 'CH 00';
@@ -687,6 +713,7 @@ const txt: TxtContext = {
     function closeContact() {
       if (!root!.classList.contains('is-contact')) return;
       clearForm();
+      screen.style.removeProperty('height');
       root!.classList.remove('is-contact');
       contact.hidden = true;
       avail?.setAttribute('aria-expanded', 'false');

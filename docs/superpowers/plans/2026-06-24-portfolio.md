@@ -290,8 +290,6 @@ location: somewhere on earth
 socials:
   - label: github
     url: https://github.com/nyhz
-  - label: linkedin
-    url: https://linkedin.com/
 ```
 
 `src/content/projects/sample-one.yaml`:
