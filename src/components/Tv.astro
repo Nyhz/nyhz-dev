@@ -673,8 +673,20 @@ const txt: TxtContext = {
       } else gsap.set(fields, { opacity: 1, y: 0 });
       if (!isPhone()) setTimeout(() => contact.querySelector<HTMLElement>('input')?.focus({ preventScroll: true }), reduce ? 0 : 300);
     }
+    // leaving CH 00 (any way out) wipes the form: next time it's blank
+    function clearForm() {
+      const form = contact.querySelector<HTMLFormElement>('form');
+      if (!form) return;
+      form.reset();
+      form.classList.remove('is-tx');
+      form.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+      const status = form.querySelector<HTMLElement>('[data-contact-status]');
+      if (status) { status.textContent = ''; status.removeAttribute('data-state'); }
+    }
+
     function closeContact() {
       if (!root!.classList.contains('is-contact')) return;
+      clearForm();
       root!.classList.remove('is-contact');
       contact.hidden = true;
       avail?.setAttribute('aria-expanded', 'false');
