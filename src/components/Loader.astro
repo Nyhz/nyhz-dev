@@ -65,11 +65,13 @@ const { name, tagline = 'creative developer' } = Astro.props;
   /* each line is typed out (width clipped char-by-char); the typing line shows a caret */
   /* content-box so the typed width is the text width — the caret border sits
      OUTSIDE it (border-box would eat the last glyph) */
-  .loader__log div { width: 0; box-sizing: content-box; overflow: hidden; white-space: nowrap;
+  /* :global — the welcome-back and panic-recovery lines are created in JS, so
+     they don't carry the scope attribute */
+  .loader__log :global(div) { width: 0; box-sizing: content-box; overflow: hidden; white-space: nowrap;
     border-right: 0.5em solid transparent; }
-  .loader__log div.typing { animation: lblink 0.8s steps(1) infinite; }
-  .loader__log .hx { color: #4a4a44; }
-  .loader__log .ok { color: var(--accent); }
+  .loader__log :global(div.typing) { animation: lblink 0.8s steps(1) infinite; }
+  .loader__log :global(.hx) { color: #4a4a44; }
+  .loader__log :global(.ok) { color: var(--accent); }
   .loader__log.out { opacity: 0; }
   /* micro-glitch flicker on the log while loading */
   .loader.flick .loader__log { transform: translateX(-2px); text-shadow: -1px 0 #ff2e63, 1px 0 #2ee6ff; }
