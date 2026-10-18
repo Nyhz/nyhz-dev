@@ -79,7 +79,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
     opacity: 0; transition: opacity 0.3s ease; }
   .loader__name.in { opacity: 1; }
   /* matches .hero-name exactly so the fly-to-hero handoff is seamless */
-  .loader__center { width: 4ch; font: 700 var(--name-size)/1 var(--mono); letter-spacing: -0.02em; }
+  .loader__center { width: 4ch; font: 700 var(--name-size)/1 var(--name-font); letter-spacing: -0.02em; }
   .loader__type { position: relative; display: block; width: 0; overflow: hidden; white-space: nowrap;
     border-right: 0.07em solid var(--accent); animation: lblink 0.8s steps(1) infinite; }
   .loader__type.typed { overflow: visible; } /* let glitch/shatter spill out once written */

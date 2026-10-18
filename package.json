@@ -18,6 +18,7 @@
     "@astrojs/react": "^6.0.0",
     "@astrojs/sitemap": "^3.7.3",
     "@astrojs/vercel": "^11.0.0",
+    "@fontsource-variable/doto": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@keystatic/astro": "^5.1.0",
     "@keystatic/core": "~0.5.50",

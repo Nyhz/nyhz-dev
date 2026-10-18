@@ -140,7 +140,7 @@
   .egg-saver { position: fixed; inset: clamp(14px, 1.6vw, 26px); z-index: 150; display: none; overflow: hidden; }
   .egg-saver.is-on { display: block; }
   .egg-trail { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .egg-dvd { position: absolute; left: 0; top: 0; font: 700 clamp(2.2rem, 6vw, 4.5rem)/1 var(--mono);
+  .egg-dvd { position: absolute; left: 0; top: 0; font: 700 clamp(2.2rem, 6vw, 4.5rem)/1 var(--name-font);
     letter-spacing: -0.02em; white-space: nowrap; color: var(--fg); transform-origin: 50% 50%;
     will-change: transform; transition: color 0.25s; text-shadow: 0 0 28px rgba(255, 255, 255, 0.1); }
   .egg-dvd.is-glitch { text-shadow: -3px 0 #ff2e63, 3px 0 #2ee6ff; }
@@ -755,7 +755,7 @@
     if (!c) {
       c = document.createElement('canvas');
       const x = c.getContext('2d')!;
-      const font = `700 ${fs}px "Geist Mono Variable", ui-monospace, monospace`;
+      const font = `700 ${fs}px "Doto Variable", "Geist Mono Variable", monospace`;
       x.font = font;
       c.width = Math.ceil(x.measureText(NAME).width + fs * 0.2);
       c.height = Math.ceil(fs * 1.2);

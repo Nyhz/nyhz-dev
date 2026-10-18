@@ -41,7 +41,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
   .hero-foot { display: flex; align-items: center; justify-content: space-between;
     gap: 1rem 1.4rem; flex-wrap: wrap; }
   .hero-name {
-    position: relative; font-size: var(--name-size); font-weight: 700;
+    position: relative; font-family: var(--name-font); font-size: var(--name-size); font-weight: 700;
     letter-spacing: -0.02em; line-height: 0.95; width: max-content; max-width: 100%;
     padding-bottom: 0.06em; transition: font-size 0.6s cubic-bezier(.4,0,.2,1);
     /* it gets poked (the gravity egg): repeated clicks mustn't select it */
@@ -49,7 +49,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
   }
   /* each letter's weight is driven by the pointer (variable font; mono advance
      widths don't change with weight, so nothing reflows) */
-  .hero-name .ch { font-weight: var(--w, 700); }
+  .hero-name .ch { font-weight: var(--w, 700); font-variation-settings: "ROND" var(--r, 0); }
   /* Chromatic glitch (same vibe as the loader) on duplicated colour layers,
      so the real name is never clipped. */
   .hero-name::before, .hero-name::after {
@@ -124,6 +124,27 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 </style>
 
 <script>
+  // DEV ONLY — try display faces on the name: ?font=martian | doto | vt323 | space | major | silkscreen | jersey
+  if (import.meta.env.DEV) {
+    const FACES: Record<string, [string, string]> = {
+      martian: ['Martian Mono', 'Martian+Mono:wdth,wght@75..112.5,100..800'],
+      doto: ['Doto', 'Doto:wght@100..900'],
+      vt323: ['VT323', 'VT323'],
+      space: ['Space Mono', 'Space+Mono:wght@700'],
+      major: ['Major Mono Display', 'Major+Mono+Display'],
+      silkscreen: ['Silkscreen', 'Silkscreen:wght@400;700'],
+      jersey: ['Jersey 10', 'Jersey+10'],
+    };
+    const f = FACES[new URLSearchParams(location.search).get('font') || ''];
+    if (f) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${f[1]}&display=swap`;
+      document.head.append(link);
+      document.querySelectorAll<HTMLElement>('.hero-name, .loader__center').forEach((n) => { n.style.fontFamily = `"${f[0]}", monospace`; });
+    }
+  }
+
   const el = document.querySelector<HTMLElement>('.hero-name');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (el && !reduce) {
@@ -142,8 +163,9 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
       [0, 480, 960].forEach((d) => setTimeout(glitch, d));
     });
 
-    // Pointer proximity thins the letters: each glyph eases from 700 toward
-    // 180 as the cursor nears it. Runs only while something is still moving.
+    // Pointer proximity: each glyph eases from 700 toward 180 as the cursor
+    // nears it — in the dot-matrix face the dots shrink and turn round (ROND).
+    // Runs only while something is still moving.
     if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
       const chars = Array.from(el.querySelectorAll<HTMLElement>('.ch'));
       const cur = chars.map(() => 700);
@@ -155,6 +177,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
           cur[i] += (want[i] - cur[i]) * 0.14;
           if (Math.abs(want[i] - cur[i]) > 0.5) moving = true; else cur[i] = want[i];
           c.style.setProperty('--w', cur[i].toFixed(0));
+          c.style.setProperty('--r', (((700 - cur[i]) / 520) * 100).toFixed(0)); // smaller dots go round
         });
         raf = moving ? requestAnimationFrame(tick) : 0;
       };

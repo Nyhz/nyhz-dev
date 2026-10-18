@@ -13,6 +13,7 @@
      hero name can interpolate its weight. */
   --font: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
   --mono: var(--font);
+  --name-font: "Doto Variable", var(--mono);
   --sans: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   /* the hero wordmark — shared with the loader so the fly-to-hero handoff is 1:1 */
   --name-size: clamp(3.2rem, min(9.5vw, 15vh), 7rem);

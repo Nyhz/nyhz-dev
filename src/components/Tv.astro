@@ -446,7 +446,7 @@ const txt: TxtContext = {
       yearEl.textContent = '';
       descEl.textContent = isPhone()
         ? `${chans.length} channels of things I've built — swipe the screen or tap ▶ to tune in.`
-        : `${chans.length} channels of things I've built — hover one to tune in.`;
+        : `${chans.length} channels of things I've built — pick one to tune in.`;
       descEl.classList.add('is-whole');
       moreBtn.hidden = true;
       stackEl.textContent = '';
@@ -579,27 +579,32 @@ const txt: TxtContext = {
 
     // desktop: hover previews, click locks (click the locked one again to let it surf)
     chans.forEach((c, i) => {
-      c.addEventListener('pointerenter', (e) => {
-        if (e.pointerType !== 'mouse') return;
-        sound.tick();
+      // hovering only highlights the row (a diagonal pass over the list used to
+      // change channels by accident); a click tunes in and holds the channel —
+      // click it again to let the set go back to surfing
+      c.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') sound.tick(); });
+      c.addEventListener('click', () => {
+        closeContact();
+        const again = locked === i && on && shown === i;
         powerOn(i);
+        lock(again ? null : i);
       });
-      c.addEventListener('focus', () => powerOn(i));
-      c.addEventListener('click', () => { closeContact(); powerOn(i); lock(locked === i ? null : i); });
     });
     const list = $('[data-tv-list]');
     list.addEventListener('pointerenter', () => { hovering = true; surf(); });
     list.addEventListener('pointerleave', () => {
       hovering = false;
-      if (locked !== null) tune(locked);
       surf();
     });
     // ↑ ↓ walk the channels from the list
     list.addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
       e.preventDefault();
-      const k = (shown + (e.key === 'ArrowDown' ? 1 : -1) + chans.length) % chans.length;
+      const k = (Math.max(0, shown) + (shown < 0 ? 0 : e.key === 'ArrowDown' ? 1 : -1) + chans.length) % chans.length;
       chans[k].focus();
+      closeContact();
+      powerOn(k);
+      lock(k);
     });
 
     // phones: ◀ ▶ and a swipe on the screen; picking a channel locks it
