@@ -78,6 +78,7 @@ export function findProject(ctx: TermContext, query: string) {
   const n = Number(q);
   if (Number.isInteger(n) && n >= 1 && n <= ctx.projects.length) return ctx.projects[n - 1];
   const s = slugify(q);
+  if (!s) return undefined; // only punctuation: '' would prefix-match the first project
   return ctx.projects.find((p) => p.slug === s || slugify(p.title) === s)
     ?? ctx.projects.find((p) => p.slug.startsWith(s) || slugify(p.title).startsWith(s));
 }

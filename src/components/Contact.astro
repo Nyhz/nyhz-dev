@@ -79,7 +79,7 @@
   // Sending is a transmission: the fields encode to hex, and a packet of light
   // leaves the send button, runs to the frame's edge and along it into the
   // bottom-right corner, which lights up as it lands.
-  function transmit(fields: (HTMLInputElement | HTMLTextAreaElement)[], from: DOMRect) {
+  function transmit(fields: (HTMLInputElement | HTMLTextAreaElement)[], from: DOMRect, alive: () => boolean) {
     return new Promise<void>((done) => {
       if (reduce) { done(); return; }
       fields.forEach((f) => {
@@ -87,6 +87,7 @@
         const o = { n: 0 };
         // left to right, characters give way to their bytes
         gsap.to(o, { n: hex.length, duration: 0.6, ease: 'none', onUpdate: () => {
+          if (!alive()) return; // the form was closed (and wiped) mid-send
           const k = Math.round(o.n);
           f.value = hex.slice(0, k) + text.slice(Math.ceil(k / 3));
         } });
@@ -144,9 +145,14 @@
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); form.requestSubmit(); }
     });
     form.addEventListener('input', () => { flag(null); if (status.dataset.state === 'error') setStatus('', ''); });
+    // every reset (sent, or the tv leaving CH 00) starts a new form: a reply
+    // that comes back after it belongs to the old one and is dropped
+    let gen = 0;
+    form.addEventListener('reset', () => { gen++; });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (sendBtn.disabled) return; // ⌘↵ held down: requestSubmit() ignores the disabled button
       const data = Object.fromEntries(new FormData(form).entries());
       // same rules as the API — catch the obvious ones without a round trip
       const v = validateContact(data);
@@ -162,11 +168,14 @@
       const typed = fields.map((f) => f.value);
       form.classList.add('is-tx');
       const restore = () => { form.classList.remove('is-tx'); fields.forEach((f, i) => { f.value = typed[i]; }); };
-      const flight = transmit(fields, sendBtn.getBoundingClientRect());
+      const g = gen;
+      const alive = () => g === gen;
+      const flight = transmit(fields, sendBtn.getBoundingClientRect(), alive);
       try {
         const res = await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
         const out = await res.json().catch(() => ({}));
         await flight;
+        if (!alive()) { sendBtn.disabled = false; return; }
         if (res.ok) {
           form.classList.remove('is-tx');
           form.reset();
@@ -177,6 +186,7 @@
         }
       } catch {
         await flight;
+        if (!alive()) { sendBtn.disabled = false; return; }
         restore();
         setStatus('network error — try again', 'error');
       }

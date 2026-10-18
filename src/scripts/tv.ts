@@ -127,3 +127,15 @@ export function teletextPage(n: number, ctx: TxtContext): Row[] | null {
       return null;
   }
 }
+
+export const esc = (t: string) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+
+/** a page as the screen's markup (rows + the fastext bar); its text comes from the CMS, so it's escaped */
+export function teletextHTML(n: number, ctx: TxtContext): string {
+  const rows = teletextPage(n, ctx);
+  const body = rows
+    ? rows.map((r) => `<span class="tr${r.dh ? ' dh' : ''}${r.bg ? ` bg-${r.bg}` : ''}"${r.link ? ` data-go="p${r.link}"` : r.ch !== undefined ? ` data-go="c${r.ch}"` : ''}>${r.segs.map(([c, t]) => `<span class="k-${c}">${esc(t)}</span>`).join('')}</span>`).join('')
+    : `<span class="tr"> </span><span class="tr k-r"> PAGE ${n} NOT FOUND</span><span class="tr k-w"> nothing on this page. try 100.</span><span class="tr" data-go="p100"><span class="k-y"> 100 </span><span class="k-w">index</span></span>`;
+  const fast = `<div class="fast">${FASTEXT.map(([c, t, p]) => `<span class="k-${c}" data-go="p${p}">${t}</span>`).join('')}</div>`;
+  return body + fast;
+}

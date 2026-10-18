@@ -23,7 +23,8 @@ export function validateContact(input: unknown): Validated {
 
   if (!name) return { ok: false, error: 'name is required' };
   if (name.length > 100) return { ok: false, error: 'name is too long' };
-  if (!EMAIL.test(email)) return { ok: false, error: 'a valid email is required' };
+  // the length cap first: the regex backtracks quadratically on long input
+  if (email.length > 254 || !EMAIL.test(email)) return { ok: false, error: 'a valid email is required' };
   if (!message) return { ok: false, error: 'message is required' };
   if (message.length > 5000) return { ok: false, error: 'message is too long' };
 

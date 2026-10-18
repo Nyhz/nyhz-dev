@@ -9,6 +9,11 @@ const json = (data: unknown, status: number) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 
 export const POST: APIRoute = async ({ request }) => {
+  // browsers posting from another site get turned away (scripts can fake the
+  // header — the real limit is the firewall's rate rule on this route)
+  const origin = request.headers.get('origin');
+  if (origin && origin !== new URL(request.url).origin) return json({ error: 'forbidden' }, 403);
+
   let body: unknown;
   try {
     body = await request.json();

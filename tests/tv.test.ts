@@ -1,6 +1,6 @@
 // tests/tv.test.ts
 import { describe, it, expect } from 'vitest';
-import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextPage, type TxtContext } from '../src/scripts/tv';
+import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextPage, teletextHTML, type TxtContext } from '../src/scripts/tv';
 
 const ctx: TxtContext = {
   name: 'nyhz', role: 'creative developer', location: 'somewhere on earth',
@@ -46,5 +46,18 @@ describe('teletext', () => {
   });
   it('has no page 555', () => {
     expect(teletextPage(555, ctx)).toBeNull();
+  });
+});
+
+describe('teletext markup', () => {
+  it('escapes text from the CMS', () => {
+    const html = teletextHTML(103, { ...ctx, projects: [{ title: '<img src=x onerror=alert(1)>', status: 'live' }] });
+    expect(html).not.toContain('<img');
+    expect(html).toContain('&lt;img src=x');
+  });
+  it('links rows to pages and channels, and always has the fastext bar', () => {
+    expect(teletextHTML(100, ctx)).toContain('data-go="p101"');
+    expect(teletextHTML(103, ctx)).toContain('data-go="c1"');
+    expect(teletextHTML(555, ctx)).toMatch(/PAGE 555 NOT FOUND.*class="fast"/);
   });
 });

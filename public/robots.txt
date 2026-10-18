@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /keystatic
 Disallow: /api/
 
 Sitemap: https://www.nyhz.dev/sitemap-index.xml

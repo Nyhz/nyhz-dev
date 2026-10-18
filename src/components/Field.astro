@@ -5,10 +5,9 @@
   import { createGrain } from '../scripts/grain';
   const canvas = document.querySelector('canvas.field-canvas') as HTMLCanvasElement | null;
   if (canvas) {
-    const ok = (() => { try { return !!document.createElement('canvas').getContext('webgl'); } catch { return false; } })();
-    if (!ok) { canvas.style.display = 'none'; }
+    const grain = (() => { try { return createGrain(canvas); } catch { return null; } })();
+    if (!grain) { canvas.style.display = 'none'; }
     else {
-      const grain = createGrain(canvas);
       grain.start();
       // the terminal's `glitch` command (and the name's own glitch) send a
       // shockwave out from the wordmark

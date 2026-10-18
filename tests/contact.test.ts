@@ -20,6 +20,14 @@ describe('validateContact', () => {
   it('rejects a missing name', () => {
     expect(validateContact({ ...valid, name: '   ' })).toEqual({ ok: false, error: 'name is required' });
   });
+  it('rejects an over-long email before the regex sees it', () => {
+    const t = performance.now();
+    const r = validateContact({ ...valid, email: 'a@' + '.'.repeat(40_000) + '@' });
+    expect(r).toEqual({ ok: false, error: 'a valid email is required' });
+    expect(performance.now() - t).toBeLessThan(50);
+    expect(validateContact({ ...valid, email: `${'a'.repeat(250)}@x.io` }).ok).toBe(false);
+  });
+
   it('rejects an invalid email', () => {
     expect(validateContact({ ...valid, email: 'nope' })).toEqual({ ok: false, error: 'a valid email is required' });
   });

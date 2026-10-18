@@ -10,19 +10,19 @@
 //   …and more (see EGGS in scripts/eggs.ts). Desktop gets a counter by the
 //   clock once the first one is found, with a hint for each one left.
 ---
-<div class="egg-toast" data-egg-toast role="status" aria-live="polite" hidden>
+<div data-nosnippet class="egg-toast" data-egg-toast role="status" aria-live="polite" hidden>
   <i class="egg-toast__gem" aria-hidden="true">◆</i>
   <span class="egg-toast__k" data-egg-k></span>
   <span class="egg-toast__t" data-egg-t></span>
   <span class="egg-toast__n" data-egg-n></span>
 </div>
-<button class="snd" type="button" data-sound aria-pressed="false">
+<button data-nosnippet class="snd" type="button" data-sound aria-pressed="false">
   <span class="snd__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span data-sound-label>sound off</span>
 </button>
-<button class="eggs-btn" type="button" data-eggs-btn hidden aria-expanded="false" aria-controls="eggs-panel">
+<button data-nosnippet class="eggs-btn" type="button" data-eggs-btn hidden aria-expanded="false" aria-controls="eggs-panel">
   <i aria-hidden="true">◆</i> <span data-eggs-n>0</span>/<span data-eggs-total>0</span>
 </button>
-<section class="eggs-panel" id="eggs-panel" data-eggs-panel aria-label="achievements" hidden>
+<section data-nosnippet class="eggs-panel" id="eggs-panel" data-eggs-panel aria-label="achievements" hidden>
   <i class="eggs-tick tl"></i><i class="eggs-tick tr"></i><i class="eggs-tick bl"></i><i class="eggs-tick br"></i>
   <header class="eggs-panel__head">achievements <span data-eggs-score></span></header>
   <ul class="eggs-panel__list" data-eggs-list></ul>
@@ -30,7 +30,7 @@
 </section>
 <canvas class="egg-rain" data-egg-rain aria-hidden="true"></canvas>
 <div class="egg-veil" aria-hidden="true"></div>
-<div class="egg-panic" data-egg-panic aria-hidden="true" hidden>
+<div data-nosnippet class="egg-panic" data-egg-panic aria-hidden="true" hidden>
   <div class="egg-panic__in">
     <pre data-egg-panic-text></pre>
     <div class="bsod" data-egg-bsod hidden>
@@ -45,7 +45,7 @@
     </div>
   </div>
 </div>
-<div class="egg-saver" data-egg-saver aria-hidden="true">
+<div data-nosnippet class="egg-saver" data-egg-saver aria-hidden="true">
   <canvas class="egg-trail" data-egg-trail></canvas>
   <span class="egg-dvd" data-egg-dvd>nyhz</span>
   <div class="egg-hud"><span class="egg-hud__rec">sleep mode</span><span data-egg-idle>idle 00:15</span><span class="egg-hud__c" data-egg-corners></span></div>
@@ -210,6 +210,7 @@
   import { gsap } from 'gsap';
   import { achievements, isEgg, isBonus, konamiStep, KONAMI, EGGS, REQUIRED, leet } from '../scripts/eggs';
   import { sound } from '../scripts/sound';
+  import { afterLoader } from '../scripts/loaded';
 
   const html = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -240,7 +241,7 @@
   const queue: [string, string, string][] = [];
   let ready = false, showing = false;
   const go = () => { if (!ready) { ready = true; flush(); } };
-  addEventListener('loaderdone', () => setTimeout(go, 1400), { once: true });
+  afterLoader(() => setTimeout(go, 1400));
   setTimeout(go, 9000);
 
   function flush() {
@@ -588,10 +589,10 @@
   let panicked = false;
   try { panicked = !!sessionStorage.getItem(PANIC); } catch { /* no */ }
   if (panicked) {
-    addEventListener('loaderdone', () => {
+    afterLoader(() => {
       try { sessionStorage.removeItem(PANIC); } catch { /* no */ }
       achieve('panic');
-    }, { once: true });
+    });
   }
 
   // ---------- overheat: whip the mouse around for a couple of seconds ----------
@@ -726,7 +727,8 @@
   let idleT = 0, sleeping = false, waking = false, moving = false, raf = 0;
   const busy = () => document.hidden || falling || raining || html.classList.contains('egg-game')
     || !!document.activeElement?.closest('input, textarea')
-    || !!document.querySelector('.term.is-open');
+    || !!document.querySelector('.term.is-open')
+    || !!document.querySelector('.tv.is-contact'); // sleeping powers the tv off, which would wipe a draft
   const arm = () => { clearTimeout(idleT); idleT = window.setTimeout(sleep, IDLE); };
 
   // the logo: top-left of its unscaled box (saver coords), scale, squash, opacity
@@ -828,7 +830,9 @@
     // size and sets off — so it's the name itself that leaves
     const W = saver.clientWidth, H = saver.clientHeight, w = dvd.offsetWidth, h = dvd.offsetHeight;
     const spot = heroSpot(w, h);
-    Object.assign(o, spot ? { x: spot.x, y: spot.y, s: spot.s, a: 1 } : { x: (W - w) / 2, y: (H - h) / 2, s: 0, a: 1 }, { sx: 1, sy: 1 });
+    // lifts off a hair (3%) smaller than the name: anything bigger than it,
+    // painted for the first time, would become the page's LCP (at 15s+)
+    Object.assign(o, spot ? { x: spot.x, y: spot.y, s: spot.s * 0.97, a: 1 } : { x: (W - w) / 2, y: (H - h) / 2, s: 0, a: 1 }, { sx: 1, sy: 1 });
     if (spot && heroName) heroName.style.visibility = 'hidden';
     vx = 1.7 * (Math.random() < 0.5 ? -1 : 1);
     vy = 1.3 * (Math.random() < 0.5 ? -1 : 1);
@@ -965,5 +969,5 @@
 
   ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((ev) =>
     addEventListener(ev, () => { wake(); arm(); }, { passive: true }));
-  addEventListener('loaderdone', arm, { once: true });
+  afterLoader(arm);
 </script>

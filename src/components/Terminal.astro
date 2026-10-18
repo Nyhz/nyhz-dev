@@ -16,7 +16,7 @@ const ctx: TermContext = {
   socials: profile.socials,
 };
 ---
-<div class="term" data-term data-ctx={JSON.stringify(ctx)}>
+<div data-nosnippet class="term" data-term data-ctx={JSON.stringify(ctx)}>
   <section class="term__win" data-term-win aria-label="terminal" hidden>
     <i class="term__tick tl"></i><i class="term__tick tr"></i><i class="term__tick bl"></i><i class="term__tick br"></i>
     <header class="term__bar">
@@ -223,6 +223,8 @@ const ctx: TermContext = {
     // california line, and coming back within seconds finishes it
     let exits = 0, lyricAt = 0;
     let train = false;    // sl: you wait for it to pass
+    let trainTw: gsap.core.Tween | null = null;
+    let session = 0;      // bumped on close: late replies from an earlier session are dropped
     let ssh: { target: string; n: number } | null = null;
     const prompt = () => (vim ? ':' : ssh ? '*' : isRoot ? '#' : '›');
     const chrome = () => {
@@ -257,6 +259,8 @@ const ctx: TermContext = {
 
     const close = () => {
       if (!root.classList.contains('is-open')) return;
+      session++;
+      trainTw?.kill(); trainTw = null; train = false;
       ssh = null;
       setVim(false);
       exits = 0;
@@ -375,11 +379,13 @@ const ctx: TermContext = {
           else printRes([`locked — ${a.count()}/${a.total} found. keep looking.`]);
           break;
         }
-        case 'status':
+        case 'status': {
+          const s = session;
           fetch('/api/status').then((r) => r.json()).then((pings: Ping[]) => {
-            printRes(pings.length ? pings.map(statusLine) : ['nothing live to ping.']);
-          }).catch(() => printRes(['status: network unreachable']));
+            if (s === session) printRes(pings.length ? pings.map(statusLine) : ['nothing live to ping.']);
+          }).catch(() => { if (s === session) printRes(['status: network unreachable']); });
           break;
+        }
         case 'snake': setTimeout(() => { close(); dispatchEvent(new Event('nyhz:snake')); }, 350); break;
         case 'clear': out.replaceChildren(); break;
         case 'exit':
@@ -419,8 +425,8 @@ const ctx: TermContext = {
             const w = pre.offsetWidth;
             box.style.height = `${pre.offsetHeight}px`;
             toEnd();
-            gsap.fromTo(pre, { x: W }, { x: -w, duration: reduce ? 0.01 : (W + w) / 260, ease: 'none',
-              onComplete: () => { box.remove(); train = false; printRes(['choo choo. (you meant ls)']); } });
+            trainTw = gsap.fromTo(pre, { x: W }, { x: -w, duration: reduce ? 0.01 : (W + w) / 260, ease: 'none',
+              onComplete: () => { box.remove(); train = false; trainTw = null; printRes(['choo choo. (you meant ls)']); } });
           });
           break;
         }

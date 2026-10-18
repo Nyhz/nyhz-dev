@@ -1,7 +1,7 @@
 ---
 const { name, tagline = 'creative developer' } = Astro.props;
 ---
-<div class="loader" data-loader data-name={name} data-tagline={tagline}>
+<div data-nosnippet class="loader" data-loader data-name={name} data-tagline={tagline}>
   <div class="loader__frame" aria-hidden="true">
     <span class="ltk tl"></span><span class="ltk tr"></span>
     <span class="ltk bl"></span><span class="ltk br"></span>
@@ -25,7 +25,6 @@ const { name, tagline = 'creative developer' } = Astro.props;
       </div>
     </div>
 
-    <h1 class="loader__sr" aria-label={name}>{name}</h1>
 
     <div class="loader__counter"><span data-count>000</span><i>%</i></div>
     <div class="loader__bar-wrap"><span class="loader__bar" data-bar></span></div>
@@ -40,7 +39,6 @@ const { name, tagline = 'creative developer' } = Astro.props;
     background: #0a0a0a; color: #f1efe9;
     --accent: #3ad29f;
   }
-  .loader__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
   .loader__frame { position: absolute; inset: clamp(14px, 1.6vw, 26px); border: 1px solid #2b2b27; z-index: 3; }
   .ltk { position: absolute; width: 9px; height: 9px; border: 1px solid #f1efe9; }
@@ -82,7 +80,12 @@ const { name, tagline = 'creative developer' } = Astro.props;
   .loader__name.in { opacity: 1; }
   /* matches .hero-name exactly so the fly-to-hero handoff is seamless */
   .loader__center { width: 4ch; font: 700 var(--name-size)/1 var(--name-font); letter-spacing: -0.02em; }
+  /* 3% under the hero name's size: the hero name paints first (~0.4s) and is
+     the page's LCP; a loader name even a pixel bigger would take the LCP over
+     at the end of the boot (~3.7s). The flight measures the text, so it still
+     lands exactly. */
   .loader__type { position: relative; display: block; width: 0; overflow: hidden; white-space: nowrap;
+    transform: scale(0.97); transform-origin: 0 50%;
     border-right: 0.07em solid var(--accent); animation: lblink 0.8s steps(1) infinite; }
   .loader__type.typed { overflow: visible; } /* let glitch/shatter spill out once written */
   .loader__type::before, .loader__type::after { content: attr(data-text); position: absolute; left: 0; top: 0;
@@ -108,7 +111,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
     transform: scaleX(0); transform-origin: left center; }
 
   @media (prefers-reduced-motion: reduce) {
-    .loader__scan, .loader__log .cur, .loader__type { animation: none; }
+    .loader__scan, .loader__type { animation: none; }
     .loader__type { border-right-color: transparent; }
   }
 </style>
@@ -167,6 +170,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
       opacity: 1, y: 0, duration: reduce ? 0 : 0.8, stagger: reduce ? 0 : 0.07,
       ease: 'power2.out', delay: reduce ? 0 : 0.1,
     });
+    document.documentElement.setAttribute('data-loaded', '');
     window.dispatchEvent(new Event('loaderdone'));
   }
 

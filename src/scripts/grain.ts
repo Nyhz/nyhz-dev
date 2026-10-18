@@ -1,8 +1,9 @@
-import * as THREE from 'three';
-
+// Plain WebGL: one full-screen triangle pair and one fragment shader — no
+// engine needed (three.js was 128KB gzipped for this).
 const VERT = `
+  attribute vec2 position;
   varying vec2 vUv;
-  void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+  void main() { vUv = position * 0.5 + 0.5; gl_Position = vec4(position, 0.0, 1.0); }
 `;
 
 // Film grain + a breathing vignette in one pass. Doing it together means the
@@ -59,29 +60,52 @@ const FRAG = `
     float g = n * (0.09 + ring * 0.4);
     float v = glow + lamp + ring * 0.07 - edge + g;
     vec3 col = v > 0.0 ? vec3(1.0) : vec3(0.0);
-    gl_FragColor = vec4(col, clamp(abs(v), 0.0, 0.55));
+    float a = clamp(abs(v), 0.0, 0.55);
+    gl_FragColor = vec4(col * a, a); // premultiplied, like the canvas expects
   }
 `;
 
-export function createGrain(canvas: HTMLCanvasElement) {
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-
-  const scene = new THREE.Scene();
-  const ripples = Array.from({ length: RIPPLES }, () => new THREE.Vector4(0, 0, 0, 0));
-  const uniforms = {
-    uTime: { value: 0 }, uAspect: { value: 1 },
-    uMouse: { value: new THREE.Vector2(0.5, 0.5) }, uMouseAmt: { value: 0 },
-    uRipple: { value: ripples },
+function program(gl: WebGLRenderingContext) {
+  const shader = (type: number, src: string) => {
+    const sh = gl.createShader(type)!;
+    gl.shaderSource(sh, src); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh) || 'shader');
+    return sh;
   };
-  const material = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, transparent: true });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material);
-  scene.add(mesh);
-  const camera = new THREE.Camera();
+  const prog = gl.createProgram()!;
+  gl.attachShader(prog, shader(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FRAG));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
+  return prog;
+}
+
+/** null when there's no WebGL (or the shader won't build) — the page just goes without */
+export function createGrain(canvas: HTMLCanvasElement) {
+  const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: true });
+  if (!gl) return null;
+  let prog: WebGLProgram;
+  try { prog = program(gl); } catch { return null; }
+  gl.useProgram(prog);
+  // two triangles covering clip space
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+  const pos = gl.getAttribLocation(prog, 'position');
+  gl.enableVertexAttribArray(pos);
+  gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+  const u = (name: string) => gl.getUniformLocation(prog, name);
+  const uTime = u('uTime'), uAspect = u('uAspect'), uMouse = u('uMouse'), uMouseAmt = u('uMouseAmt'), uRipple = u('uRipple');
+
+  // xy = origin (uv), z = age (s), w = strength — RIPPLES of them, flat
+  const ripples = new Float32Array(RIPPLES * 4);
+  const mouse = { x: 0.5, y: 0.5 };
+  let time = 0, mouseAmt = 0;
 
   function resize() {
-    renderer.setSize(innerWidth, innerHeight, false);
-    uniforms.uAspect.value = innerWidth / Math.max(innerHeight, 1);
+    const pr = Math.min(devicePixelRatio, 2);
+    canvas.width = Math.round(innerWidth * pr); canvas.height = Math.round(innerHeight * pr);
+    gl!.viewport(0, 0, canvas.width, canvas.height);
+    gl!.uniform1f(uAspect, innerWidth / Math.max(innerHeight, 1));
   }
   resize();
   addEventListener('resize', resize);
@@ -98,7 +122,7 @@ export function createGrain(canvas: HTMLCanvasElement) {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function ripple(x: number, y: number, strength: number) {
     if (reduce) return;
-    ripples[nextRipple].set(x / innerWidth, 1 - y / innerHeight, 0, strength);
+    ripples.set([x / innerWidth, 1 - y / innerHeight, 0, strength], nextRipple * 4);
     nextRipple = (nextRipple + 1) % RIPPLES;
   }
   addEventListener('pointermove', onMove, { passive: true });
@@ -108,13 +132,20 @@ export function createGrain(canvas: HTMLCanvasElement) {
   function frame() {
     const now = performance.now();
     const dt = Math.min((now - last) / 1000, 0.1);
-    uniforms.uTime.value += (now - last) / 1000; last = now;
-    const mouse = uniforms.uMouse.value, k = 1 - Math.exp(-dt * 6);
+    time += (now - last) / 1000; last = now;
+    const k = 1 - Math.exp(-dt * 6);
     mouse.x += (target.x - mouse.x) * k; mouse.y += (target.y - mouse.y) * k;
     const want = now - lastMove < 1600 ? 1 : 0;
-    uniforms.uMouseAmt.value += (want - uniforms.uMouseAmt.value) * (1 - Math.exp(-dt * (want ? 4 : 1.2)));
-    for (const r of ripples) if (r.w > 0) { r.z += dt; if (r.z > 2.4) r.w = 0; }
-    renderer.render(scene, camera);
+    mouseAmt += (want - mouseAmt) * (1 - Math.exp(-dt * (want ? 4 : 1.2)));
+    for (let i = 0; i < RIPPLES; i++) {
+      const o = i * 4;
+      if (ripples[o + 3] > 0) { ripples[o + 2] += dt; if (ripples[o + 2] > 2.4) ripples[o + 3] = 0; }
+    }
+    gl!.uniform1f(uTime, time);
+    gl!.uniform2f(uMouse, mouse.x, mouse.y);
+    gl!.uniform1f(uMouseAmt, mouseAmt);
+    gl!.uniform4fv(uRipple, ripples);
+    gl!.drawArrays(gl!.TRIANGLES, 0, 6);
     raf = requestAnimationFrame(frame);
   }
   function onVis() {
@@ -125,18 +156,9 @@ export function createGrain(canvas: HTMLCanvasElement) {
 
   return {
     start() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } },
-    setTheme(_c: string) { /* luminance-based, theme-agnostic */ },
     /** a shockwave from a viewport point (CSS px) */
     ripple,
     /** points the lamp at a viewport point (CSS px), as if the pointer were there */
     lamp(x: number, y: number) { target.x = x / innerWidth; target.y = 1 - y / innerHeight; lastMove = performance.now(); },
-    dispose() {
-      cancelAnimationFrame(raf);
-      removeEventListener('resize', resize);
-      removeEventListener('pointermove', onMove);
-      removeEventListener('pointerdown', onDown);
-      document.removeEventListener('visibilitychange', onVis);
-      mesh.geometry.dispose(); material.dispose(); renderer.dispose();
-    },
   };
 }

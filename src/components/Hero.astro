@@ -138,6 +138,8 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 </style>
 
 <script>
+  import { afterLoader } from '../scripts/loaded';
+
   const el = document.querySelector<HTMLElement>('.hero-name');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (el && !reduce) {
@@ -177,7 +179,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
       const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
       // stays at rest until the loader's name has landed and handed over
       let live = false;
-      addEventListener('loaderdone', () => setTimeout(() => { live = true; }, 900), { once: true });
+      afterLoader(() => setTimeout(() => { live = true; }, 900));
       addEventListener('pointermove', (e) => {
         if (!live || e.pointerType !== 'mouse') return;
         const R = el.getBoundingClientRect().height * 1.9;

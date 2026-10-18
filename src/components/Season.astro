@@ -36,13 +36,14 @@
 
 <script>
   import { seasonOf, type Season } from '../scripts/season';
+  import { afterLoader } from '../scripts/loaded';
 
   const html = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const forced = import.meta.env.DEV ? new URLSearchParams(location.search).get('season') : null;
   const season = (forced || seasonOf(new Date())) as Season;
   const toast = (k: string, t: string, n = '') => dispatchEvent(new CustomEvent('nyhz:toast', { detail: { k, t, n } }));
-  const after = (ms: number, fn: () => void) => addEventListener('loaderdone', () => setTimeout(fn, ms), { once: true });
+  const after = (ms: number, fn: () => void) => afterLoader(() => setTimeout(fn, ms));
 
   if (season) html.classList.add(`season-${season}`);
 

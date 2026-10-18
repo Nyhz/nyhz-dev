@@ -35,7 +35,7 @@ const txt: TxtContext = {
         <i class="tv__ember" aria-hidden="true"></i>
         <i class="tv__line" data-tv-line aria-hidden="true"></i>
         <a class="tv__hit" data-tv-hit target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"></a>
-        <div class="tv__osd" aria-hidden="true">
+        <div data-nosnippet class="tv__osd" aria-hidden="true">
           <span class="tv__ch" data-tv-ch>CH 01</span>
           <span class="tv__state" data-tv-state></span>
         </div>
@@ -51,7 +51,7 @@ const txt: TxtContext = {
       </div>
 
       <!-- phones only: change channels right under the picture -->
-      <div class="tv__nav" aria-label="channels">
+      <div data-nosnippet class="tv__nav" aria-label="channels">
         <button type="button" class="tv__navbtn" data-tv-prev aria-label="previous channel">◀</button>
         <span class="tv__navn">CH <b data-tv-n>01</b> / {pad(shown.length)}</span>
         <button type="button" class="tv__navbtn" data-tv-next aria-label="next channel">▶</button>
@@ -102,15 +102,33 @@ const txt: TxtContext = {
       ))}
     </ul>
     <!-- the remote: power, teletext, and what the keyboard does -->
-    <div class="tv__remote">
+    <div data-nosnippet class="tv__remote">
       <button type="button" class="tv__rbtn" data-tv-power aria-label="power">⏻</button>
       <button type="button" class="tv__rbtn" data-tv-txt aria-pressed="false">txt</button>
       <span class="tv__keys" aria-hidden="true">0–9 · + −</span>
     </div>
   </div>
+
+  <!-- the same projects as plain text: the tv shows them as pictures and data
+       attributes, which search engines don't index and screen readers can't
+       browse. Visually hidden, links out of the tab order. -->
+  <section class="tv__index" aria-labelledby="tv-index-h">
+    <h2 id="tv-index-h">projects</h2>
+    {shown.map((p) => (
+      <article>
+        <h3>{p.title}{p.year ? ` (${p.year})` : ''}</h3>
+        <p>{p.description}</p>
+        {p.tags.length > 0 && <p>built with {p.tags.join(', ')}</p>}
+        {p.deployUrl && <a href={p.deployUrl} tabindex="-1">{p.title} — live</a>}
+        {p.downloadUrl && <a href={p.downloadUrl} tabindex="-1">{p.title} — download</a>}
+        {p.repoUrl && <a href={p.repoUrl} tabindex="-1">{p.title} — source</a>}
+      </article>
+    ))}
+  </section>
 </div>
 
 <style>
+  .tv__index { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .tv { display: grid; grid-template-columns: auto minmax(11rem, 14rem); justify-content: space-between;
     align-items: center; gap: 0 clamp(1.5rem, 3vw, 2.5rem); height: 100%; }
   .tv__set { min-width: 0; }
@@ -371,7 +389,8 @@ const txt: TxtContext = {
   import { gsap } from 'gsap';
   import { sound } from '../scripts/sound';
   import { leet } from '../scripts/eggs';
-  import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextPage, FASTEXT, TXT_HOME, type TxtContext } from '../scripts/tv';
+  import { afterLoader } from '../scripts/loaded';
+  import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextHTML, esc, TXT_HOME, type TxtContext } from '../scripts/tv';
 
   const root = document.querySelector<HTMLElement>('[data-tv]');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -468,8 +487,13 @@ const txt: TxtContext = {
     let afterOn: (() => void) | null = null;
     const line = $('[data-tv-line]');
 
+    // the title's decode animation — whoever writes the title next cancels it
+    let decodeIv = 0;
+    const warmed = new Set<number>(); // covers already fetched (see warm())
+
     // standby: what the screen says before it's switched on
     function paintStandby() {
+      clearInterval(decodeIv);
       chEl.textContent = 'CH --';
       stateEl.textContent = 'standby';
       stateEl.dataset.s = 'off';
@@ -514,6 +538,7 @@ const txt: TxtContext = {
     const data = (i: number) => chans[i].dataset;
 
     function paintDetails(i: number) {
+      clearInterval(decodeIv);
       const d = data(i);
       chEl.textContent = `CH ${pad(i + 1)}`;
       stateEl.textContent = d.status || 'personal';
@@ -540,10 +565,10 @@ const txt: TxtContext = {
         const truth = say(d.title || '');
         const G = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*';
         let f = 0;
-        const iv = setInterval(() => {
+        decodeIv = window.setInterval(() => {
           const lock = Math.floor((f++ / 9) * truth.length);
           titleEl.textContent = truth.split('').map((c, k) => (k < lock || c === ' ' ? c : G[(Math.random() * G.length) | 0])).join('');
-          if (lock >= truth.length) { clearInterval(iv); titleEl.textContent = truth; }
+          if (lock >= truth.length) { clearInterval(decodeIv); titleEl.textContent = truth; }
         }, 32);
       }
     }
@@ -569,7 +594,9 @@ const txt: TxtContext = {
         void glass.offsetWidth;
         glass.classList.add('is-roll');
       };
+      next.onload = next.onerror = null; // a stale handler would swap twice
       if (d.cover) { next.src = d.cover; if (next.complete) swap(); else next.onload = swap; }
+      warm(i + 1); warm(i - 1); // the neighbours, for ◀ ▶ and the surf
       paintDetails(i);
       if (quiet) return;
       burst(260);
@@ -742,8 +769,17 @@ const txt: TxtContext = {
     addEventListener('nyhz:leet', () => setTimeout(() => { if (shown >= 0) paintDetails(shown); }, 300));
     document.addEventListener('visibilitychange', () => { if (document.hidden) attract?.pause(); else attract?.resume(); });
 
-    // warm every cover, then switch on: the first channel, quietly, and start surfing
-    chans.forEach((c) => { if (c.dataset.cover) { const im = new Image(); im.decoding = 'async'; im.src = c.dataset.cover; } });
+    // covers are fetched as they're needed: the channel and its neighbours
+    // (tune() warms those), not all of them up front
+    function warm(i: number) {
+      i = (i + chans.length) % chans.length;
+      const src = chans[i]?.dataset.cover;
+      if (!src || warmed.has(i)) return;
+      warmed.add(i);
+      const im = new Image(); im.decoding = 'async'; im.fetchPriority = 'low'; im.src = src;
+    }
+    // the first channel is where it switches on
+    afterLoader(() => warm(0));
 
     // ===================== the remote and its channels =====================
     const txtCtx = JSON.parse(root.dataset.txt || '{}') as TxtContext;
@@ -782,6 +818,7 @@ const txt: TxtContext = {
 
     // a lower third for the screens that aren't projects
     function caption(ch: string, title: string, desc: string) {
+      clearInterval(decodeIv);
       chEl.textContent = ch;
       stateEl.textContent = '';
       stateEl.dataset.s = '';
@@ -932,7 +969,6 @@ const txt: TxtContext = {
     // ---- teletext ----
     let ttxPage = TXT_HOME, ttxClock = 0, ttxLabel = '';
     const PAGES = [100, 101, 102, 103, 104, 888];
-    const esc = (t: string) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
     function ttxHeader(label?: string) {
       if (label !== undefined) ttxLabel = label;
       const h = ttxIn.querySelector('[data-ttx-head]');
@@ -943,13 +979,8 @@ const txt: TxtContext = {
       h.innerHTML = `<span class="k-w">${esc(ttxLabel.padEnd(5))}</span> <span class="k-c">NYHZ TEXT</span> <span class="k-w">${ttxPage}</span> <span class="k-y">${esc(day)} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}</span>`;
     }
     function page(n: number) {
-      const rows = teletextPage(n, txtCtx);
       ttxPage = n;
-      const body = rows
-        ? rows.map((r) => `<span class="tr${r.dh ? ' dh' : ''}${r.bg ? ` bg-${r.bg}` : ''}"${r.link ? ` data-go="p${r.link}"` : r.ch !== undefined ? ` data-go="c${r.ch}"` : ''}>${r.segs.map(([c, t]) => `<span class="k-${c}">${esc(t)}</span>`).join('')}</span>`).join('')
-        : `<span class="tr"> </span><span class="tr k-r"> PAGE ${n} NOT FOUND</span><span class="tr k-w"> nothing on this page. try 100.</span><span class="tr" data-go="p100"><span class="k-y"> 100 </span><span class="k-w">index</span></span>`;
-      const fast = `<div class="fast">${FASTEXT.map(([c, t, p]) => `<span class="k-${c}" data-go="p${p}">${t}</span>`).join('')}</div>`;
-      ttxIn.innerHTML = `<span class="tr" data-ttx-head></span>${body}${fast}`;
+      ttxIn.innerHTML = `<span class="tr" data-ttx-head></span>${teletextHTML(n, txtCtx)}`;
       ttxHeader(`P${n}`);
     }
     function stepPage(dir: number) {

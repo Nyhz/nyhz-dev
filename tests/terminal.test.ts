@@ -22,6 +22,9 @@ describe('findProject', () => {
   it('matches by slug prefix', () => {
     expect(findProject(ctx, 'nyhz')?.slug).toBe('nyhzops-devroom');
   });
+  it('matches nothing for a query that is only punctuation', () => {
+    expect(findProject(ctx, '???')).toBeUndefined();
+  });
   it('returns undefined for out-of-range index or unknown names', () => {
     expect(findProject(ctx, '9')).toBeUndefined();
     expect(findProject(ctx, 'nope')).toBeUndefined();

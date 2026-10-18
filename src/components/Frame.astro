@@ -1,6 +1,6 @@
 ---
 ---
-<div class="frame" aria-hidden="true">
+<div data-nosnippet class="frame" aria-hidden="true">
   <div class="frame__border">
     <span class="tick tl"></span><span class="tick tr"></span>
     <span class="tick bl"></span><span class="tick br"></span>
@@ -23,7 +23,6 @@
   .meta { position: absolute; font: 500 0.62rem var(--mono); letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--muted); }
   .meta.a { left: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px); color: var(--fg); }
-  .meta.b { right: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px); font-variant-numeric: tabular-nums; }
   .meta.d { right: clamp(26px, 2.6vw, 42px); bottom: clamp(22px, 2.4vw, 38px);
     font-variant-numeric: tabular-nums; }
   @media (max-width: 520px) { .meta.d { display: none; } }
@@ -61,11 +60,12 @@
 <script>
   import { clockNote } from '../scripts/eggs';
   import { relTime, type Activity } from '../scripts/activity';
+  import { afterLoader } from '../scripts/loaded';
 
   // last push: fetched once the loader is done (it never competes with the boot)
   const act = document.querySelector<HTMLElement>('[data-activity]');
   if (act) {
-    addEventListener('loaderdone', async () => {
+    afterLoader(async () => {
       let a: Activity | null = null;
       try { a = await (await fetch('/api/activity')).json(); } catch { /* stays hidden */ }
       if (!a?.repo) return;
@@ -84,7 +84,7 @@
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) { msg.textContent = text; return; }
       let i = 0;
       const iv = setInterval(() => { msg.textContent = text.slice(0, ++i); if (i >= text.length) clearInterval(iv); }, 18);
-    }, { once: true });
+    });
   }
 
   const el = document.querySelector('[data-clock]');

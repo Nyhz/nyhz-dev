@@ -4,7 +4,7 @@
 // terminal). Sign it, download it as a PNG, or copy a link — the link carries
 // the certificate in its hash (#cert=…), and opening it shows that person's.
 ---
-<div class="cert" data-cert role="dialog" aria-modal="true" aria-label="root certificate" hidden>
+<div data-nosnippet class="cert" data-cert role="dialog" aria-modal="true" aria-label="root certificate" hidden>
   <div class="cert__card" data-cert-card>
     <i class="cert__tick tl"></i><i class="cert__tick tr"></i><i class="cert__tick bl"></i><i class="cert__tick br"></i>
     <header class="cert__head"><span><b aria-hidden="true">◆</b> root certificate</span><span>nyhz.dev</span></header>
@@ -71,6 +71,7 @@
 <script>
   import { gsap } from 'gsap';
   import { achievements, encodeCert, decodeCert, serial, took, type Cert } from '../scripts/eggs';
+  import { afterLoader } from '../scripts/loaded';
 
   const root = document.querySelector<HTMLElement>('[data-cert]');
   const card = root?.querySelector<HTMLElement>('[data-cert-card]');
@@ -153,7 +154,7 @@
 
     // someone shared theirs: show it once the site has loaded
     const fromHash = location.hash.startsWith('#cert=') ? decodeCert(location.hash.slice(6)) : null;
-    if (fromHash) addEventListener('loaderdone', () => setTimeout(() => open(fromHash, true), 900), { once: true });
+    if (fromHash) afterLoader(() => setTimeout(() => open(fromHash, true), 900));
   }
 
   // the certificate as a 1200×630 image, drawn in the site's own type
