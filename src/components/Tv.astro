@@ -19,6 +19,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     <div class="tv__screen" data-tv-screen>
       <i class="tv__tick tl"></i><i class="tv__tick tr"></i><i class="tv__tick bl"></i><i class="tv__tick br"></i>
       <div class="tv__glass" data-tv-glass>
+        <img class="tv__fill" data-tv-fill alt="" decoding="async" />
         <img class="tv__img" data-tv-img alt="" decoding="async" />
         <img class="tv__img" data-tv-img alt="" decoding="async" />
         <canvas class="tv__static" data-tv-static width="160" height="100"></canvas>
@@ -96,6 +97,12 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .tv__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%;
     opacity: 0; filter: saturate(0.85) contrast(1.05); }
   .tv__img.is-top { opacity: 1; }
+  /* a cover that isn't (nearly) 16:10 is shown whole — never cropped — and
+     the rest of the screen is filled with itself, blurred and dimmed */
+  .tv__img.is-contain { object-fit: contain; object-position: 50% 32%; }
+  .tv__fill { position: absolute; inset: -8%; width: 116%; height: 116%; object-fit: cover; opacity: 0;
+    filter: blur(22px) brightness(0.42) saturate(1.2); transition: opacity 0.2s ease; }
+  .tv__fill.is-on { opacity: 1; }
   /* glass: scanlines, a vignette and a faint glare */
   .tv__glass::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
     background:
@@ -224,6 +231,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     const screen = $('[data-tv-screen]');
     const glass = $('[data-tv-glass]');
     const imgs = Array.from(root.querySelectorAll<HTMLImageElement>('[data-tv-img]'));
+    const fill = $<HTMLImageElement>('[data-tv-fill]');
     const staticCv = $<HTMLCanvasElement>('[data-tv-static]');
     const hit = $<HTMLAnchorElement>('[data-tv-hit]');
     const chEl = $('[data-tv-ch]');
@@ -320,6 +328,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
       // the next picture loads into the back layer, then swaps to the front
       const next = imgs[1 - top];
       const swap = () => {
+        const ratio = next.naturalWidth / next.naturalHeight || 1.6;
+        const letterbox = Math.abs(ratio - 1.6) / 1.6 > 0.06;
+        next.classList.toggle('is-contain', letterbox);
+        fill.classList.toggle('is-on', letterbox);
+        if (letterbox) fill.src = next.src;
         imgs[top].classList.remove('is-top');
         next.classList.add('is-top');
         top = 1 - top;
