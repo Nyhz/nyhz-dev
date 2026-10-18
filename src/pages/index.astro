@@ -3,16 +3,14 @@ import Base from '../layouts/Base.astro';
 import Field from '../components/Field.astro';
 import Frame from '../components/Frame.astro';
 import Hero from '../components/Hero.astro';
-import Projects from '../components/Projects.astro';
-import Preview from '../components/Preview.astro';
 import Loader from '../components/Loader.astro';
 import Terminal from '../components/Terminal.astro';
 import Cursor from '../components/Cursor.astro';
+import Tv from '../components/Tv.astro';
 import Eggs from '../components/Eggs.astro';
 import Snake from '../components/Snake.astro';
 import Cert from '../components/Cert.astro';
 import Season from '../components/Season.astro';
-import Peek from '../components/Peek.astro';
 import { getContent } from '../scripts/content';
 const { profile, projects } = await getContent();
 ---
@@ -24,7 +22,6 @@ const { profile, projects } = await getContent();
   <Snake slot="overlay" />
   <Cert slot="overlay" />
   <Season slot="overlay" />
-  <Peek slot="overlay" />
   <Cursor slot="overlay" />
   <Loader name={profile.name} tagline={profile.role} slot="overlay" />
 
@@ -38,11 +35,8 @@ const { profile, projects } = await getContent();
     />
   </section>
   <div class="spacer" data-spacer-mid></div>
-  <section class="lower">
-    <div class="lower__track" data-track>
-      <Projects projects={projects} />
-      <Preview projects={projects} />
-    </div>
+  <section class="lower lower--tv">
+    <Tv projects={projects} />
   </section>
   <div class="spacer" data-spacer-bottom></div>
 </Base>

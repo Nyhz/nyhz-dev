@@ -1,0 +1,448 @@
+---
+// The work, as television: one monitor (16:10, sized to the room it has) and
+// the projects as channels. Hovering a channel tunes to it — static, a roll,
+// a chromatic split and the channel number flashing — and a click locks it.
+// Left alone, the set channel-surfs on its own, like a TV in a shop window.
+// The project's details sit on the screen as an on-screen display. "available
+// for work" tunes to CH 00: the contact form, over static.
+// Phones: the screen goes full width; swipe it (or ◀ ▶) to change channels,
+// and the details sit under it.
+import Contact from './Contact.astro';
+import { statusOf, type ProjectProps } from '../scripts/content';
+
+const { projects } = Astro.props as { projects: ProjectProps[] };
+const shown = projects.slice(0, 10);
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+<div class="tv" data-tv data-anim>
+  <div class="tv__set">
+    <div class="tv__screen" data-tv-screen>
+      <i class="tv__tick tl"></i><i class="tv__tick tr"></i><i class="tv__tick bl"></i><i class="tv__tick br"></i>
+      <div class="tv__glass" data-tv-glass>
+        <img class="tv__img" data-tv-img alt="" decoding="async" />
+        <img class="tv__img" data-tv-img alt="" decoding="async" />
+        <canvas class="tv__static" data-tv-static width="160" height="100"></canvas>
+        <a class="tv__hit" data-tv-hit target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"></a>
+        <div class="tv__osd" aria-hidden="true">
+          <span class="tv__ch" data-tv-ch>CH 01</span>
+          <span class="tv__state" data-tv-state></span>
+        </div>
+        <p class="tv__big" data-tv-big aria-hidden="true"></p>
+        <i class="tv__bar" data-tv-bar aria-hidden="true"></i>
+      </div>
+
+      <!-- phones only: change channels right under the picture -->
+      <div class="tv__nav" aria-label="channels">
+        <button type="button" class="tv__navbtn" data-tv-prev aria-label="previous channel">◀</button>
+        <span class="tv__navn">CH <b data-tv-n>01</b> / {pad(shown.length)}</span>
+        <button type="button" class="tv__navbtn" data-tv-next aria-label="next channel">▶</button>
+      </div>
+
+      <!-- the lower third: over the picture on desktop, under it on phones -->
+      <div class="tv__l3" data-tv-l3 aria-live="polite">
+        <h3 class="tv__title"><span data-tv-title></span><span class="tv__year" data-tv-year></span></h3>
+        <p class="tv__desc" data-tv-desc></p>
+        <div class="tv__meta">
+          <span class="tv__stack" data-tv-stack></span>
+          <nav class="tv__links" aria-label="project links">
+            <a class="tv__btn tv__btn--go" data-tv-live target="_blank" rel="noopener noreferrer" hidden><span aria-hidden="true">↗</span> live</a>
+            <a class="tv__btn tv__btn--go" data-tv-download target="_blank" rel="noopener noreferrer" hidden><span aria-hidden="true">↓</span> download</a>
+            <a class="tv__btn" data-tv-repo target="_blank" rel="noopener noreferrer" hidden><span aria-hidden="true">↗</span> source</a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- CH 00: "available for work" -->
+      <section class="tv__contact" id="contact" data-tv-contact aria-label="contact" hidden>
+        <p class="tv__contact-h">write to me <button class="tv__x" type="button" data-tv-close aria-label="close contact">esc ×</button></p>
+        <Contact />
+      </section>
+    </div>
+
+  </div>
+
+  <div class="tv__side">
+    <p class="sec-label">— channels <span class="sec-count">[{pad(shown.length)}]</span></p>
+    <ul class="tv__list" data-tv-list>
+      {shown.map((p, i) => (
+        <li>
+          <button type="button" class="tv__chbtn" data-ch={i}
+            data-slug={p.slug} data-title={p.title} data-desc={p.description} data-tags={p.tags.join(' · ')}
+            data-cover={p.coverUrl} data-live={p.deployUrl} data-download={p.downloadUrl} data-repo={p.repoUrl}
+            data-year={p.year} data-status={statusOf(p)} aria-label={`Tune to ${p.title}`}>
+            <span class="tv__chn">{pad(i + 1)}</span>
+            <span class="tv__chname">{p.title}</span>
+            <i class="tv__dot" data-s={statusOf(p)} aria-hidden="true"></i>
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+</div>
+
+<style>
+  .tv { display: grid; grid-template-columns: auto minmax(11rem, 14rem); justify-content: space-between;
+    align-items: center; gap: 0 clamp(1.5rem, 3vw, 2.5rem); height: 100%; }
+  .tv__set { min-width: 0; }
+
+  /* ---- the screen ---- */
+  .tv__screen { position: relative; width: var(--tv-w, 560px); height: var(--tv-h, 350px); }
+  .tv__tick { position: absolute; z-index: 3; width: 11px; height: 11px; border: 1px solid var(--fg); pointer-events: none; }
+  .tv__tick.tl { top: -5px; left: -5px; border-right: 0; border-bottom: 0; }
+  .tv__tick.tr { top: -5px; right: -5px; border-left: 0; border-bottom: 0; }
+  .tv__tick.bl { bottom: -5px; left: -5px; border-right: 0; border-top: 0; }
+  .tv__tick.br { bottom: -5px; right: -5px; border-left: 0; border-top: 0; }
+  .tv__glass { position: absolute; inset: 0; overflow: hidden; background: #0c0c0b; border: 1px solid var(--line); }
+  .tv__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%;
+    opacity: 0; filter: saturate(0.85) contrast(1.05); }
+  .tv__img.is-top { opacity: 1; }
+  /* glass: scanlines, a vignette and a faint glare */
+  .tv__glass::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background:
+      repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.45) 100%),
+      linear-gradient(160deg, rgba(255, 255, 255, 0.05), transparent 40%); }
+  .tv__static { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; opacity: 0;
+    image-rendering: pixelated; pointer-events: none; mix-blend-mode: screen; }
+  .tv__hit { position: absolute; inset: 0; z-index: 1; cursor: pointer; }
+  .tv__hit:not([href]) { cursor: default; }
+
+  /* on-screen display */
+  .tv__osd { position: absolute; z-index: 3; top: 0.8rem; left: 1rem; right: 1rem; display: flex; justify-content: space-between;
+    font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: #f2f1ea;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9); pointer-events: none; }
+  .tv__ch { color: var(--accent); }
+  .tv__state[data-s="live"]::before { content: '● '; color: var(--accent); }
+  .tv__state[data-s="download"]::before { content: '↓ '; }
+  .tv__big { position: absolute; z-index: 3; top: 50%; left: 50%; translate: -50% -50%; margin: 0; opacity: 0; pointer-events: none;
+    font: 700 clamp(2.4rem, 7vw, 4.6rem)/1 var(--mono); letter-spacing: 0.02em; color: #f2f1ea;
+    text-shadow: -3px 0 rgba(255, 46, 99, 0.85), 3px 0 rgba(46, 230, 255, 0.85), 0 0 24px rgba(0, 0, 0, 0.8); }
+  .tv__bar { position: absolute; z-index: 3; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--accent);
+    transform: scaleX(0); transform-origin: left; opacity: 0.8; pointer-events: none; }
+
+  /* changing channels: the picture rolls and splits */
+  .tv__glass.is-roll .tv__img.is-top { animation: tvRoll 0.32s steps(4) 1; }
+  @keyframes tvRoll {
+    0% { transform: translateY(-18%); filter: drop-shadow(-6px 0 rgba(255, 46, 99, 0.8)) drop-shadow(6px 0 rgba(46, 230, 255, 0.8)) brightness(1.6); }
+    40% { transform: translateY(9%) skewX(-4deg); }
+    70% { transform: translateY(-3%); filter: drop-shadow(-2px 0 rgba(255, 46, 99, 0.6)) drop-shadow(2px 0 rgba(46, 230, 255, 0.6)); }
+    100% { transform: none; filter: saturate(0.85) contrast(1.05); }
+  }
+
+  /* lower third: over the bottom of the picture */
+  .tv__l3 { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; padding: 2.6rem 1.1rem 0.95rem;
+    background: linear-gradient(transparent, rgba(8, 8, 8, 0.82) 38%, rgba(8, 8, 8, 0.94));
+    pointer-events: none; }
+  .tv__l3 a { pointer-events: auto; }
+  .tv__title { display: flex; align-items: baseline; gap: 0.8rem; margin: 0 0 0.3rem;
+    font: 700 clamp(1.05rem, 1.6vw, 1.35rem) var(--mono); letter-spacing: -0.01em; color: #f2f1ea; }
+  .tv__year { font: 500 0.66rem var(--mono); letter-spacing: 0.18em; color: var(--muted); }
+  .tv__desc { margin: 0 0 0.6rem; font: 0.76rem/1.6 var(--mono); color: var(--dim); max-width: 62ch;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .tv__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; flex-wrap: wrap; }
+  .tv__stack { font: 500 0.64rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .tv__links { display: flex; gap: 0.45rem; }
+  .tv__btn { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.38rem 0.7rem;
+    border: 1px solid rgba(242, 241, 234, 0.22); background: rgba(10, 10, 10, 0.55);
+    font: 500 0.62rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: #f2f1ea;
+    transition: color var(--t-hover) ease, border-color var(--t-hover) ease, box-shadow var(--t-hover) ease; }
+  .tv__btn[hidden] { display: none; }
+  .tv__btn--go { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+  .tv__btn:hover, .tv__btn:focus-visible { color: var(--accent); border-color: var(--accent); outline: none;
+    box-shadow: 0 0 18px -6px var(--accent); }
+
+  /* CH 00: the contact form over static */
+  .tv__contact { position: absolute; z-index: 4; inset: 0; padding: 1rem 1.2rem; overflow: hidden;
+    background: rgba(10, 10, 10, 0.6); display: flex; flex-direction: column; justify-content: center; }
+  .tv__contact[hidden] { display: none; }
+  .tv__contact-h { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 0.6rem;
+    font: 700 1.05rem var(--mono); color: var(--fg); }
+  .tv__x { background: none; border: 0; padding: 0; cursor: pointer; font: 500 0.62rem var(--mono);
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .tv__x:hover { color: var(--fg); }
+  .tv.is-contact .tv__l3, .tv.is-contact .tv__osd .tv__state { visibility: hidden; }
+  /* CH 00 has no picture: just a faint snow behind the form */
+  .tv.is-contact .tv__img { opacity: 0 !important; }
+  .tv.is-contact .tv__static { mix-blend-mode: normal; }
+
+  /* ---- channels ---- */
+  .tv__side { align-self: center; }
+  .tv__list { list-style: none; border-bottom: 1px solid var(--line); }
+  .tv__chbtn { display: grid; grid-template-columns: 2.2ch minmax(0, 1fr) auto; align-items: center; gap: 0 0.8rem;
+    width: 100%; padding: 0.52rem 0.2rem; background: none; border: 0; border-top: 1px solid var(--line);
+    cursor: pointer; text-align: left; font: 500 0.8rem var(--mono); color: var(--dim);
+    transition: color var(--t-hover) ease, padding var(--t-hover) var(--ease-out); }
+  .tv__chn { font-size: 0.66rem; color: var(--muted); }
+  .tv__chname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tv__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
+  .tv__dot[data-s="live"] { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .tv__dot[data-s="download"] { background: var(--dim); }
+  .tv__chbtn:hover, .tv__chbtn:focus-visible { color: var(--fg); padding-left: 0.6rem; outline: none; }
+  .tv__chbtn.is-on { color: var(--fg); padding-left: 0.6rem; }
+  .tv__chbtn.is-on .tv__chn { color: var(--accent); }
+  .tv__chbtn.is-locked .tv__chname::after { content: '  ●'; color: var(--accent); font-size: 0.6em; vertical-align: 0.2em; }
+
+  .tv__nav { display: none; }
+
+  /* ---- phones: full-width screen, details under it, ◀ ▶ and swipe ---- */
+  @media (max-width: 720px) {
+    .tv { display: block; height: auto; }
+    .tv__side { display: none; }
+    .tv__screen { width: 100%; height: auto; }
+    .tv__glass { position: relative; inset: auto; aspect-ratio: 16 / 10; }
+    .tv__l3 { position: static; padding: 0.9rem 0 0; background: none; pointer-events: auto; }
+    .tv__desc { -webkit-line-clamp: 3; }
+    .tv__nav { display: flex; align-items: center; justify-content: space-between; margin-top: 0.7rem;
+      font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+    .tv__navn b { color: var(--fg); font-weight: 500; }
+    .tv__navbtn { background: none; border: 1px solid var(--line); padding: 0.45rem 0.9rem; color: var(--fg);
+      font: inherit; cursor: pointer; }
+    .tv__navbtn:active { transform: translateY(1px); }
+    .tv.is-contact .tv__l3, .tv.is-contact .tv__nav { display: none; }
+    .tv__contact { position: static; inset: auto; padding: 0.9rem 0 0; background: none; }
+    .tv.is-contact .tv__glass { aspect-ratio: auto; height: 3.2rem; }
+  }
+  @media (max-width: 720px) and (max-height: 700px) { .tv__desc { -webkit-line-clamp: 2; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tv__glass.is-roll .tv__img.is-top { animation: none; }
+    .tv__chbtn, .tv__btn { transition: none; }
+  }
+</style>
+
+<script>
+  import { gsap } from 'gsap';
+  import { sound } from '../scripts/sound';
+  import { leet } from '../scripts/eggs';
+
+  const root = document.querySelector<HTMLElement>('[data-tv]');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isPhone = () => matchMedia('(max-width: 720px)').matches;
+
+  if (root) {
+    const $ = <T extends HTMLElement = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const screen = $('[data-tv-screen]');
+    const glass = $('[data-tv-glass]');
+    const imgs = Array.from(root.querySelectorAll<HTMLImageElement>('[data-tv-img]'));
+    const staticCv = $<HTMLCanvasElement>('[data-tv-static]');
+    const hit = $<HTMLAnchorElement>('[data-tv-hit]');
+    const chEl = $('[data-tv-ch]');
+    const stateEl = $('[data-tv-state]');
+    const big = $('[data-tv-big]');
+    const bar = $('[data-tv-bar]');
+    const titleEl = $('[data-tv-title]');
+    const yearEl = $('[data-tv-year]');
+    const descEl = $('[data-tv-desc]');
+    const stackEl = $('[data-tv-stack]');
+    const live = $<HTMLAnchorElement>('[data-tv-live]');
+    const download = $<HTMLAnchorElement>('[data-tv-download]');
+    const repo = $<HTMLAnchorElement>('[data-tv-repo]');
+    const nEl = $('[data-tv-n]');
+    const contact = $('[data-tv-contact]');
+    const chans = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-ch]'));
+    const avail = document.querySelector<HTMLButtonElement>('[data-contact-open]');
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const say = (t: string) => (document.documentElement.classList.contains('egg-leet') ? leet(t) : t);
+
+    // ---- size: as big as the room allows, always 16:10 ----
+    function fit() {
+      if (isPhone()) { screen.style.removeProperty('--tv-w'); screen.style.removeProperty('--tv-h'); return; }
+      const side = root.querySelector<HTMLElement>('.tv__side')!;
+      const gap = parseFloat(getComputedStyle(root).columnGap) || 32;
+      const w = root.clientWidth - side.offsetWidth - gap;
+      const h = root.clientHeight - 12;
+      const W = Math.max(240, Math.min(w, h * 1.6));
+      screen.style.setProperty('--tv-w', `${Math.round(W)}px`);
+      screen.style.setProperty('--tv-h', `${Math.round(W / 1.6)}px`);
+    }
+    fit();
+    let fitT = 0;
+    addEventListener('resize', () => { clearTimeout(fitT); fitT = window.setTimeout(fit, 80); });
+    document.fonts.ready.then(fit);
+
+    // ---- static: noise painted into a tiny canvas, scaled up ----
+    const sx = staticCv.getContext('2d')!;
+    const noise = sx.createImageData(staticCv.width, staticCv.height);
+    let staticRaf = 0, staticUntil = 0;
+    const paintStatic = () => {
+      const d = noise.data;
+      for (let i = 0; i < d.length; i += 4) { const v = (Math.random() * 255) | 0; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+      sx.putImageData(noise, 0, 0);
+      if (performance.now() < staticUntil || root.classList.contains('is-contact')) staticRaf = requestAnimationFrame(paintStatic);
+      else { staticRaf = 0; staticCv.style.opacity = '0'; }
+    };
+    const burst = (ms: number, level = 0.85) => {
+      if (reduce) return;
+      staticUntil = performance.now() + ms;
+      staticCv.style.opacity = String(level);
+      gsap.to(staticCv, { opacity: 0, duration: ms / 1000, ease: 'power2.in', delay: 0.05 });
+      if (!staticRaf) staticRaf = requestAnimationFrame(paintStatic);
+    };
+
+    // ---- tuning ----
+    let shown = -1, locked: number | null = null, hovering = false, top = 0;
+    const data = (i: number) => chans[i].dataset;
+
+    function paintDetails(i: number) {
+      const d = data(i);
+      chEl.textContent = `CH ${pad(i + 1)}`;
+      stateEl.textContent = d.status === 'live' ? 'live' : d.status === 'download' ? 'download' : 'personal';
+      stateEl.dataset.s = d.status || '';
+      titleEl.textContent = say(d.title || '');
+      yearEl.textContent = d.year || '';
+      descEl.textContent = say(d.desc || '');
+      stackEl.textContent = d.tags || '';
+      ([[live, d.live], [download, d.download], [repo, d.repo]] as const).forEach(([a, href]) => {
+        if (href) { a.href = href; a.hidden = false; } else a.hidden = true;
+      });
+      const main = d.live || d.download || d.repo || '';
+      if (main) { hit.href = main; } else hit.removeAttribute('href');
+      nEl.textContent = pad(i + 1);
+      chans.forEach((c, k) => c.classList.toggle('is-on', k === i));
+      // the title decodes in, like everything else here
+      if (!reduce) {
+        const truth = say(d.title || '');
+        const G = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*';
+        let f = 0;
+        const iv = setInterval(() => {
+          const lock = Math.floor((f++ / 9) * truth.length);
+          titleEl.textContent = truth.split('').map((c, k) => (k < lock || c === ' ' ? c : G[(Math.random() * G.length) | 0])).join('');
+          if (lock >= truth.length) { clearInterval(iv); titleEl.textContent = truth; }
+        }, 32);
+      }
+    }
+
+    function tune(i: number, quiet = false) {
+      i = (i + chans.length) % chans.length;
+      if (i === shown) return;
+      shown = i;
+      const d = data(i);
+      // the next picture loads into the back layer, then swaps to the front
+      const next = imgs[1 - top];
+      const swap = () => {
+        imgs[top].classList.remove('is-top');
+        next.classList.add('is-top');
+        top = 1 - top;
+        glass.classList.remove('is-roll');
+        void glass.offsetWidth;
+        glass.classList.add('is-roll');
+      };
+      if (d.cover) { next.src = d.cover; if (next.complete) swap(); else next.onload = swap; }
+      paintDetails(i);
+      if (quiet) return;
+      burst(260);
+      sound.glitch();
+      if (!reduce) {
+        big.textContent = `CH ${pad(i + 1)}`;
+        gsap.fromTo(big, { opacity: 1 }, { opacity: 0, duration: 0.5, delay: 0.25, ease: 'steps(3)' });
+      }
+    }
+
+    // ---- left alone, it channel-surfs ----
+    const ATTRACT = 7;
+    let attract: gsap.core.Tween | null = null;
+    function surf() {
+      attract?.kill();
+      if (reduce || locked !== null || hovering || root.classList.contains('is-contact')) { gsap.set(bar, { scaleX: 0 }); return; }
+      attract = gsap.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: ATTRACT, ease: 'none',
+        onComplete: () => { if (!document.hidden) tune(shown + 1); surf(); } });
+    }
+
+    const lock = (i: number | null) => {
+      locked = i;
+      chans.forEach((c, k) => c.classList.toggle('is-locked', k === i));
+      surf();
+    };
+
+    // desktop: hover previews, click locks (click the locked one again to let it surf)
+    chans.forEach((c, i) => {
+      c.addEventListener('pointerenter', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        sound.tick();
+        tune(i);
+      });
+      c.addEventListener('focus', () => tune(i));
+      c.addEventListener('click', () => { closeContact(); tune(i); lock(locked === i ? null : i); });
+    });
+    const list = $('[data-tv-list]');
+    list.addEventListener('pointerenter', () => { hovering = true; surf(); });
+    list.addEventListener('pointerleave', () => {
+      hovering = false;
+      if (locked !== null) tune(locked);
+      surf();
+    });
+    // ↑ ↓ walk the channels from the list
+    list.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      const k = (shown + (e.key === 'ArrowDown' ? 1 : -1) + chans.length) % chans.length;
+      chans[k].focus();
+    });
+
+    // phones: ◀ ▶ and a swipe on the screen; picking a channel locks it
+    const step = (dir: number) => { closeContact(); tune(shown + dir); lock(shown); };
+    $('[data-tv-prev]').addEventListener('click', () => step(-1));
+    $('[data-tv-next]').addEventListener('click', () => step(1));
+    let tx = 0, ty = 0;
+    glass.addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+    glass.addEventListener('touchend', (e) => {
+      const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.4) step(dx < 0 ? 1 : -1);
+    }, { passive: true });
+
+    // ---- CH 00: contact ----
+    const fields = Array.from(contact.querySelectorAll<HTMLElement>('[data-field]'));
+    function openContact() {
+      if (root!.classList.contains('is-contact')) return;
+      root!.classList.add('is-contact');
+      contact.hidden = false;
+      chEl.textContent = 'CH 00';
+      chans.forEach((c) => c.classList.remove('is-on'));
+      avail?.setAttribute('aria-expanded', 'true');
+      attract?.kill();
+      gsap.set(bar, { scaleX: 0 });
+      sound.glitch();
+      if (!reduce) {
+        staticCv.style.opacity = '0.14';
+        if (!staticRaf) staticRaf = requestAnimationFrame(paintStatic);
+        big.textContent = 'CH 00';
+        gsap.fromTo(big, { opacity: 1 }, { opacity: 0, duration: 0.5, delay: 0.25, ease: 'steps(3)' });
+        gsap.fromTo(fields, { opacity: 0, y: 8 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.3, delay: 0.2, ease: 'power2.out' });
+      } else gsap.set(fields, { opacity: 1, y: 0 });
+      if (!isPhone()) setTimeout(() => contact.querySelector<HTMLElement>('input')?.focus({ preventScroll: true }), reduce ? 0 : 300);
+    }
+    function closeContact() {
+      if (!root!.classList.contains('is-contact')) return;
+      root!.classList.remove('is-contact');
+      contact.hidden = true;
+      avail?.setAttribute('aria-expanded', 'false');
+      const i = shown;
+      shown = -1;
+      tune(i);
+      surf();
+    }
+    avail?.addEventListener('click', () => (root.classList.contains('is-contact') ? closeContact() : openContact()));
+    $('[data-tv-close]').addEventListener('click', () => { closeContact(); avail?.focus(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && root.classList.contains('is-contact')) { closeContact(); avail?.focus(); }
+    });
+    addEventListener('nyhz:contact', openContact);
+    // the terminal's `open <project>`
+    addEventListener('nyhz:open', (e) => {
+      const slug = (e as CustomEvent<{ slug: string }>).detail?.slug;
+      const i = chans.findIndex((c) => c.dataset.slug === slug);
+      if (i < 0) return;
+      closeContact();
+      tune(i);
+      lock(i);
+    });
+    // the l33t minute rewrites static text; the screen's text is set here
+    addEventListener('nyhz:leet', () => setTimeout(() => { if (shown >= 0) paintDetails(shown); }, 300));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) attract?.pause(); else attract?.resume(); });
+
+    // warm every cover, then switch on: the first channel, quietly, and start surfing
+    chans.forEach((c) => { if (c.dataset.cover) { const im = new Image(); im.decoding = 'async'; im.src = c.dataset.cover; } });
+    tune(0, true);
+    addEventListener('loaderdone', () => { burst(500, 1); surf(); }, { once: true });
+  }
+</script>

@@ -103,3 +103,13 @@ a { color: inherit; text-decoration: none; }
   .page.projects-open .projects { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 }
 
+
+/* ---- the tv layout: hero on top, the set fills the rest (Tv.astro sizes the
+   screen to whatever room this leaves, always 16:10) ---- */
+@media (min-width: 721px) {
+  .page:has(.lower--tv) { max-width: clamp(900px, 64vw, 1180px); }
+  .page:has(.lower--tv) [data-spacer-top] { flex: 0 1 clamp(0px, 4vh, 48px); }
+  .page:has(.lower--tv) [data-spacer-bottom] { display: none; }
+  .page:has(.lower--tv) .hero { margin-bottom: clamp(1.5rem, 6vh, 3.5rem); }
+  .lower--tv { flex: 1 1 0; min-height: 0; }
+}
