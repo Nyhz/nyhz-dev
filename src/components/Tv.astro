@@ -5,8 +5,8 @@
 // It starts switched off (standby); touching a channel powers it on, CRT
 // style, and from then on, left alone, it channel-surfs like a TV in a shop
 // window.
-// The project's details sit on the screen as an on-screen display. "available
-// for work" tunes to CH 00: the contact form, over static.
+// The project's details sit on the screen as an on-screen display. "say hi"
+// tunes to CH 00: the contact form, over static.
 // Phones: the screen goes full width; swipe it (or ◀ ▶) to change channels,
 // and the details sit under it.
 import Contact from './Contact.astro';
@@ -76,7 +76,7 @@ const txt: TxtContext = {
         </div>
       </div>
 
-      <!-- CH 00: "available for work" -->
+      <!-- CH 00: "say hi" -->
       <section class="tv__contact" id="contact" data-tv-contact aria-label="contact" hidden>
         <p class="tv__contact-h">write to me <button class="tv__x" type="button" data-tv-close aria-label="close contact">esc ×</button></p>
         <Contact />
