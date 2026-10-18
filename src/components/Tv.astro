@@ -2,7 +2,9 @@
 // The work, as television: one monitor (16:10, sized to the room it has) and
 // the projects as channels. Hovering a channel tunes to it — static, a roll,
 // a chromatic split and the channel number flashing — and a click locks it.
-// Left alone, the set channel-surfs on its own, like a TV in a shop window.
+// It starts switched off (standby); touching a channel powers it on, CRT
+// style, and from then on, left alone, it channel-surfs like a TV in a shop
+// window.
 // The project's details sit on the screen as an on-screen display. "available
 // for work" tunes to CH 00: the contact form, over static.
 // Phones: the screen goes full width; swipe it (or ◀ ▶) to change channels,
@@ -14,7 +16,7 @@ const { projects } = Astro.props as { projects: ProjectProps[] };
 const shown = projects.slice(0, 10);
 const pad = (n: number) => String(n).padStart(2, '0');
 ---
-<div class="tv" data-tv data-anim>
+<div class="tv is-off" data-tv data-anim>
   <div class="tv__set">
     <div class="tv__screen" data-tv-screen>
       <i class="tv__tick tl"></i><i class="tv__tick tr"></i><i class="tv__tick bl"></i><i class="tv__tick br"></i>
@@ -23,12 +25,16 @@ const pad = (n: number) => String(n).padStart(2, '0');
         <img class="tv__img" data-tv-img alt="" decoding="async" />
         <img class="tv__img" data-tv-img alt="" decoding="async" />
         <canvas class="tv__static" data-tv-static width="160" height="100"></canvas>
+        <i class="tv__ember" aria-hidden="true"></i>
+        <i class="tv__line" data-tv-line aria-hidden="true"></i>
         <a class="tv__hit" data-tv-hit target="_blank" rel="noopener noreferrer" tabindex="-1" aria-hidden="true"></a>
         <div class="tv__osd" aria-hidden="true">
           <span class="tv__ch" data-tv-ch>CH 01</span>
           <span class="tv__state" data-tv-state></span>
         </div>
         <p class="tv__big" data-tv-big aria-hidden="true"></p>
+        <!-- phones: the whole description, read on the screen itself -->
+        <div class="tv__read" data-tv-read hidden><p data-tv-read-t></p><span class="tv__read-x">tap to close</span></div>
         <i class="tv__bar" data-tv-bar aria-hidden="true"></i>
       </div>
 
@@ -42,7 +48,10 @@ const pad = (n: number) => String(n).padStart(2, '0');
       <!-- the lower third: over the picture on desktop, under it on phones -->
       <div class="tv__l3" data-tv-l3 aria-live="polite">
         <h3 class="tv__title"><span data-tv-title></span><span class="tv__year" data-tv-year></span></h3>
-        <p class="tv__desc" data-tv-desc></p>
+        <div class="tv__descwrap">
+          <p class="tv__desc" data-tv-desc></p>
+          <button type="button" class="tv__more" data-tv-more hidden>+ more</button>
+        </div>
         <div class="tv__meta">
           <span class="tv__stack" data-tv-stack></span>
           <nav class="tv__links" aria-label="project links">
@@ -112,9 +121,24 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .tv__static { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; opacity: 0;
     image-rendering: pixelated; pointer-events: none; mix-blend-mode: screen; }
   .tv__hit { position: absolute; inset: 0; z-index: 1; cursor: pointer; }
+  /* standby: no picture, the glow of a switched-off tube, a red pilot light */
+  .tv.is-off .tv__img, .tv.is-off .tv__fill { opacity: 0 !important; }
+  .tv.is-off .tv__hit { cursor: pointer; }
+  .tv__ember { position: absolute; z-index: 2; left: 50%; top: 40%; width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    border-radius: 50%; background: #f2f1ea; box-shadow: 0 0 16px 5px rgba(242, 241, 234, 0.3); opacity: 0; pointer-events: none; }
+  .tv.is-off .tv__ember { animation: tvEmber 3.6s ease-in-out infinite; }
+  @keyframes tvEmber { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.45; } }
+  .tv__state[data-s="off"]::before { content: '● '; color: #ff2e63; text-shadow: 0 0 6px #ff2e63; }
+  /* powering on: a bright line that the picture opens out of */
+  .tv__line { position: absolute; z-index: 5; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: #fff;
+    box-shadow: 0 0 12px 2px rgba(255, 255, 255, 0.8), 0 0 34px rgba(58, 210, 159, 0.6);
+    transform: scaleX(0); opacity: 0; pointer-events: none; }
   .tv__hit:not([href]) { cursor: default; }
 
   /* on-screen display */
+  /* a soft shade under the on-screen display, so it reads over any picture */
+  .tv__glass::before { content: ''; position: absolute; z-index: 2; left: 0; right: 0; top: 0; height: 4rem; pointer-events: none;
+    background: linear-gradient(rgba(8, 8, 8, 0.7), transparent); }
   .tv__osd { position: absolute; z-index: 3; top: 0.8rem; left: 1rem; right: 1rem; display: flex; justify-content: space-between;
     font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: #f2f1ea;
     text-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9); pointer-events: none; }
@@ -144,11 +168,28 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .tv__title { display: flex; align-items: baseline; gap: 0.8rem; margin: 0 0 0.3rem;
     font: 700 clamp(1.05rem, 1.6vw, 1.35rem) var(--mono); letter-spacing: -0.01em; color: #f2f1ea; }
   .tv__year { font: 500 0.66rem var(--mono); letter-spacing: 0.18em; color: var(--muted); }
-  .tv__desc { margin: 0 0 0.6rem; font: 0.76rem/1.6 var(--mono); color: var(--dim); max-width: 62ch;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .tv__meta { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; flex-wrap: wrap; }
-  .tv__stack { font: 500 0.64rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-  .tv__links { display: flex; gap: 0.45rem; }
+  /* three lines that fade out; hovering the screen opens it up to the whole text */
+  .tv__desc { margin: 0 0 0.6rem; font: 0.76rem/1.6 var(--mono); color: var(--dim); max-width: 96ch;
+    max-height: calc(1.6em * 3); overflow: hidden; transition: max-height 0.45s var(--ease-out);
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 1.6em), transparent);
+    mask-image: linear-gradient(180deg, #000 calc(100% - 1.6em), transparent); }
+  .tv__desc.is-whole { -webkit-mask-image: none; mask-image: none; }
+  .tv__descwrap { position: relative; }
+  .tv__more { display: none; }
+  .tv__read { position: absolute; inset: 0; z-index: 4; padding: 1rem 1.1rem; overflow: hidden;
+    background: rgba(8, 8, 8, 0.93); font: 0.8rem/1.6 var(--mono); color: var(--fg); cursor: pointer; }
+  .tv__read[hidden] { display: none; }
+  .tv__read p { margin: 0 0 0.6rem; }
+  .tv__read-x { font: 500 0.6rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  @media (hover: hover) {
+    .tv__screen:hover .tv__desc, .tv__screen:focus-within .tv__desc { max-height: calc(1.6em * 12);
+      -webkit-mask-image: none; mask-image: none; }
+  }
+  /* one line, always: the stack gives way (…) before the buttons ever wrap */
+  .tv__meta { display: flex; align-items: center; justify-content: space-between; gap: 0 1rem; }
+  .tv__stack { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font: 500 0.64rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .tv__links { display: flex; gap: 0.45rem; flex: none; }
   .tv__btn { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.38rem 0.7rem;
     border: 1px solid rgba(242, 241, 234, 0.22); background: rgba(10, 10, 10, 0.55);
     font: 500 0.62rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: #f2f1ea;
@@ -198,7 +239,8 @@ const pad = (n: number) => String(n).padStart(2, '0');
     .tv__screen { width: 100%; height: auto; }
     .tv__glass { position: relative; inset: auto; aspect-ratio: 16 / 10; }
     .tv__l3 { position: static; padding: 0.9rem 0 0; background: none; pointer-events: auto; }
-    .tv__desc { -webkit-line-clamp: 3; }
+    .tv__desc { max-height: calc(1.6em * 3); min-height: calc(1.6em * 3); } /* steady height across channels */
+    .tv__meta { min-height: 2.05rem; } /* the link buttons' height, even in standby */
     .tv__nav { display: flex; align-items: center; justify-content: space-between; margin-top: 0.7rem;
       font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
     .tv__navn b { color: var(--fg); font-weight: 500; }
@@ -206,10 +248,13 @@ const pad = (n: number) => String(n).padStart(2, '0');
       font: inherit; cursor: pointer; }
     .tv__navbtn:active { transform: translateY(1px); }
     .tv.is-contact .tv__l3, .tv.is-contact .tv__nav { display: none; }
+    .tv__more:not([hidden]) { display: block; position: absolute; right: 0; bottom: 0; padding: 0 0 0 1.4rem;
+      background: linear-gradient(90deg, transparent, var(--bg) 1.2rem); border: 0; cursor: pointer;
+      font: 500 0.7rem/1.6 var(--mono); color: var(--accent); }
     .tv__contact { position: static; inset: auto; padding: 0.9rem 0 0; background: none; }
     .tv.is-contact .tv__glass { aspect-ratio: auto; height: 3.2rem; }
   }
-  @media (max-width: 720px) and (max-height: 700px) { .tv__desc { -webkit-line-clamp: 2; } }
+  @media (max-width: 720px) and (max-height: 700px) { .tv__desc { max-height: calc(1.6em * 2); min-height: calc(1.6em * 2); } }
 
   @media (prefers-reduced-motion: reduce) {
     .tv__glass.is-roll .tv__img.is-top { animation: none; }
@@ -246,6 +291,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
     const download = $<HTMLAnchorElement>('[data-tv-download]');
     const repo = $<HTMLAnchorElement>('[data-tv-repo]');
     const nEl = $('[data-tv-n]');
+    const moreBtn = $<HTMLButtonElement>('[data-tv-more]');
+    const readBox = $('[data-tv-read]');
+    const readT = $('[data-tv-read-t]');
     const contact = $('[data-tv-contact]');
     const chans = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-ch]'));
     const avail = document.querySelector<HTMLButtonElement>('[data-contact-open]');
@@ -289,6 +337,46 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     // ---- tuning ----
     let shown = -1, locked: number | null = null, hovering = false, top = 0;
+    let on = false, powering = false, pending = 0;
+    const line = $('[data-tv-line]');
+
+    // standby: what the screen says before it's switched on
+    function paintStandby() {
+      chEl.textContent = 'CH --';
+      stateEl.textContent = 'standby';
+      stateEl.dataset.s = 'off';
+      titleEl.textContent = 'standby';
+      yearEl.textContent = '';
+      descEl.textContent = isPhone()
+        ? `${chans.length} channels of things I've built — swipe the screen or tap ▶ to tune in.`
+        : `${chans.length} channels of things I've built — hover one to tune in.`;
+      descEl.classList.add('is-whole');
+      moreBtn.hidden = true;
+      stackEl.textContent = '';
+      [live, download, repo].forEach((a) => { a.hidden = true; });
+      hit.removeAttribute('href');
+      nEl.textContent = '--';
+      chans.forEach((c) => c.classList.remove('is-on'));
+    }
+
+    // switch on, CRT style: the picture collapses to a bright line and opens out
+    function powerOn(i: number) {
+      pending = i;
+      if (on) { if (!powering) tune(i); return; }
+      on = true;
+      root!.classList.remove('is-off');
+      sound.glitch();
+      if (reduce) { tune(i, true); surf(); return; }
+      powering = true;
+      gsap.timeline({ onComplete: () => { powering = false; surf(); } })
+        .set(glass, { clipPath: 'inset(50% 0 50% 0)' })
+        .fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.2, ease: 'power3.out' })
+        .add(() => tune(pending, true))
+        .to(glass, { clipPath: 'inset(0% 0 0% 0)', duration: 0.42, ease: 'power3.out' })
+        .to(line, { opacity: 0, duration: 0.3, ease: 'power2.out' }, '<')
+        .add(() => { burst(260, 0.5); })
+        .set(glass, { clearProps: 'clipPath' });
+    }
     const data = (i: number) => chans[i].dataset;
 
     function paintDetails(i: number) {
@@ -299,6 +387,12 @@ const pad = (n: number) => String(n).padStart(2, '0');
       titleEl.textContent = say(d.title || '');
       yearEl.textContent = d.year || '';
       descEl.textContent = say(d.desc || '');
+      readBox.hidden = true;
+      requestAnimationFrame(() => {
+        const whole = descEl.scrollHeight <= descEl.clientHeight + 1;
+        descEl.classList.toggle('is-whole', whole);
+        moreBtn.hidden = whole || !isPhone(); // desktop opens it on hover instead
+      });
       stackEl.textContent = d.tags || '';
       ([[live, d.live], [download, d.download], [repo, d.repo]] as const).forEach(([a, href]) => {
         if (href) { a.href = href; a.hidden = false; } else a.hidden = true;
@@ -356,7 +450,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
     let attract: gsap.core.Tween | null = null;
     function surf() {
       attract?.kill();
-      if (reduce || locked !== null || hovering || root.classList.contains('is-contact')) { gsap.set(bar, { scaleX: 0 }); return; }
+      if (!on || reduce || locked !== null || hovering || root.classList.contains('is-contact')) { gsap.set(bar, { scaleX: 0 }); return; }
       attract = gsap.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: ATTRACT, ease: 'none',
         onComplete: () => { if (!document.hidden) tune(shown + 1); surf(); } });
     }
@@ -372,10 +466,10 @@ const pad = (n: number) => String(n).padStart(2, '0');
       c.addEventListener('pointerenter', (e) => {
         if (e.pointerType !== 'mouse') return;
         sound.tick();
-        tune(i);
+        powerOn(i);
       });
-      c.addEventListener('focus', () => tune(i));
-      c.addEventListener('click', () => { closeContact(); tune(i); lock(locked === i ? null : i); });
+      c.addEventListener('focus', () => powerOn(i));
+      c.addEventListener('click', () => { closeContact(); powerOn(i); lock(locked === i ? null : i); });
     });
     const list = $('[data-tv-list]');
     list.addEventListener('pointerenter', () => { hovering = true; surf(); });
@@ -393,7 +487,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
     });
 
     // phones: ◀ ▶ and a swipe on the screen; picking a channel locks it
-    const step = (dir: number) => { closeContact(); tune(shown + dir); lock(shown); };
+    const step = (dir: number) => {
+      closeContact();
+      if (!on) { powerOn(dir > 0 ? 0 : chans.length - 1); lock(pending); return; }
+      tune(shown + dir);
+      lock(shown);
+    };
+    // a click (or tap) on the switched-off screen turns it on
+    hit.addEventListener('click', (e) => { if (!on) { e.preventDefault(); powerOn(0); } });
     $('[data-tv-prev]').addEventListener('click', () => step(-1));
     $('[data-tv-next]').addEventListener('click', () => step(1));
     let tx = 0, ty = 0;
@@ -403,10 +504,20 @@ const pad = (n: number) => String(n).padStart(2, '0');
       if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.4) step(dx < 0 ? 1 : -1);
     }, { passive: true });
 
+    // phones: "+ more" puts the whole description on the screen; a tap closes it
+    moreBtn.addEventListener('click', () => {
+      readT.textContent = descEl.textContent;
+      readBox.hidden = false;
+      if (!reduce) gsap.fromTo(readBox, { opacity: 0 }, { opacity: 1, duration: 0.25 });
+      attract?.kill();
+    });
+    readBox.addEventListener('click', () => { readBox.hidden = true; surf(); });
+
     // ---- CH 00: contact ----
     const fields = Array.from(contact.querySelectorAll<HTMLElement>('[data-field]'));
     function openContact() {
       if (root!.classList.contains('is-contact')) return;
+      readBox.hidden = true;
       root!.classList.add('is-contact');
       contact.hidden = false;
       chEl.textContent = 'CH 00';
@@ -429,6 +540,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
       root!.classList.remove('is-contact');
       contact.hidden = true;
       avail?.setAttribute('aria-expanded', 'false');
+      if (!on) { paintStandby(); return; } // it was in standby before
       const i = shown;
       shown = -1;
       tune(i);
@@ -446,7 +558,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
       const i = chans.findIndex((c) => c.dataset.slug === slug);
       if (i < 0) return;
       closeContact();
-      tune(i);
+      powerOn(i);
       lock(i);
     });
     // the l33t minute rewrites static text; the screen's text is set here
@@ -455,7 +567,6 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
     // warm every cover, then switch on: the first channel, quietly, and start surfing
     chans.forEach((c) => { if (c.dataset.cover) { const im = new Image(); im.decoding = 'async'; im.src = c.dataset.cover; } });
-    tune(0, true);
-    addEventListener('loaderdone', () => { burst(500, 1); surf(); }, { once: true });
+    paintStandby();
   }
 </script>
