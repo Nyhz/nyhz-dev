@@ -5,11 +5,11 @@ import Base from './Base.astro';
 import Field from '../components/Field.astro';
 import Frame from '../components/Frame.astro';
 
-const { title, description, schema, crumb } = Astro.props as {
-  title: string; description: string; schema?: object; crumb?: { href: string; label: string };
+const { title, description, schema, crumb, image } = Astro.props as {
+  title: string; description: string; schema?: object; crumb?: { href: string; label: string }; image?: string;
 };
 ---
-<Base title={title} description={description} schema={schema} doc>
+<Base title={title} description={description} schema={schema} image={image} doc>
   <Field slot="bg" />
   <Frame slot="frame" />
   <div class="lab">

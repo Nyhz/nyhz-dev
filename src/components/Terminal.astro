@@ -129,17 +129,18 @@ const ctx: TermContext = {
   import { achievements } from '../scripts/eggs';
   import { statusLine, type Ping } from '../scripts/status';
   import { sound } from '../scripts/sound';
+  import { onPage } from '../scripts/page';
 
   const UNDER_ESC = ['`', 'º', '²', '§'];
 
-  const root = document.querySelector<HTMLElement>('[data-term]');
-  const win = root?.querySelector<HTMLElement>('[data-term-win]');
-  const out = root?.querySelector<HTMLElement>('[data-term-out]');
-  const hint = root?.querySelector<HTMLButtonElement>('[data-term-hint]');
-  const form = root?.querySelector<HTMLFormElement>('[data-term-form]');
-  const input = root?.querySelector<HTMLInputElement>('[data-term-input]');
-
-  if (root && win && out && hint && form && input) {
+  onPage((signal) => {
+    const root = document.querySelector<HTMLElement>('[data-term]');
+    const win = root?.querySelector<HTMLElement>('[data-term-win]');
+    const out = root?.querySelector<HTMLElement>('[data-term-out]');
+    const hint = root?.querySelector<HTMLButtonElement>('[data-term-hint]');
+    const form = root?.querySelector<HTMLFormElement>('[data-term-form]');
+    const input = root?.querySelector<HTMLInputElement>('[data-term-input]');
+    if (!root || !win || !out || !hint || !form || !input) return;
     const ctx = JSON.parse(root.dataset.ctx || '{}') as TermContext;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const history: string[] = [];
@@ -298,7 +299,7 @@ const ctx: TermContext = {
       if (getComputedStyle(root).display === 'none') return;
       e.preventDefault();
       open();
-    });
+    }, { signal });
 
     input.addEventListener('keydown', (e) => {
       if (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace') sound.key();
@@ -432,7 +433,8 @@ const ctx: TermContext = {
         }
       }
     });
-  }
+    signal.addEventListener('abort', () => { trainTw?.kill(); tl?.kill(); });
+  });
 
   // for whoever opens the devtools
   console.log(
@@ -442,9 +444,6 @@ const ctx: TermContext = {
 
   // the tab keeps a prompt blinking while you're away — the title, and the
   // favicon's cursor with it (public/favicon.svg, drawn here with/without it)
-  const title = document.title;
-  const iconEl = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-  const iconHref = iconEl?.href ?? '';
   const icon = (cursor: boolean) => 'data:image/svg+xml,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#0b0b0b"/>'
     + '<g fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
@@ -453,19 +452,23 @@ const ctx: TermContext = {
     + '<path d="M9.4 9 L15.4 16 L9.4 23" stroke="#f1efe9"/></g>'
     + (cursor ? '<rect x="17.5" y="20.4" width="6.4" height="2.8" fill="#3ad29f"/>' : '') + '</svg>');
   const frames = [icon(true), icon(false)];
-  let blink = 0;
-  document.addEventListener('visibilitychange', () => {
-    clearInterval(blink);
-    if (!document.hidden) {
-      document.title = title;
-      if (iconEl) iconEl.href = iconHref;
-      return;
-    }
-    let on = false;
-    blink = window.setInterval(() => {
-      on = !on;
-      document.title = on ? '›_ still here' : '› still here';
-      if (iconEl) iconEl.href = frames[on ? 0 : 1];
-    }, 900);
+  onPage((signal) => {
+    if (!document.querySelector('[data-term]')) return; // the tv's page only
+    const title = document.title;
+    const iconEl = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const iconHref = iconEl?.href ?? '';
+    let blink = 0;
+    const stop = () => { clearInterval(blink); document.title = title; if (iconEl) iconEl.href = iconHref; };
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { stop(); return; }
+      clearInterval(blink);
+      let on = false;
+      blink = window.setInterval(() => {
+        on = !on;
+        document.title = on ? '›_ still here' : '› still here';
+        if (iconEl) iconEl.href = frames[on ? 0 : 1];
+      }, 900);
+    }, { signal });
+    signal.addEventListener('abort', () => clearInterval(blink));
   });
 </script>

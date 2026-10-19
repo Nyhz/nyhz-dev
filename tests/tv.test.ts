@@ -35,7 +35,7 @@ describe('teletext', () => {
   const text = (n: number) => teletextPage(n, ctx)?.map((r) => r.segs.map((s) => s[1]).join('')).join('\n') ?? null;
   it('has an index that links to its pages', () => {
     const p = teletextPage(100, ctx)!;
-    expect(p.filter((r) => r.link).map((r) => r.link)).toEqual([101, 102, 103, 104, 888]);
+    expect(p.filter((r) => r.link).map((r) => r.link)).toEqual([101, 102, 103, 104, 105, 888]);
   });
   it('fills pages from the content', () => {
     expect(text(101)).toContain('2 channels, 1 live');
@@ -59,5 +59,8 @@ describe('teletext markup', () => {
     expect(teletextHTML(100, ctx)).toContain('data-go="p101"');
     expect(teletextHTML(103, ctx)).toContain('data-go="c1"');
     expect(teletextHTML(555, ctx)).toMatch(/PAGE 555 NOT FOUND.*class="fast"/);
+  });
+  it('links the making-of page off the tv, to the post', () => {
+    expect(teletextHTML(105, ctx)).toContain('data-go="u/lab/tv/"');
   });
 });

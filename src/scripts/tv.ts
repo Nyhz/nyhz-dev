@@ -39,7 +39,7 @@ export const clampVolume = (v: number) => Math.max(0, Math.min(VOL_MAX, v));
 // A page is rows of segments: [colour, text]. Colours are teletext's own
 // (w y c g r m b); a row can be double height ('dh') or a fastext bar.
 export type Seg = [string, string];
-export type Row = { segs: Seg[]; dh?: boolean; bg?: string; link?: number; ch?: number };
+export type Row = { segs: Seg[]; dh?: boolean; bg?: string; link?: number; ch?: number; href?: string };
 export type TxtContext = {
   name: string; role: string; location: string;
   projects: { title: string; status: string }[];
@@ -67,6 +67,7 @@ export function teletextPage(n: number, ctx: TxtContext): Row[] | null {
         { segs: [['y', ' 102  '], ['w', 'skills']], link: 102 },
         { segs: [['y', ' 103  '], ['w', 'projects · the guide']], link: 103 },
         { segs: [['y', ' 104  '], ['w', 'contact']], link: 104 },
+        { segs: [['y', ' 105  '], ['w', 'making of · how this tv was built']], link: 105 },
         blank,
         { segs: [['c', ' 888  '], ['c', 'subtitles']], link: 888 },
         blank,
@@ -112,6 +113,17 @@ export function teletextPage(n: number, ctx: TxtContext): Row[] | null {
         blank,
         ...ctx.socials.map((s): Row => ({ segs: [['c', dots(s.label, 10)], ['w', strip(s.url)]] })),
       ];
+    case 105:
+      return [
+        title('MAKING OF'),
+        blank,
+        { segs: [['w', ' how this tv was built, step by step:']] },
+        { segs: [['w', ' the picture, the static, the crt switch,']] },
+        { segs: [['w', ' the remote, this teletext, the ticker']] },
+        { segs: [['w', ' and the ambilight — with the code.']] },
+        blank,
+        { segs: [['y', ' read it '], ['c', '› nyhz.dev/lab/tv']], href: '/lab/tv/' },
+      ];
     case 888:
       return [
         title('SUBTITLES', 'y'),
@@ -134,7 +146,7 @@ export const esc = (t: string) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<
 export function teletextHTML(n: number, ctx: TxtContext): string {
   const rows = teletextPage(n, ctx);
   const body = rows
-    ? rows.map((r) => `<span class="tr${r.dh ? ' dh' : ''}${r.bg ? ` bg-${r.bg}` : ''}"${r.link ? ` data-go="p${r.link}"` : r.ch !== undefined ? ` data-go="c${r.ch}"` : ''}>${r.segs.map(([c, t]) => `<span class="k-${c}">${esc(t)}</span>`).join('')}</span>`).join('')
+    ? rows.map((r) => `<span class="tr${r.dh ? ' dh' : ''}${r.bg ? ` bg-${r.bg}` : ''}"${r.link ? ` data-go="p${r.link}"` : r.ch !== undefined ? ` data-go="c${r.ch}"` : r.href ? ` data-go="u${esc(r.href)}"` : ''}>${r.segs.map(([c, t]) => `<span class="k-${c}">${esc(t)}</span>`).join('')}</span>`).join('')
     : `<span class="tr"> </span><span class="tr k-r"> PAGE ${n} NOT FOUND</span><span class="tr k-w"> nothing on this page. try 100.</span><span class="tr" data-go="p100"><span class="k-y"> 100 </span><span class="k-w">index</span></span>`;
   const fast = `<div class="fast">${FASTEXT.map(([c, t, p]) => `<span class="k-${c}" data-go="p${p}">${t}</span>`).join('')}</div>`;
   return body + fast;

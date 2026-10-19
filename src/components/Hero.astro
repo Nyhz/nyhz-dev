@@ -3,6 +3,8 @@ const { name, role, tagline = '', location, socials = [] } = Astro.props;
 
 const ICONS: Record<string, string> = {
   github: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-1.8c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>',
+  // the lab: a flask, drawn in strokes
+  lab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6l-5.4 9.4A1.7 1.7 0 0 0 6.1 21h11.8a1.7 1.7 0 0 0 1.5-2.6L14 9V3"/><path d="M7.3 15h9.4"/></svg>',
   default: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>',
 };
 const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
@@ -14,17 +16,21 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
   <h1 class="hero-name" data-text={name} aria-label={name}>{[...name].map((ch) => <span class="ch" aria-hidden="true">{ch}</span>)}</h1>
   {tagline && <p class="hero-tagline" data-anim>{tagline}</p>}
   <div class="hero-foot" data-anim>
-    {socials.length > 0 && (
-      <nav class="hero-socials">
-        {socials.map((s: { label: string; url: string }) => (
-          <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
-            <span class="ico" set:html={icon(s.label)} />
-            <span class="sl">{s.label}</span>
-            <span class="ar" aria-hidden="true">↗</span>
-          </a>
-        ))}
-      </nav>
-    )}
+    <nav class="hero-socials">
+      {socials.map((s: { label: string; url: string }) => (
+        <a href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
+          <span class="ico" set:html={icon(s.label)} />
+          <span class="sl">{s.label}</span>
+          <span class="ar" aria-hidden="true">↗</span>
+        </a>
+      ))}
+      <!-- the lab: how the things here were built (/lab) -->
+      <a href="/lab/" class="is-in">
+        <span class="ico" set:html={icon('lab')} />
+        <span class="sl">lab</span>
+        <span class="ar" aria-hidden="true">→</span>
+      </a>
+    </nav>
     <!-- tunes the tv to CH 00, the contact form (Tv.astro) -->
     <button class="hero-avail" type="button" data-contact-open aria-controls="contact" aria-expanded="false">
       <i class="live" aria-hidden="true"></i>
@@ -91,8 +97,10 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
     80% { opacity: 0.7; transform: translate(-2px,0); clip-path: inset(0 0 68% 0); }
   }
 
+  /* the right padding is room for a hovered arrow's nudge — the overflow
+     (there for the fold) would clip its head off */
   .hero-socials { display: flex; gap: 1.8rem; flex-wrap: wrap;
-    overflow: hidden; max-height: 6rem;
+    overflow: hidden; max-height: 6rem; padding-right: 0.5rem;
     transition: opacity 0.4s ease, max-height 0.5s ease, margin 0.5s ease; }
   .hero-socials a { position: relative; display: inline-flex; align-items: center; gap: 0.5rem;
     font-size: 0.9rem; font-weight: 500; color: var(--muted); padding-bottom: 5px; transition: color 0.25s; }
@@ -103,6 +111,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
     background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease; }
   .hero-socials a:hover { color: var(--fg); }
   .hero-socials a:hover .ar { transform: translate(2px, -2px); opacity: 1; }
+  .hero-socials a.is-in:hover .ar { transform: translateX(3px); }
   .hero-socials a:hover::after { transform: scaleX(1); }
 
   .hero-avail { position: relative; display: inline-flex; align-items: center; gap: 0.55rem;
@@ -144,24 +153,26 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
 
 <script>
   import { afterLoader } from '../scripts/loaded';
+  import { onPage, later } from '../scripts/page';
 
-  const el = document.querySelector<HTMLElement>('.hero-name');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (el && !reduce) {
+  onPage((signal) => {
+    const el = document.querySelector<HTMLElement>('.hero-name');
+    if (!el || reduce) return;
     const glitch = () => {
       if (el.classList.contains('glitching')) return;
       el.classList.add('glitching');
-      setTimeout(() => el.classList.remove('glitching'), 420);
+      later(420, () => el.classList.remove('glitching'), signal);
     };
-    const loop = () => { glitch(); setTimeout(loop, 3000 + Math.random() * 3000); };
-    setTimeout(loop, 3000 + Math.random() * 3000);
+    const loop = () => { glitch(); later(3000 + Math.random() * 3000, loop, signal); };
+    later(3000 + Math.random() * 3000, loop, signal);
 
     // the terminal's `glitch` command: a burst of three, plus a shockwave
     addEventListener('nyhz:glitch', () => {
       const r = el.getBoundingClientRect();
       dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x: r.left + r.width / 2, y: r.top + r.height / 2, strength: 2 } }));
-      [0, 480, 960].forEach((d) => setTimeout(glitch, d));
-    });
+      [0, 480, 960].forEach((d) => later(d, glitch, signal));
+    }, { signal });
 
     // Pointer proximity: each glyph eases from 700 toward 180 as the cursor
     // nears it — in the dot-matrix face the dots shrink and turn round (ROND).
@@ -184,7 +195,7 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
       const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
       // stays at rest until the loader's name has landed and handed over
       let live = false;
-      afterLoader(() => setTimeout(() => { live = true; }, 900));
+      afterLoader(() => later(900, () => { live = true; }, signal));
       addEventListener('pointermove', (e) => {
         if (!live || e.pointerType !== 'mouse') return;
         const R = el.getBoundingClientRect().height * 1.9;
@@ -195,8 +206,9 @@ const icon = (label: string) => ICONS[label.toLowerCase()] ?? ICONS.default;
           want[i] = 700 - 520 * k * k * (3 - 2 * k);
         });
         kick();
-      }, { passive: true });
-      document.documentElement.addEventListener('pointerleave', () => { want.fill(700); kick(); });
+      }, { passive: true, signal });
+      document.documentElement.addEventListener('pointerleave', () => { want.fill(700); kick(); }, { signal });
+      signal.addEventListener('abort', () => cancelAnimationFrame(raf));
     }
-  }
+  });
 </script>

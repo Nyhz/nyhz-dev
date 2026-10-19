@@ -1,6 +1,6 @@
 ---
 ---
-<div data-nosnippet class="frame" aria-hidden="true">
+<div data-nosnippet class="frame" aria-hidden="true" transition:persist="frame">
   <div class="frame__border">
     <span class="tick tl"></span><span class="tick tr"></span>
     <span class="tick bl"></span><span class="tick br"></span>
@@ -20,6 +20,8 @@
   .tick.bl { left: -1px; bottom: -1px; border-right: 0; border-top: 0; }
   .tick.br { right: -1px; bottom: -1px; border-left: 0; border-top: 0; }
 
+  /* pages that scroll (the lab's): the text passes under the corner lines */
+  :global(html.is-doc) .meta { background: var(--bg); padding: 0.35rem 0.5rem; margin: -0.35rem -0.5rem; }
   .meta { position: absolute; font: 500 0.62rem var(--mono); letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--muted); }
   .meta.a { left: clamp(26px, 2.6vw, 42px); top: clamp(22px, 2.4vw, 38px); color: var(--fg); }

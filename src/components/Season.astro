@@ -37,109 +37,119 @@
 <script>
   import { seasonOf, type Season } from '../scripts/season';
   import { afterLoader } from '../scripts/loaded';
+  import { onPage, later } from '../scripts/page';
 
   const html = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const forced = import.meta.env.DEV ? new URLSearchParams(location.search).get('season') : null;
   const season = (forced || seasonOf(new Date())) as Season;
   const toast = (k: string, t: string, n = '') => dispatchEvent(new CustomEvent('nyhz:toast', { detail: { k, t, n } }));
-  const after = (ms: number, fn: () => void) => afterLoader(() => setTimeout(fn, ms));
+  // the greetings and the one-off jokes are once per visit, not once per
+  // time you come back to the tv from a post
+  let greeted = false;
+  const once = (fn: () => void) => { if (!greeted) { greeted = true; fn(); } };
 
-  if (season) html.classList.add(`season-${season}`);
+  onPage((signal) => {
+    if (!document.querySelector('[data-snow]')) return; // not the tv's page (this component isn't on it)
+    const after = (ms: number, fn: () => void) => afterLoader(() => later(ms, fn, signal));
+    if (season) html.classList.add(`season-${season}`);
 
-  // ---- halloween: lights out, a torch follows the pointer, the bulb fails ----
-  if (season === 'halloween') {
-    after(1500, () => toast('31 · 10', 'the lights are failing', '🎃'));
-    const dark = document.querySelector<HTMLElement>('[data-dark]');
-    const lamp = dark?.querySelector<HTMLElement>('[data-lamp]');
-    if (dark && lamp) {
-      const at = { x: innerWidth / 2, y: innerHeight * 0.4 }, to = { ...at };
-      addEventListener('pointermove', (e) => { to.x = e.clientX; to.y = e.clientY; }, { passive: true });
-      addEventListener('pointerdown', (e) => { to.x = e.clientX; to.y = e.clientY; }, { passive: true });
-      let last = 0;
-      const move = (t: number) => {
-        // a torch held in a hand: it trails the pointer a little, and sways
-        const k = reduce ? 1 : 0.16;
-        at.x += (to.x - at.x) * k; at.y += (to.y - at.y) * k;
-        const sway = reduce ? 0 : Math.sin(t / 900) * 4;
-        if (t - last > 8) { lamp.style.transform = `translate3d(${at.x + sway}px, ${at.y + sway * 0.6}px, 0)`; last = t; }
-        requestAnimationFrame(move);
-      };
-      requestAnimationFrame(move);
-      // the bulb is dying: bursts of flicker, and once in a while it goes out
-      if (!reduce) {
-        const flicker = () => {
-          const n = 2 + ((Math.random() * 4) | 0);
-          let i = 0;
-          const tick = () => {
-            dark.classList.toggle('is-out');
-            if (++i < n * 2) setTimeout(tick, 40 + Math.random() * 110);
-            else {
-              dark.classList.remove('is-out');
-              if (Math.random() < 0.25) { // a proper blackout, then the name jolts back
-                dark.classList.add('is-out');
-                setTimeout(() => { dark.classList.remove('is-out'); dispatchEvent(new Event('nyhz:glitch')); }, 900);
-              }
-            }
-          };
-          tick();
-          setTimeout(flicker, 5000 + Math.random() * 7000);
+    // ---- halloween: lights out, a torch follows the pointer, the bulb fails ----
+    if (season === 'halloween') {
+      once(() => after(1500, () => toast('31 · 10', 'the lights are failing', '🎃')));
+      const dark = document.querySelector<HTMLElement>('[data-dark]');
+      const lamp = dark?.querySelector<HTMLElement>('[data-lamp]');
+      if (dark && lamp) {
+        const at = { x: innerWidth / 2, y: innerHeight * 0.4 }, to = { ...at };
+        addEventListener('pointermove', (e) => { to.x = e.clientX; to.y = e.clientY; }, { passive: true, signal });
+        addEventListener('pointerdown', (e) => { to.x = e.clientX; to.y = e.clientY; }, { passive: true, signal });
+        let last = 0;
+        const move = (t: number) => {
+          if (signal.aborted) return;
+          // a torch held in a hand: it trails the pointer a little, and sways
+          const k = reduce ? 1 : 0.16;
+          at.x += (to.x - at.x) * k; at.y += (to.y - at.y) * k;
+          const sway = reduce ? 0 : Math.sin(t / 900) * 4;
+          if (t - last > 8) { lamp.style.transform = `translate3d(${at.x + sway}px, ${at.y + sway * 0.6}px, 0)`; last = t; }
+          requestAnimationFrame(move);
         };
-        after(4000, flicker);
+        requestAnimationFrame(move);
+        // the bulb is dying: bursts of flicker, and once in a while it goes out
+        if (!reduce) {
+          const flicker = () => {
+            const n = 2 + ((Math.random() * 4) | 0);
+            let i = 0;
+            const tick = () => {
+              dark.classList.toggle('is-out');
+              if (++i < n * 2) later(40 + Math.random() * 110, tick, signal);
+              else {
+                dark.classList.remove('is-out');
+                if (Math.random() < 0.25) { // a proper blackout, then the name jolts back
+                  dark.classList.add('is-out');
+                  later(900, () => { dark.classList.remove('is-out'); dispatchEvent(new Event('nyhz:glitch')); }, signal);
+                }
+              }
+            };
+            tick();
+            later(5000 + Math.random() * 7000, flicker, signal);
+          };
+          after(4000, flicker);
+        }
       }
     }
-  }
 
-  // ---- christmas: glyph snow, slow, behind the page ----
-  if (season === 'xmas') {
-    after(1500, () => toast('24 – 26 · 12', 'season\'s greetings', '* · +'));
-    const cv = document.querySelector<HTMLCanvasElement>('[data-snow]');
-    const x = cv?.getContext('2d');
-    if (cv && x && !reduce) {
-      const dpr = Math.min(devicePixelRatio || 1, 2);
-      const size = () => { cv.width = Math.round(cv.clientWidth * dpr); cv.height = Math.round(cv.clientHeight * dpr); };
-      size();
-      addEventListener('resize', size);
-      const GL = ['*', '·', '+', '.', '*'];
-      const flakes = Array.from({ length: 90 }, () => ({
-        x: Math.random(), y: Math.random(), v: 0.0006 + Math.random() * 0.0012, ph: Math.random() * 6.28,
-        g: GL[(Math.random() * GL.length) | 0], s: 9 + Math.random() * 9, a: 0.18 + Math.random() * 0.4,
-      }));
-      const frame = (t: number) => {
-        if (!document.hidden) {
-          x.clearRect(0, 0, cv.width, cv.height);
-          x.textAlign = 'center';
-          for (const f of flakes) {
-            f.y += f.v;
-            if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
-            const px = (f.x + Math.sin(t / 1400 + f.ph) * 0.012) * cv.width;
-            x.font = `500 ${f.s * dpr}px "Geist Mono Variable", ui-monospace, monospace`;
-            x.fillStyle = `rgba(242, 241, 234, ${f.a})`;
-            x.fillText(f.g, px, f.y * cv.height);
+    // ---- christmas: glyph snow, slow, behind the page ----
+    if (season === 'xmas') {
+      once(() => after(1500, () => toast('24 – 26 · 12', 'season\'s greetings', '* · +')));
+      const cv = document.querySelector<HTMLCanvasElement>('[data-snow]');
+      const x = cv?.getContext('2d');
+      if (cv && x && !reduce) {
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const size = () => { cv.width = Math.round(cv.clientWidth * dpr); cv.height = Math.round(cv.clientHeight * dpr); };
+        size();
+        addEventListener('resize', size, { signal });
+        const GL = ['*', '·', '+', '.', '*'];
+        const flakes = Array.from({ length: 90 }, () => ({
+          x: Math.random(), y: Math.random(), v: 0.0006 + Math.random() * 0.0012, ph: Math.random() * 6.28,
+          g: GL[(Math.random() * GL.length) | 0], s: 9 + Math.random() * 9, a: 0.18 + Math.random() * 0.4,
+        }));
+        const frame = (t: number) => {
+          if (signal.aborted) return;
+          if (!document.hidden) {
+            x.clearRect(0, 0, cv.width, cv.height);
+            x.textAlign = 'center';
+            for (const f of flakes) {
+              f.y += f.v;
+              if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+              const px = (f.x + Math.sin(t / 1400 + f.ph) * 0.012) * cv.width;
+              x.font = `500 ${f.s * dpr}px "Geist Mono Variable", ui-monospace, monospace`;
+              x.fillStyle = `rgba(242, 241, 234, ${f.a})`;
+              x.fillText(f.g, px, f.y * cv.height);
+            }
           }
-        }
+          requestAnimationFrame(frame);
+        };
         requestAnimationFrame(frame);
-      };
-      requestAnimationFrame(frame);
+      }
     }
-  }
 
-  // ---- día de los inocentes: the page flips over, holds, flips back ----
-  if (season === 'innocents') {
-    after(900, () => {
-      if (reduce) { toast('28 · 12', '¡inocente!', 'gotcha'); return; }
-      html.classList.add('season-flipping');                       // promote the layer first…
-      requestAnimationFrame(() => requestAnimationFrame(() => html.classList.add('season-flip'))); // …then turn it
-      setTimeout(() => {
-        html.classList.remove('season-flip');
-        dispatchEvent(new Event('nyhz:glitch'));
-        setTimeout(() => { html.classList.remove('season-flipping'); toast('28 · 12', '¡inocente!', 'gotcha'); }, 750);
-      }, 2200);
-    });
-  }
+    // ---- día de los inocentes: the page flips over, holds, flips back ----
+    if (season === 'innocents') {
+      once(() => after(900, () => {
+        if (reduce) { toast('28 · 12', '¡inocente!', 'gotcha'); return; }
+        html.classList.add('season-flipping');                       // promote the layer first…
+        requestAnimationFrame(() => requestAnimationFrame(() => html.classList.add('season-flip'))); // …then turn it
+        later(2200, () => {
+          html.classList.remove('season-flip');
+          dispatchEvent(new Event('nyhz:glitch'));
+          later(750, () => { html.classList.remove('season-flipping'); toast('28 · 12', '¡inocente!', 'gotcha'); }, signal);
+        }, signal);
+      }));
+    }
 
-  // ---- programmers' day ----
-  if (season === 'programmers') {
-    after(1500, () => { toast('day 256 · 0x100', "happy programmers' day", '</>'); dispatchEvent(new Event('nyhz:glitch')); });
-  }
+    // ---- programmers' day ----
+    if (season === 'programmers') {
+      once(() => after(1500, () => { toast('day 256 · 0x100', "happy programmers' day", '</>'); dispatchEvent(new Event('nyhz:glitch')); }));
+    }
+  });
 </script>

@@ -5,8 +5,10 @@
 // box. It glitches like the hero name — a jolt on lock, a harder one on
 // click, and now and then on its own. Fine pointers only; text fields keep
 // the native I-beam.
+// It's on every page and outlives navigation (transition:persist): one cursor
+// for the whole site, never swapped for the system's on the way to a post.
 ---
-<div class="cur" data-cursor aria-hidden="true">
+<div class="cur" data-cursor aria-hidden="true" transition:persist="cursor">
   <i class="cur__tick tl"></i><i class="cur__tick tr"></i>
   <i class="cur__tick bl"></i><i class="cur__tick br"></i>
   <i class="cur__dot"></i>
@@ -49,6 +51,8 @@
     const TEXT = 'input:not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable="true"]';
 
     document.documentElement.classList.add('has-cursor');
+    // a navigation brings the new page's <html> attributes: say it again
+    document.addEventListener('astro:after-swap', () => document.documentElement.classList.add('has-cursor'));
 
     const ptr = { x: innerWidth / 2, y: innerHeight / 2 };
     const box = { x: ptr.x - REST / 2, y: ptr.y - REST / 2, w: REST, h: REST };

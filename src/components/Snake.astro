@@ -37,13 +37,8 @@
   import { gsap } from 'gsap';
   import { create, turn, step, speed, type Game, type P } from '../scripts/snake';
   import { sound } from '../scripts/sound';
+  import { onPage } from '../scripts/page';
 
-  const root = document.querySelector<HTMLElement>('[data-snake]');
-  const cv = root?.querySelector<HTMLCanvasElement>('[data-snake-cv]');
-  const ctx = cv?.getContext('2d');
-  const scoreEl = root?.querySelector('[data-snake-score]');
-  const bestEl = root?.querySelector('[data-snake-best]');
-  const msgEl = root?.querySelector<HTMLElement>('[data-snake-msg]');
   const html = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const CELL = 22;
@@ -54,7 +49,14 @@
   const GLYPHS = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*+=';
   const pad = (n: number) => String(n).padStart(2, '0');
 
-  if (root && cv && ctx) {
+  onPage((signal) => {
+    const root = document.querySelector<HTMLElement>('[data-snake]');
+    const cv = root?.querySelector<HTMLCanvasElement>('[data-snake-cv]');
+    const ctx = cv?.getContext('2d');
+    const scoreEl = root?.querySelector('[data-snake-score]');
+    const bestEl = root?.querySelector('[data-snake-best]');
+    const msgEl = root?.querySelector<HTMLElement>('[data-snake-msg]');
+    if (!root || !cv || !ctx) return;
     let g: Game | null = null;
     let playing = false, raf = 0, lastStep = 0, dpr = 1, ox = 0, oy = 0, foodCh = '◆';
     let best = 0;
@@ -165,7 +167,9 @@
       raf = requestAnimationFrame(loop);
     }
 
-    addEventListener('nyhz:snake', open);
+    addEventListener('nyhz:snake', open, { signal });
+    // leaving the page mid-game: the loop stops, and the page isn't left in game mode
+    signal.addEventListener('abort', quit);
     // capture: while playing, the arrows belong to the game (not the list pager, not konami)
     addEventListener('keydown', (e) => {
       if (root!.hidden) return;
@@ -174,7 +178,7 @@
       if (e.key === 'Enter' && !playing) { e.preventDefault(); start(); return; }
       const d = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
       if (d && g && playing) { e.preventDefault(); turn(g, d); }
-    }, { capture: true });
-    document.addEventListener('visibilitychange', () => { if (document.hidden && playing) lastStep = Infinity; else lastStep = performance.now(); });
-  }
+    }, { capture: true, signal });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && playing) lastStep = Infinity; else lastStep = performance.now(); }, { signal });
+  });
 </script>

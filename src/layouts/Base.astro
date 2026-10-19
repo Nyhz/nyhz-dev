@@ -6,6 +6,8 @@ import '@fontsource-variable/doto/full.css';
 import doto from '@fontsource-variable/doto/files/doto-latin-full-normal.woff2?url';
 import '../styles/tokens.css';
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import Cursor from '../components/Cursor.astro';
 
 const SITE = 'nyhz';
 const DEFAULT_TITLE = 'nyhz — creative developer';
@@ -96,11 +98,15 @@ const jsonLd = {
     <link rel="sitemap" href="/sitemap-index.xml" />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
     {schema && <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />}
+    <!-- moving around the site swaps the page inside a view transition, no reload (scripts/page.ts) -->
+    <ClientRouter />
   </head>
   <body>
     <slot name="bg" />
     <slot name="frame" />
     <main class="page"><slot /></main>
     <slot name="overlay" />
+    <Cursor />
+    <script>import '../scripts/page';</script>
   </body>
 </html>

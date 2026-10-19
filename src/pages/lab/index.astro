@@ -1,26 +1,35 @@
 ---
-// /lab: the experiments, as a list. Each one runs live on its own page and
-// on the tv's LAB band.
+// /lab: the posts — how the things on this site were built, newest first.
 import Lab from '../../layouts/Lab.astro';
 import { getContent } from '../../scripts/content';
-const { profile, lab } = await getContent();
+import { getPosts } from '../../scripts/posts';
+const { profile } = await getContent();
+const posts = getPosts();
 const pad = (n: number) => String(n).padStart(2, '0');
 ---
-<Lab title={`lab — ${profile.name}`}
-  description={`Small interaction experiments by ${profile.name}: ${lab.map((l) => l.title.toLowerCase()).join(', ')}. Each one runs live, with how it works and the code.`}>
+<Lab title={`lab — ${profile.name}`} description={`How the things on ${profile.name}'s site were built, step by step, with the code.`}>
   <header class="lx__head">
-    <p class="eyebrow">lab · {pad(lab.length)} experiments</p>
-    <h1 class="lx__h">Things I figured out while building this site.</h1>
-    <p class="lx__lead">Each one runs live — on its page, and on the tv's <a href="/?lab">LAB band</a>.</p>
+    <p class="eyebrow">lab <span class="lx__count">[{pad(posts.length)}]</span></p>
+    <h1 class="lx__h">How the things on this site were built.</h1>
+    <p class="lx__lead">Long reads on the parts that took more than one try — step by step, with the code and the mistakes.</p>
   </header>
+
   <ol class="lx__list">
-    {lab.map((l, i) => (
+    {posts.map((p, i) => (
       <li>
-        <a class="lx__item" href={`/lab/${l.slug}/`}>
-          <span class="lx__n">{pad(i + 1)}</span>
-          <span class="lx__t">{l.title}</span>
-          <span class="lx__s">{l.summary}</span>
-          <span class="lx__tags">{l.tags.join(' · ')}</span>
+        <a class="lx__item" href={`/lab/${p.slug}/`}>
+          {p.meta.cover && (
+            <span class="lx__pic" style={`view-transition-name: cover-${p.slug}`}><img src={p.meta.cover} alt="" width="1600" height="840" loading={i < 2 ? 'eager' : 'lazy'} decoding="async" /></span>
+          )}
+          <span class="lx__body">
+            <span class="lx__meta"><span class="lx__n">{pad(posts.length - i)}</span><time datetime={p.meta.date}>{p.meta.date}</time> · {p.minutes} min read</span>
+            <span class="lx__t" style={`view-transition-name: title-${p.slug}`}>{p.meta.title}</span>
+            <span class="lx__s">{p.meta.summary}</span>
+            <span class="lx__foot">
+              <span class="lx__tags">{(p.meta.tags ?? []).join(' · ')}</span>
+              <span class="lx__go">read <span class="lx__ar" aria-hidden="true">→</span></span>
+            </span>
+          </span>
         </a>
       </li>
     ))}
@@ -28,18 +37,47 @@ const pad = (n: number) => String(n).padStart(2, '0');
 </Lab>
 
 <style>
-  .lx__head { margin-bottom: 2.6rem; }
+  .lx__head { margin-bottom: clamp(2.2rem, 6vh, 3.4rem); }
   .lx__head .eyebrow { margin-bottom: 1rem; }
-  .lx__h { font: 700 clamp(1.4rem, 3.2vw, 2rem)/1.25 var(--mono); color: var(--fg); letter-spacing: -0.01em; margin-bottom: 0.9rem; }
-  .lx__lead a { color: var(--accent); }
-  .lx__list { list-style: none; border-top: 1px solid var(--line); }
-  .lx__item { display: grid; grid-template-columns: 2.6rem 1fr; column-gap: 0.4rem; padding: 1.15rem 0;
-    border-bottom: 1px solid var(--line); transition: padding var(--t-hover) ease; }
-  .lx__n { grid-row: span 3; font: 500 0.7rem/2.1 var(--mono); color: var(--muted); }
-  .lx__t { font: 700 1.02rem var(--mono); color: var(--fg); transition: color var(--t-hover) ease; }
-  .lx__s { color: var(--dim); font-size: 0.86rem; line-height: 1.6; margin-top: 0.2rem; }
-  .lx__tags { font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-top: 0.45rem; }
-  .lx__item:hover, .lx__item:focus-visible { padding-left: 0.5rem; outline: none; }
-  .lx__item:hover .lx__t, .lx__item:focus-visible .lx__t { color: var(--accent); }
-  @media (prefers-reduced-motion: reduce) { .lx__item { transition: none; } }
+  .lx__count { color: var(--fg); }
+  .lx__h { font: 700 clamp(1.5rem, 3.4vw, 2.2rem)/1.2 var(--mono); color: var(--fg); letter-spacing: -0.015em; margin-bottom: 0.9rem; }
+  .lx__lead { max-width: 52ch; }
+
+  .lx__list { list-style: none; display: grid; gap: 1.4rem; }
+  /* one entry: the cover, and the text beside or under it. Hover never
+     changes a box's size — only colours, the cover's light and the arrow's
+     transform — so no line ever re-wraps */
+  .lx__item { display: grid; gap: 1.2rem; padding: 1rem; border: 1px solid var(--line);
+    background: rgba(11, 11, 11, 0.55); transition: border-color var(--t-hover) ease; }
+  .lx__pic { position: relative; display: block; overflow: hidden; aspect-ratio: 1600 / 840; background: #0c0c0b; }
+  .lx__pic img { display: block; width: 100%; height: 100%; object-fit: cover;
+    filter: saturate(0.85) brightness(0.86); transition: filter 0.35s ease, transform 0.6s var(--ease-out); }
+  .lx__body { display: grid; gap: 0.55rem; padding: 0 0.2rem 0.2rem; }
+  .lx__meta { display: flex; align-items: center; gap: 0.8rem; font: 500 0.62rem var(--mono); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--muted); }
+  .lx__n { color: var(--accent); }
+  .lx__t { font: 700 clamp(1.15rem, 2.2vw, 1.4rem)/1.25 var(--mono); color: var(--fg); letter-spacing: -0.01em;
+    transition: color var(--t-hover) ease; }
+  .lx__s { color: var(--dim); font-size: 0.88rem; line-height: 1.65; max-width: 62ch; }
+  .lx__foot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.4rem; }
+  .lx__tags { font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  .lx__go { flex: none; font: 500 0.66rem var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg);
+    transition: color var(--t-hover) ease; }
+  .lx__ar { display: inline-block; transition: transform 0.3s var(--ease-out); }
+
+  .lx__item:hover { border-color: #3a3a35; }
+  .lx__item:focus-visible { border-color: var(--accent); outline: none; }
+  .lx__item:hover .lx__pic img, .lx__item:focus-visible .lx__pic img { filter: none; transform: scale(1.015); }
+  .lx__item:hover .lx__t, .lx__item:focus-visible .lx__t,
+  .lx__item:hover .lx__go, .lx__item:focus-visible .lx__go { color: var(--accent); }
+  .lx__item:hover .lx__ar, .lx__item:focus-visible .lx__ar { transform: translateX(4px); }
+
+  /* wide enough: the cover beside the text */
+  @media (min-width: 760px) {
+    .lx__item { grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr); align-items: center; gap: 1.6rem; padding: 1.1rem; }
+    .lx__body { padding: 0.2rem 0.4rem 0.2rem 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lx__item, .lx__pic img, .lx__t, .lx__go, .lx__ar { transition: none; }
+  }
 </style>

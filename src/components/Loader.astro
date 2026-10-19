@@ -1,6 +1,19 @@
 ---
 const { name, tagline = 'creative developer' } = Astro.props;
 ---
+<!-- the boot is for arriving: the url typed, a reload, a link from
+     elsewhere. Moving around the site — a link from another of its pages, or
+     back / forward — there's no boot. Inline, so it's decided before the
+     first paint (no flash of the loader); the script below reads it. -->
+<script is:inline>
+  try {
+    var nav = performance.getEntriesByType('navigation')[0];
+    var type = nav ? nav.type : 'navigate';
+    var inside = type === 'back_forward'
+      || (type === 'navigate' && document.referrer && new URL(document.referrer).origin === location.origin);
+    if (inside) document.documentElement.classList.add('no-boot');
+  } catch (e) { /* boot as usual */ }
+</script>
 <div data-nosnippet class="loader" data-loader data-name={name} data-tagline={tagline}>
   <div class="loader__frame" aria-hidden="true">
     <span class="ltk tl"></span><span class="ltk tr"></span>
@@ -34,6 +47,7 @@ const { name, tagline = 'creative developer' } = Astro.props;
 <noscript><style>.loader { display: none !important; }</style></noscript>
 
 <style>
+  :global(html.no-boot) .loader { display: none !important; }
   .loader {
     position: fixed; inset: 0; z-index: 100; overflow: hidden;
     background: #0a0a0a; color: #f1efe9;
@@ -119,160 +133,172 @@ const { name, tagline = 'creative developer' } = Astro.props;
 <script>
   import { gsap } from 'gsap';
   import { ago } from '../scripts/eggs';
+  import { onPage } from '../scripts/page';
 
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const loader = document.querySelector('[data-loader]') as HTMLElement;
-  const countEl = document.querySelector('[data-count]') as HTMLElement;
-  const barEl = document.querySelector('[data-bar]') as HTMLElement;
-  const logEl = document.querySelector('[data-log]') as HTMLElement;
+  // a real arrival boots; a page reached by navigating doesn't (scripts/page.ts
+  // marks it no-boot), and this just hands the page over
+  onPage((signal) => {
 
-  // a returning visitor (back after an hour, within a day) skips the boot log:
-  // one line, "welcome back", and a shorter hold — and an achievement. After
-  // 24h away it's a first visit again.
-  let seen = 0;
-  try {
-    seen = Number(localStorage.getItem('nyhz:seen')) || 0;
-    localStorage.setItem('nyhz:seen', String(Date.now()));
-  } catch { /* no memory, no welcome */ }
-  const away = Date.now() - seen;
-  const back = seen > 0 && away > 36e5 && away < 864e5;
-  if (back) {
-    const line = document.createElement('div');
-    line.innerHTML = `› welcome back <span class="hx">· last seen ${ago(away)} ago</span>`;
-    logEl.replaceChildren(line);
-    addEventListener('loaderdone', () => dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: 'return' } })), { once: true });
-  }
-  // back from a kernel panic (the terminal's rm -rf /): the boot owns up to it
-  let panicked = '';
-  try { panicked = sessionStorage.getItem('nyhz:panic') || ''; } catch { /* no */ }
-  if (panicked) {
-    const line = document.createElement('div');
-    line.innerHTML = panicked === 'bsod'
-      ? '› chkdsk /f c: <span class="hx">0x0000007b</span><span class="ok"> recovered</span>'
-      : '› fsck /dev/nyhz <span class="hx">0xdead</span><span class="ok"> recovered</span>';
-    logEl.prepend(line);
-  }
-  const logLines = Array.from(logEl.children) as HTMLElement[];
-  const nameWrap = document.querySelector('[data-name-wrap]') as HTMLElement;
-  const centerEl = nameWrap.querySelector('.loader__center') as HTMLElement;
-  const typeEl = document.querySelector('[data-type]') as HTMLElement;
-  const frameEl = loader.querySelector('.loader__frame') as HTMLElement;
-  const scanEl = loader.querySelector('.loader__scan') as HTMLElement;
-  const counterEl = loader.querySelector('.loader__counter') as HTMLElement;
-  const barWrap = loader.querySelector('.loader__bar-wrap') as HTMLElement;
-  const NAME = loader.dataset.name || 'nyhz';
-  const anims = gsap.utils.toArray<HTMLElement>('[data-anim]');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const loader = document.querySelector('[data-loader]') as HTMLElement | null;
+    if (!loader) return; // not the tv's page
+    const countEl = document.querySelector('[data-count]') as HTMLElement;
+    const barEl = document.querySelector('[data-bar]') as HTMLElement;
+    const logEl = document.querySelector('[data-log]') as HTMLElement;
 
-  gsap.set(anims, { opacity: 0, y: 16 });
-
-  function revealSite() {
-    gsap.to(anims, {
-      opacity: 1, y: 0, duration: reduce ? 0 : 0.8, stagger: reduce ? 0 : 0.07,
-      ease: 'power2.out', delay: reduce ? 0 : 0.1,
-    });
-    document.documentElement.setAttribute('data-loaded', '');
-    window.dispatchEvent(new Event('loaderdone'));
-  }
-
-  // Fly the typed loader name onto the hero name and hand over on the landing
-  // frame: the real name stays hidden for the whole flight, so there is only
-  // ever one "nyhz" on screen. Positions are measured on the text itself
-  // (Range boxes), not the containers, whose line-heights differ.
-  const heroName = document.querySelector<HTMLElement>('.hero-name');
-  if (heroName && !reduce) heroName.style.visibility = 'hidden';
-
-  const textBox = (el: Element) => {
-    const r = document.createRange();
-    r.selectNodeContents(el);
-    return r.getBoundingClientRect();
-  };
-
-  function flyToHero() {
-    typeEl.style.borderRightColor = 'transparent'; // drop the caret
-    nameWrap.classList.remove('glitch');           // land clean, no chromatic frame
-    if (!heroName) {
-      gsap.timeline({ onComplete: () => gsap.set(loader, { display: 'none' }) })
-        .to(loader, { opacity: 0, duration: 0.5, ease: 'power2.inOut' })
-        .add(revealSite, 0.1);
-      return;
+    // a returning visitor (back after an hour, within a day) skips the boot log:
+    // one line, "welcome back", and a shorter hold — and an achievement. After
+    // 24h away it's a first visit again.
+    let seen = 0;
+    try {
+      seen = Number(localStorage.getItem('nyhz:seen')) || 0;
+      localStorage.setItem('nyhz:seen', String(Date.now()));
+    } catch { /* no memory, no welcome */ }
+    const away = Date.now() - seen;
+    const back = seen > 0 && away > 36e5 && away < 864e5;
+    if (back) {
+      const line = document.createElement('div');
+      line.innerHTML = `› welcome back <span class="hx">· last seen ${ago(away)} ago</span>`;
+      logEl.replaceChildren(line);
+      addEventListener('loaderdone', () => dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: 'return' } })), { once: true });
     }
-    const box = centerEl.getBoundingClientRect();
-    const src = textBox(typeEl);
-    const dst = textBox(heroName);
-    const scale = dst.height / src.height;
-    const FLY = 0.7;
+    // back from a kernel panic (the terminal's rm -rf /): the boot owns up to it
+    let panicked = '';
+    try { panicked = sessionStorage.getItem('nyhz:panic') || ''; } catch { /* no */ }
+    if (panicked) {
+      const line = document.createElement('div');
+      line.innerHTML = panicked === 'bsod'
+        ? '› chkdsk /f c: <span class="hx">0x0000007b</span><span class="ok"> recovered</span>'
+        : '› fsck /dev/nyhz <span class="hx">0xdead</span><span class="ok"> recovered</span>';
+      logEl.prepend(line);
+    }
+    const logLines = Array.from(logEl.children) as HTMLElement[];
+    const nameWrap = document.querySelector('[data-name-wrap]') as HTMLElement;
+    const centerEl = nameWrap.querySelector('.loader__center') as HTMLElement;
+    const typeEl = document.querySelector('[data-type]') as HTMLElement;
+    const frameEl = loader.querySelector('.loader__frame') as HTMLElement;
+    const scanEl = loader.querySelector('.loader__scan') as HTMLElement;
+    const counterEl = loader.querySelector('.loader__counter') as HTMLElement;
+    const barWrap = loader.querySelector('.loader__bar-wrap') as HTMLElement;
+    const NAME = loader.dataset.name || 'nyhz';
+    const anims = gsap.utils.toArray<HTMLElement>('[data-anim]');
+    // no second boot (see the inline script above): the page is simply there
+    const skip = document.documentElement.classList.contains('no-boot');
+    const instant = reduce || skip;
 
-    gsap.timeline()
-      .to([frameEl, scanEl, logEl, counterEl, barWrap], { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0)
-      .to(loader, { backgroundColor: 'rgba(10,10,10,0)', duration: 0.5, ease: 'power2.in' }, 0.1)
-      .to(centerEl, {
-        x: dst.left - src.left, y: dst.top - src.top, scale, duration: FLY, ease: 'power3.inOut',
-        transformOrigin: `${src.left - box.left}px ${src.top - box.top}px`,
-      }, 0)
-      .add(revealSite, 0.2) // eyebrow, links and lists rise in around the flight
-      .add(() => { heroName.style.visibility = ''; gsap.set(centerEl, { opacity: 0 }); }, FLY)
-      .set(loader, { display: 'none' }, FLY + 0.05);
-  }
+    if (!skip) gsap.set(anims, { opacity: 0, y: 16 });
 
-  if (reduce) {
-    gsap.set(logLines, { width: 'auto' });
-    countEl.textContent = '100';
-    barEl.style.transform = 'scaleX(1)';
-    typeEl.style.width = NAME.length + 'ch';
-    nameWrap.classList.add('in');
-    logEl.classList.add('out');
-    loader.style.display = 'none';
-    revealSite();
-  } else {
-    // Irregular glitch flicker — bursty, not a steady metronome. Mostly long
-    // gaps with the occasional rapid burst, so it reads as a glitch, not a pulse.
-    let flickTimer = 0;
-    const scheduleFlick = () => {
-      loader.classList.add('flick');
-      flickTimer = window.setTimeout(() => {
-        loader.classList.remove('flick');
-        const burst = Math.random() < 0.28;
-        flickTimer = window.setTimeout(scheduleFlick, burst ? 70 + Math.random() * 90 : 450 + Math.random() * 950);
-      }, 35 + Math.random() * 55);
+    function revealSite() {
+      gsap.to(anims, {
+        opacity: 1, y: 0, duration: instant ? 0 : 0.8, stagger: instant ? 0 : 0.07,
+        ease: 'power2.out', delay: instant ? 0 : 0.1,
+      });
+      document.documentElement.setAttribute('data-loaded', '');
+      window.dispatchEvent(new Event('loaderdone'));
+    }
+
+    // Fly the typed loader name onto the hero name and hand over on the landing
+    // frame: the real name stays hidden for the whole flight, so there is only
+    // ever one "nyhz" on screen. Positions are measured on the text itself
+    // (Range boxes), not the containers, whose line-heights differ.
+    const heroName = document.querySelector<HTMLElement>('.hero-name');
+    if (heroName && !instant) heroName.style.visibility = 'hidden';
+
+    const textBox = (el: Element) => {
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      return r.getBoundingClientRect();
     };
-    scheduleFlick();
 
-    const state = { p: 0 };
-    const typer = { c: 0 };
-    const tick = () => {
-      countEl.textContent = String(Math.round(state.p)).padStart(3, '0');
-      barEl.style.transform = `scaleX(${state.p / 100})`;
-    };
+    function flyToHero() {
+      typeEl.style.borderRightColor = 'transparent'; // drop the caret
+      nameWrap.classList.remove('glitch');           // land clean, no chromatic frame
+      if (!heroName) {
+        gsap.timeline({ onComplete: () => gsap.set(loader, { display: 'none' }) })
+          .to(loader, { opacity: 0, duration: 0.5, ease: 'power2.inOut' })
+          .add(revealSite, 0.1);
+        return;
+      }
+      const box = centerEl.getBoundingClientRect();
+      const src = textBox(typeEl);
+      const dst = textBox(heroName);
+      const scale = dst.height / src.height;
+      const FLY = 0.7;
 
-    gsap.set(logLines, { width: 0 });
+      gsap.timeline()
+        .to([frameEl, scanEl, logEl, counterEl, barWrap], { opacity: 0, duration: 0.45, ease: 'power2.in' }, 0)
+        .to(loader, { backgroundColor: 'rgba(10,10,10,0)', duration: 0.5, ease: 'power2.in' }, 0.1)
+        .to(centerEl, {
+          x: dst.left - src.left, y: dst.top - src.top, scale, duration: FLY, ease: 'power3.inOut',
+          transformOrigin: `${src.left - box.left}px ${src.top - box.top}px`,
+        }, 0)
+        .add(revealSite, 0.2) // eyebrow, links and lists rise in around the flight
+        .add(() => { heroName.style.visibility = ''; gsap.set(centerEl, { opacity: 0 }); }, FLY)
+        .set(loader, { display: 'none' }, FLY + 0.05);
+    }
 
-    // Type each log line out char-by-char, in sequence (terminal typewriter).
-    const PER = 0.024; // seconds per character
-    const logTl = gsap.timeline();
-    logLines.forEach((line, i) => {
-      const n = (line.textContent || '').length || 1;
-      const full = line.scrollWidth; // true width — glyphs like › · — aren't exactly 1ch
-      logTl.add(() => line.classList.add('typing'));
-      logTl.to(line, { width: full, duration: Math.max(0.18, n * PER), ease: `steps(${n})` });
-      // keep the caret blinking on the last line (live prompt); clear it on the rest
-      if (i < logLines.length - 1) logTl.add(() => line.classList.remove('typing'), '+=0.09');
-      else logTl.to({}, { duration: 0.15 });
-    });
+    if (instant) {
+      gsap.set(logLines, { width: 'auto' });
+      countEl.textContent = '100';
+      barEl.style.transform = 'scaleX(1)';
+      typeEl.style.width = NAME.length + 'ch';
+      nameWrap.classList.add('in');
+      logEl.classList.add('out');
+      loader.style.display = 'none';
+      revealSite();
+    } else {
+      // Irregular glitch flicker — bursty, not a steady metronome. Mostly long
+      // gaps with the occasional rapid burst, so it reads as a glitch, not a pulse.
+      let flickTimer = 0;
+      const scheduleFlick = () => {
+        loader.classList.add('flick');
+        flickTimer = window.setTimeout(() => {
+          loader.classList.remove('flick');
+          const burst = Math.random() < 0.28;
+          flickTimer = window.setTimeout(scheduleFlick, burst ? 70 + Math.random() * 90 : 450 + Math.random() * 950);
+        }, 35 + Math.random() * 55);
+      };
+      scheduleFlick();
+      // gone mid-boot (back, before it finished): nothing of it keeps running
+      signal.addEventListener('abort', () => { clearTimeout(flickTimer); tl.kill(); });
 
-    const tl = gsap.timeline();
-    tl.add(logTl, 0);
-    // counter fills over the same span as the typing
-    tl.to(state, { p: 100, duration: logTl.duration(), ease: 'power2.inOut', onUpdate: tick }, 0);
+      const state = { p: 0 };
+      const typer = { c: 0 };
+      const tick = () => {
+        countEl.textContent = String(Math.round(state.p)).padStart(3, '0');
+        barEl.style.transform = `scaleX(${state.p / 100})`;
+      };
 
-    // finale: fade the log, type the name, then let it glitch + hold
-    tl.add(() => { logEl.classList.add('out'); nameWrap.classList.add('in'); }, '>+0.1');
-    tl.to(typer, { c: NAME.length, duration: 0.55, ease: `steps(${NAME.length})`,
-      onUpdate() { typeEl.style.width = Math.round(typer.c) + 'ch'; } });
-    tl.add(() => { typeEl.classList.add('typed'); nameWrap.classList.add('glitch'); });
-    tl.to({}, { duration: back ? 0.7 : 1.5 }); // hold longer so more glitch bursts show
+      gsap.set(logLines, { width: 0 });
 
-    // exit — fly the name to the hero
-    tl.call(() => { clearTimeout(flickTimer); loader.classList.remove('flick'); });
-    tl.add(flyToHero);
-  }
+      // Type each log line out char-by-char, in sequence (terminal typewriter).
+      const PER = 0.024; // seconds per character
+      const logTl = gsap.timeline();
+      logLines.forEach((line, i) => {
+        const n = (line.textContent || '').length || 1;
+        const full = line.scrollWidth; // true width — glyphs like › · — aren't exactly 1ch
+        logTl.add(() => line.classList.add('typing'));
+        logTl.to(line, { width: full, duration: Math.max(0.18, n * PER), ease: `steps(${n})` });
+        // keep the caret blinking on the last line (live prompt); clear it on the rest
+        if (i < logLines.length - 1) logTl.add(() => line.classList.remove('typing'), '+=0.09');
+        else logTl.to({}, { duration: 0.15 });
+      });
+
+      const tl = gsap.timeline();
+      tl.add(logTl, 0);
+      // counter fills over the same span as the typing
+      tl.to(state, { p: 100, duration: logTl.duration(), ease: 'power2.inOut', onUpdate: tick }, 0);
+
+      // finale: fade the log, type the name, then let it glitch + hold
+      tl.add(() => { logEl.classList.add('out'); nameWrap.classList.add('in'); }, '>+0.1');
+      tl.to(typer, { c: NAME.length, duration: 0.55, ease: `steps(${NAME.length})`,
+        onUpdate() { typeEl.style.width = Math.round(typer.c) + 'ch'; } });
+      tl.add(() => { typeEl.classList.add('typed'); nameWrap.classList.add('glitch'); });
+      tl.to({}, { duration: back ? 0.7 : 1.5 }); // hold longer so more glitch bursts show
+
+      // exit — fly the name to the hero
+      tl.call(() => { clearTimeout(flickTimer); loader.classList.remove('flick'); });
+      tl.add(flyToHero);
+    }
+  });
 </script>

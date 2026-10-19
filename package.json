@@ -1,7 +1,7 @@
 {
   "name": "nyhz-dev",
   "version": "1.0.0",
-  "description": "",
+  "description": "nyhz.dev — one screen, a CRT television, every project on its own channel.",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -11,19 +11,19 @@
     "test": "vitest run",
     "check": "astro check"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "homepage": "https://www.nyhz.dev",
+  "author": "nyhz (https://www.nyhz.dev)",
+  "license": "SEE LICENSE IN LICENSE",
   "packageManager": "pnpm@10.31.0",
   "dependencies": {
     "@astrojs/react": "^6.0.0",
-    "@astrojs/sitemap": "^3.7.3",
-    "@astrojs/vercel": "^11.0.0",
+    "@astrojs/sitemap": "^3.7.4",
+    "@astrojs/vercel": "^11.0.16",
     "@fontsource-variable/doto": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
     "@keystatic/astro": "^5.1.0",
     "@keystatic/core": "~0.5.50",
-    "astro": "^7.0.2",
+    "astro": "^7.4.1",
     "gsap": "~3.15.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

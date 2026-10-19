@@ -72,17 +72,19 @@
   import { gsap } from 'gsap';
   import { achievements, encodeCert, decodeCert, serial, took, type Cert } from '../scripts/eggs';
   import { afterLoader } from '../scripts/loaded';
+  import { onPage, later } from '../scripts/page';
 
-  const root = document.querySelector<HTMLElement>('[data-cert]');
-  const card = root?.querySelector<HTMLElement>('[data-cert-card]');
-  const $ = <T extends HTMLElement = HTMLElement>(s: string) => root?.querySelector<T>(s) ?? null;
-  const nameIn = $<HTMLInputElement>('[data-c-name]');
-  const nameRo = $('[data-c-name-ro]');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const NAME_KEY = 'nyhz:cert:name';
   const when = (ms: number) => new Date(ms).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).toLowerCase();
 
-  if (root && card && nameIn && nameRo) {
+  onPage((signal) => {
+    const root = document.querySelector<HTMLElement>('[data-cert]');
+    const card = root?.querySelector<HTMLElement>('[data-cert-card]');
+    const $ = <T extends HTMLElement = HTMLElement>(s: string) => root?.querySelector<T>(s) ?? null;
+    const nameIn = $<HTMLInputElement>('[data-c-name]');
+    const nameRo = $('[data-c-name-ro]');
+    if (!root || !card || !nameIn || !nameRo) return;
     let cert: Cert | null = null;
     let shared = false;
 
@@ -115,7 +117,7 @@
           .fromTo(card, { scaleX: 0.02, scaleY: 0.01, opacity: 0, filter: 'brightness(3)' }, { scaleX: 1, opacity: 1, duration: 0.28, ease: 'power3.out' })
           .to(card, { scaleY: 1, filter: 'brightness(1)', duration: 0.5, ease: 'back.out(1.6)' });
       }
-      if (!shared) setTimeout(() => nameIn.focus(), reduce ? 0 : 750);
+      if (!shared) later(reduce ? 0 : 750, () => nameIn.focus(), signal);
     };
     const close = () => {
       root.hidden = true;
@@ -129,7 +131,7 @@
       if (!ach.complete() || !span) return;
       open({ n: '', f: span.first, l: span.last, c: ach.total }, false);
     };
-    addEventListener('nyhz:cert', openMine);
+    addEventListener('nyhz:cert', openMine, { signal });
 
     nameIn.addEventListener('input', () => {
       if (!cert) return;
@@ -143,19 +145,19 @@
       const btn = e.currentTarget as HTMLButtonElement;
       const url = `${location.origin}/#cert=${encodeCert(cert)}`;
       try { await navigator.clipboard.writeText(url); btn.textContent = 'copied ✓'; } catch { prompt('copy this link', url); }
-      setTimeout(() => { btn.textContent = 'copy link'; }, 1600);
+      later(1600, () => { btn.textContent = 'copy link'; }, signal);
     });
 
     $('[data-c-png]')!.addEventListener('click', () => { if (cert) png(cert); });
     $('[data-c-close]')!.addEventListener('click', close);
     $('[data-c-try]')!.addEventListener('click', close);
     root.addEventListener('pointerdown', (e) => { if (e.target === root) close(); });
-    addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) { e.stopImmediatePropagation(); close(); } }, { capture: true });
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) { e.stopImmediatePropagation(); close(); } }, { capture: true, signal });
 
     // someone shared theirs: show it once the site has loaded
     const fromHash = location.hash.startsWith('#cert=') ? decodeCert(location.hash.slice(6)) : null;
-    if (fromHash) afterLoader(() => setTimeout(() => open(fromHash, true), 900));
-  }
+    if (fromHash) afterLoader(() => later(900, () => open(fromHash, true), signal));
+  });
 
   // the certificate as a 1200×630 image, drawn in the site's own type
   async function png(c: Cert) {

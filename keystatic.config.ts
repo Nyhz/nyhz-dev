@@ -49,29 +49,6 @@ export default config({
         order: fields.integer({ label: 'Order', defaultValue: 0 }),
       },
     }),
-    // the lab: small interaction experiments, each one running live on the tv's
-    // LAB band and on its own page (/lab/<slug>). The demo itself is code
-    // (src/scripts/lab/<slug>.ts); this is what's said about it.
-    lab: collection({
-      label: 'Lab',
-      slugField: 'title',
-      path: 'src/content/lab/*',
-      format: { data: 'yaml' },
-      schema: {
-        title: fields.slug({ name: { label: 'Title' }, slug: { label: 'Slug', description: 'Must match a demo in src/scripts/lab/' } }),
-        summary: fields.text({ label: 'Summary', description: 'One line: what it is.' }),
-        how: fields.text({ label: 'How it works', multiline: true, description: 'A few short paragraphs, separated by a blank line.' }),
-        tags: fields.array(fields.text({ label: 'Tag' }), { label: 'Tags', itemLabel: (p) => p.value }),
-        code: fields.text({ label: 'The key code', multiline: true }),
-        lang: fields.select({
-          label: 'Code language',
-          options: [{ label: 'TypeScript', value: 'ts' }, { label: 'GLSL', value: 'glsl' }, { label: 'CSS', value: 'css' }],
-          defaultValue: 'ts',
-        }),
-        source: fields.url({ label: 'Source on GitHub' }),
-        order: fields.integer({ label: 'Order', defaultValue: 0 }),
-      },
-    }),
     skills: collection({
       label: 'Skills',
       slugField: 'title',

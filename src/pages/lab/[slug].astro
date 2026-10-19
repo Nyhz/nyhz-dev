@@ -1,78 +1,61 @@
 ---
-// /lab/<slug>: one experiment — running live, how it works, the key code.
-import { Code } from 'astro:components';
+// /lab/<slug>: one post, from its markdown (src/content/lab/<slug>.md).
 import Lab from '../../layouts/Lab.astro';
-import LabScreen from '../../components/LabScreen.astro';
-import { getContent, type LabProps } from '../../scripts/content';
+import { getContent } from '../../scripts/content';
+import { getPosts, type Post } from '../../scripts/posts';
 
 export async function getStaticPaths() {
-  const { lab, projects, profile } = await getContent();
-  return lab.map((entry, i) => ({
-    params: { slug: entry.slug },
-    props: { entry, n: i + 1, prev: lab[i - 1] ?? null, next: lab[i + 1] ?? null,
-      covers: projects.map((p) => p.coverUrl).filter(Boolean), name: profile.name },
-  }));
+  return getPosts().map((post) => ({ params: { slug: post.slug }, props: { post } }));
 }
-const { entry, n, prev, next, covers, name } = Astro.props as {
-  entry: LabProps; n: number; prev: LabProps | null; next: LabProps | null; covers: string[]; name: string;
-};
-const pad = (x: number) => String(x).padStart(2, '0');
-const url = new URL(`/lab/${entry.slug}/`, Astro.site).href;
+const { post } = Astro.props as { post: Post };
+const { meta, Content } = post;
+const { profile } = await getContent();
 const schema = {
   '@context': 'https://schema.org', '@type': 'TechArticle',
-  headline: entry.title, description: entry.summary, url,
-  author: { '@type': 'Person', name, url: Astro.site?.href },
-  keywords: entry.tags.join(', '),
+  headline: meta.title, description: meta.summary, datePublished: meta.date,
+  url: new URL(`/lab/${post.slug}/`, Astro.site).href,
+  author: { '@type': 'Person', name: profile.name, url: Astro.site?.href },
+  keywords: (meta.tags ?? []).join(', '),
+  ...(meta.image ? { image: new URL(meta.image, Astro.site).href } : {}),
 };
 ---
-<Lab title={`${entry.title} — lab — ${name}`} description={entry.summary} schema={schema} crumb={{ href: `/lab/${entry.slug}/`, label: entry.title }}>
-  <article class="lb">
-    <header class="lb__head">
-      <p class="eyebrow">lab {pad(n)} · {entry.tags.join(' · ')}</p>
-      <h1 class="lb__h">{entry.title}</h1>
-      <p class="lb__sum">{entry.summary}</p>
+<Lab title={`${meta.title} — ${profile.name}`} description={meta.summary} schema={schema} image={meta.image} crumb={{ href: `/lab/${post.slug}/`, label: meta.title }}>
+  <article class="post">
+    <header class="post__head">
+      <p class="eyebrow"><time datetime={meta.date}>{meta.date}</time> · {post.minutes} min read{meta.tags?.length ? ` · ${meta.tags.join(' · ')}` : ''}</p>
+      <h1 class="post__h" style={`view-transition-name: title-${post.slug}`}>{meta.title}</h1>
+      <p class="post__sum">{meta.summary}</p>
     </header>
-
-    <LabScreen slug={entry.slug} covers={covers} label={`${entry.title}, running live`} />
-    <p class="lb__links">
-      <a href={`/?lab=${entry.slug}`}>watch it on the tv →</a>
-      {entry.source && <a href={entry.source} target="_blank" rel="noopener noreferrer">source <span aria-hidden="true">↗</span></a>}
-    </p>
-
-    <h2 class="lb__h2">how it works</h2>
-    {entry.how.map((p) => <p class="lb__p">{p}</p>)}
-
-    {entry.code && (
-      <>
-        <h2 class="lb__h2">the key code</h2>
-        <div class="lb__code"><Code code={entry.code} lang={entry.lang} theme="github-dark-default" /></div>
-      </>
-    )}
-
-    <nav class="lb__pn" aria-label="more experiments">
-      {prev ? <a href={`/lab/${prev.slug}/`}>← {prev.title}</a> : <span></span>}
-      {next ? <a href={`/lab/${next.slug}/`}>{next.title} →</a> : <a href="/lab/">all experiments →</a>}
-    </nav>
+    {meta.cover && <figure class="post__cover" style={`view-transition-name: cover-${post.slug}`}><img src={meta.cover} alt={`${meta.title}: the finished thing`} width="1600" height="840" decoding="async" fetchpriority="high" /></figure>}
+    <div class="post__body"><Content /></div>
+    <footer class="post__foot">
+      <a href="/lab/">← back to the lab</a>
+    </footer>
   </article>
 </Lab>
 
 <style>
-  .lb__head { margin-bottom: 2.2rem; }
-  .lb__head .eyebrow { margin-bottom: 1rem; }
-  .lb__h { font: 700 clamp(1.7rem, 4vw, 2.6rem)/1.1 var(--mono); color: var(--fg); letter-spacing: -0.02em; margin-bottom: 0.8rem; }
-  .lb__sum { font-size: 1rem; color: var(--dim); }
-  .lb__links { display: flex; justify-content: space-between; gap: 1rem; margin: 1.3rem 0 2.8rem;
-    font: 500 0.68rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; }
-  .lb__links a { color: var(--fg); transition: color var(--t-hover) ease; }
-  .lb__links a:first-child { color: var(--accent); }
-  .lb__links a:hover, .lb__links a:focus-visible { color: var(--accent); outline: none; text-decoration: underline; text-underline-offset: 0.3em; }
-  .lb__h2 { font: 500 0.7rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted);
-    margin: 2.4rem 0 1rem; }
-  .lb__p { margin-bottom: 1.1rem; max-width: 68ch; }
-  .lb__code :global(pre) { padding: 1.1rem 1.2rem; border: 1px solid var(--line); background: #080808 !important;
-    font: 0.8rem/1.7 var(--mono); overflow-x: auto; }
-  .lb__pn { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3.2rem; padding-top: 1.2rem;
+  .post__head { margin-bottom: 2rem; }
+  .post__cover { margin: 0 0 2.6rem; border: 1px solid var(--line); background: #0c0c0b; }
+  .post__cover img { display: block; width: 100%; height: auto; }
+  .post__head .eyebrow { margin-bottom: 1rem; }
+  .post__h { font: 700 clamp(1.8rem, 4.4vw, 2.8rem)/1.1 var(--mono); color: var(--fg); letter-spacing: -0.02em; margin-bottom: 0.9rem; }
+  .post__sum { font-size: 1rem; line-height: 1.7; }
+
+  /* the markdown */
+  .post__body :global(p) { margin-bottom: 1.15rem; }
+  .post__body :global(h2) { font: 700 1.15rem/1.35 var(--mono); color: var(--fg); margin: 3rem 0 1rem; letter-spacing: -0.01em; }
+  .post__body :global(strong) { color: var(--fg); font-weight: 700; }
+  .post__body :global(a) { color: var(--accent); text-decoration: underline; text-underline-offset: 0.25em; }
+  .post__body :global(ul) { margin: 0 0 1.2rem 1.2rem; }
+  .post__body :global(li) { margin-bottom: 0.55rem; padding-left: 0.3rem; }
+  .post__body :global(li::marker) { color: var(--accent); }
+  .post__body :global(:not(pre) > code) { font: 0.85em var(--mono); color: var(--fg); background: #161614; border: 1px solid var(--line);
+    padding: 0.08em 0.35em; overflow-wrap: anywhere; }
+  .post__body :global(pre) { margin: 0.4rem 0 1.6rem; padding: 1.05rem 1.2rem; border: 1px solid var(--line);
+    background: #080808 !important; font: 0.8rem/1.7 var(--mono); overflow-x: auto; }
+  .post__foot { margin-top: 3.4rem; padding-top: 1.3rem;
     border-top: 1px solid var(--line); font: 500 0.7rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
-  .lb__pn a { color: var(--fg); transition: color var(--t-hover) ease; }
-  .lb__pn a:hover, .lb__pn a:focus-visible { color: var(--accent); outline: none; }
+  .post__foot a { color: var(--fg); transition: color var(--t-hover) ease; }
+  .post__foot a:hover, .post__foot a:focus-visible { color: var(--accent); outline: none; }
 </style>

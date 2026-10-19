@@ -38,4 +38,6 @@ export default defineConfig({
   site: 'https://www.nyhz.dev',
   integrations: [...(dev ? [react(), keystatic()] : []), sitemap(), vercelCacheHeaders],
   adapter: vercel(),
+  // the lab's posts (src/content/lab/*.md): code in a dark theme that keeps AA contrast
+  markdown: { shikiConfig: { theme: 'github-dark-default' } },
 });
