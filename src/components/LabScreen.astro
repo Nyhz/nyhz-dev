@@ -1,0 +1,30 @@
+---
+// A lab demo, running live in a 16:10 screen with the tv's corner ticks — the
+// lab pages' version of the tv (scripts/lab mounts into it).
+const { slug, covers = [], label = '' } = Astro.props as { slug: string; covers?: string[]; label?: string };
+---
+<div class="lscreen" data-lab-demo data-slug={slug} data-covers={JSON.stringify(covers)} role="img" aria-label={label}>
+  <i class="lscreen__tick tl"></i><i class="lscreen__tick tr"></i><i class="lscreen__tick bl"></i><i class="lscreen__tick br"></i>
+  <div class="lscreen__glass" data-lab-host></div>
+</div>
+
+<style>
+  .lscreen { position: relative; width: 100%; aspect-ratio: 16 / 10; }
+  .lscreen__glass { position: absolute; inset: 0; overflow: hidden; background: #0c0c0b; border: 1px solid var(--line); }
+  .lscreen__tick { position: absolute; z-index: 3; width: 11px; height: 11px; border: 1px solid var(--fg); pointer-events: none; }
+  .lscreen__tick.tl { top: -5px; left: -5px; border-right: 0; border-bottom: 0; }
+  .lscreen__tick.tr { top: -5px; right: -5px; border-left: 0; border-bottom: 0; }
+  .lscreen__tick.bl { bottom: -5px; left: -5px; border-right: 0; border-top: 0; }
+  .lscreen__tick.br { bottom: -5px; right: -5px; border-left: 0; border-top: 0; }
+</style>
+
+<script>
+  import { mountDemo } from '../scripts/lab';
+  document.querySelectorAll<HTMLElement>('[data-lab-demo]').forEach((box) => {
+    const host = box.querySelector<HTMLElement>('[data-lab-host]');
+    if (!host) return;
+    let covers: string[] = [];
+    try { covers = JSON.parse(box.dataset.covers || '[]'); } catch { /* none */ }
+    mountDemo(box.dataset.slug || '', host, { covers });
+  });
+</script>

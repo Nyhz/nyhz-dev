@@ -1,0 +1,22 @@
+title: CRT power
+summary: Switching an old tube on and off — the picture squeezed to a line, the line to a dot.
+how: |-
+  The picture is clipped with inset(), tweened from the middle out (and back). A bright line is a separate element on top, so it can glow past the clip and fade on its own.
+
+  Only the picture's layer is clipped. Clip the glass instead and its border goes with it — the whole set looks like it shrinks.
+
+  One trap: tween from the computed value and the browser hands back inset(50% 0px) — two values against four. They don't pair up, and the picture opens from the top only. Giving the tween explicit from-values fixes it.
+tags:
+  - gsap
+  - css
+code: |-
+  gsap.timeline()
+    .set(pic, { clipPath: 'inset(50% 0% 50% 0%)' })
+    .fromTo(line, { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.2 })
+    .fromTo(pic,
+      { clipPath: 'inset(50% 0% 50% 0%)' }, // explicit: the computed one has two values
+      { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.42, ease: 'power3.out' })
+    .to(line, { opacity: 0, duration: 0.3 }, '<');
+lang: ts
+source: https://github.com/Nyhz/nyhz-dev/blob/main/src/scripts/lab/crt-power.ts
+order: 2

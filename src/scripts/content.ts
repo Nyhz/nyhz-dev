@@ -3,7 +3,7 @@ import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 
 export type ProfileProps = {
-  name: string; role: string; location: string;
+  name: string; role: string; tagline: string; location: string;
   socials: { label: string; url: string }[];
 };
 export type ProjectProps = {
@@ -11,6 +11,10 @@ export type ProjectProps = {
   tags: string[]; repoUrl: string; deployUrl: string; downloadUrl: string; coverUrl: string; order: number;
   year: string; role: string;
   status: string; // optional override of statusOf's guess, e.g. 'in progress'
+};
+export type LabProps = {
+  slug: string; title: string; summary: string; how: string[]; tags: string[];
+  code: string; lang: 'ts' | 'glsl' | 'css'; source: string; order: number;
 };
 export type SkillProps = {
   slug: string; title: string; items: string[]; level: number; order: number;
@@ -28,6 +32,7 @@ export function mapProfile(raw: any): ProfileProps {
   return {
     name: str(raw?.name),
     role: str(raw?.role),
+    tagline: str(raw?.tagline),
     location: str(raw?.location),
     socials: arr<any>(raw?.socials).map((s) => ({ label: str(s?.label), url: str(s?.url) })),
   };
@@ -52,6 +57,24 @@ export function mapProjects(items: { slug: string; entry: any }[]): ProjectProps
     .sort((a, b) => a.order - b.order);
 }
 
+export function mapLab(items: { slug: string; entry: any }[]): LabProps[] {
+  const langs = ['ts', 'glsl', 'css'] as const;
+  return items
+    .map(({ slug, entry }) => ({
+      slug,
+      title: str(entry?.title),
+      summary: str(entry?.summary),
+      // paragraphs: split on blank lines
+      how: str(entry?.how).split(/\n\s*\n/).map((s) => s.trim().replace(/\s*\n\s*/g, ' ')).filter(Boolean),
+      tags: arr<string>(entry?.tags).map(str),
+      code: str(entry?.code).replace(/\s+$/, ''),
+      lang: langs.find((l) => l === entry?.lang) ?? 'ts',
+      source: str(entry?.source),
+      order: num(entry?.order),
+    }))
+    .sort((a, b) => a.order - b.order);
+}
+
 export function mapSkills(items: { slug: string; entry: any }[]): SkillProps[] {
   return items
     .map(({ slug, entry }) => ({
@@ -65,15 +88,17 @@ export function mapSkills(items: { slug: string; entry: any }[]): SkillProps[] {
 }
 
 export async function getContent(): Promise<{
-  profile: ProfileProps; projects: ProjectProps[]; skills: SkillProps[];
+  profile: ProfileProps; projects: ProjectProps[]; skills: SkillProps[]; lab: LabProps[];
 }> {
   const reader = createReader(process.cwd(), keystaticConfig);
   const profileRaw = await reader.singletons.profile.read();
   const projectRaw = await reader.collections.projects.all();
   const skillRaw = await reader.collections.skills.all();
+  const labRaw = await reader.collections.lab.all();
   return {
     profile: mapProfile(profileRaw),
     projects: mapProjects(projectRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
     skills: mapSkills(skillRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
+    lab: mapLab(labRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
   };
 }

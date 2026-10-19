@@ -10,13 +10,17 @@ import '../styles/global.css';
 const SITE = 'nyhz';
 const DEFAULT_TITLE = 'nyhz — creative developer';
 const DEFAULT_DESC =
-  'Portfolio of nyhz, a creative developer. Interactive frontends, WebGL, and creative tooling — currently available for work.';
+  'Portfolio of nyhz, a creative developer: interactive frontends, WebGL and creative tooling, shown as channels on a TV you can surf.';
 
 const {
   title = DEFAULT_TITLE,
   description = DEFAULT_DESC,
   image = '/og.png',
   robots = 'index, follow',
+  // a page to read (the lab's): it scrolls, and there's no loader to wait for
+  doc = false,
+  // the page's own structured data (a lab entry is a TechArticle), next to the Person
+  schema,
 } = Astro.props;
 
 // `site` is set in astro.config → these resolve to absolute https URLs.
@@ -39,7 +43,7 @@ const SOURCE_NOTE = `<!--
    there's a terminal on the page: the key under esc (or /)
    and a console that talks back: nyhz.help()
 
-   built with astro, three.js, gsap and too much coffee.
+   built with astro, raw webgl, gsap and too much coffee.
 
 -->`;
 
@@ -53,7 +57,7 @@ const jsonLd = {
 };
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" class:list={{ "is-doc": doc }} data-loaded={doc ? "" : undefined}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -71,7 +75,7 @@ const jsonLd = {
     <link rel="preload" href={doto} as="font" type="font/woff2" crossorigin />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={schema ? 'article' : 'website'} />
     <meta property="og:site_name" content={SITE} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -91,6 +95,7 @@ const jsonLd = {
 
     <link rel="sitemap" href="/sitemap-index.xml" />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
+    {schema && <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />}
   </head>
   <body>
     <slot name="bg" />

@@ -1,6 +1,6 @@
 # nyhz-dev
 
-Minimal single-view portfolio. Astro + Three.js + GSAP, content via Keystatic (git-based CMS).
+Minimal single-view portfolio. Astro + raw WebGL + GSAP, content via Keystatic (git-based CMS).
 
 ## Develop
 - `pnpm dev` — site at http://localhost:4321, CMS at http://localhost:4321/keystatic

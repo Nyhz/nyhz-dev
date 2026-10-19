@@ -1,0 +1,45 @@
+---
+// /lab: the experiments, as a list. Each one runs live on its own page and
+// on the tv's LAB band.
+import Lab from '../../layouts/Lab.astro';
+import { getContent } from '../../scripts/content';
+const { profile, lab } = await getContent();
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+<Lab title={`lab — ${profile.name}`}
+  description={`Small interaction experiments by ${profile.name}: ${lab.map((l) => l.title.toLowerCase()).join(', ')}. Each one runs live, with how it works and the code.`}>
+  <header class="lx__head">
+    <p class="eyebrow">lab · {pad(lab.length)} experiments</p>
+    <h1 class="lx__h">Things I figured out while building this site.</h1>
+    <p class="lx__lead">Each one runs live — on its page, and on the tv's <a href="/?lab">LAB band</a>.</p>
+  </header>
+  <ol class="lx__list">
+    {lab.map((l, i) => (
+      <li>
+        <a class="lx__item" href={`/lab/${l.slug}/`}>
+          <span class="lx__n">{pad(i + 1)}</span>
+          <span class="lx__t">{l.title}</span>
+          <span class="lx__s">{l.summary}</span>
+          <span class="lx__tags">{l.tags.join(' · ')}</span>
+        </a>
+      </li>
+    ))}
+  </ol>
+</Lab>
+
+<style>
+  .lx__head { margin-bottom: 2.6rem; }
+  .lx__head .eyebrow { margin-bottom: 1rem; }
+  .lx__h { font: 700 clamp(1.4rem, 3.2vw, 2rem)/1.25 var(--mono); color: var(--fg); letter-spacing: -0.01em; margin-bottom: 0.9rem; }
+  .lx__lead a { color: var(--accent); }
+  .lx__list { list-style: none; border-top: 1px solid var(--line); }
+  .lx__item { display: grid; grid-template-columns: 2.6rem 1fr; column-gap: 0.4rem; padding: 1.15rem 0;
+    border-bottom: 1px solid var(--line); transition: padding var(--t-hover) ease; }
+  .lx__n { grid-row: span 3; font: 500 0.7rem/2.1 var(--mono); color: var(--muted); }
+  .lx__t { font: 700 1.02rem var(--mono); color: var(--fg); transition: color var(--t-hover) ease; }
+  .lx__s { color: var(--dim); font-size: 0.86rem; line-height: 1.6; margin-top: 0.2rem; }
+  .lx__tags { font: 500 0.62rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-top: 0.45rem; }
+  .lx__item:hover, .lx__item:focus-visible { padding-left: 0.5rem; outline: none; }
+  .lx__item:hover .lx__t, .lx__item:focus-visible .lx__t { color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) { .lx__item { transition: none; } }
+</style>

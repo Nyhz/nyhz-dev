@@ -1,0 +1,78 @@
+---
+// /lab/<slug>: one experiment — running live, how it works, the key code.
+import { Code } from 'astro:components';
+import Lab from '../../layouts/Lab.astro';
+import LabScreen from '../../components/LabScreen.astro';
+import { getContent, type LabProps } from '../../scripts/content';
+
+export async function getStaticPaths() {
+  const { lab, projects, profile } = await getContent();
+  return lab.map((entry, i) => ({
+    params: { slug: entry.slug },
+    props: { entry, n: i + 1, prev: lab[i - 1] ?? null, next: lab[i + 1] ?? null,
+      covers: projects.map((p) => p.coverUrl).filter(Boolean), name: profile.name },
+  }));
+}
+const { entry, n, prev, next, covers, name } = Astro.props as {
+  entry: LabProps; n: number; prev: LabProps | null; next: LabProps | null; covers: string[]; name: string;
+};
+const pad = (x: number) => String(x).padStart(2, '0');
+const url = new URL(`/lab/${entry.slug}/`, Astro.site).href;
+const schema = {
+  '@context': 'https://schema.org', '@type': 'TechArticle',
+  headline: entry.title, description: entry.summary, url,
+  author: { '@type': 'Person', name, url: Astro.site?.href },
+  keywords: entry.tags.join(', '),
+};
+---
+<Lab title={`${entry.title} — lab — ${name}`} description={entry.summary} schema={schema} crumb={{ href: `/lab/${entry.slug}/`, label: entry.title }}>
+  <article class="lb">
+    <header class="lb__head">
+      <p class="eyebrow">lab {pad(n)} · {entry.tags.join(' · ')}</p>
+      <h1 class="lb__h">{entry.title}</h1>
+      <p class="lb__sum">{entry.summary}</p>
+    </header>
+
+    <LabScreen slug={entry.slug} covers={covers} label={`${entry.title}, running live`} />
+    <p class="lb__links">
+      <a href={`/?lab=${entry.slug}`}>watch it on the tv →</a>
+      {entry.source && <a href={entry.source} target="_blank" rel="noopener noreferrer">source <span aria-hidden="true">↗</span></a>}
+    </p>
+
+    <h2 class="lb__h2">how it works</h2>
+    {entry.how.map((p) => <p class="lb__p">{p}</p>)}
+
+    {entry.code && (
+      <>
+        <h2 class="lb__h2">the key code</h2>
+        <div class="lb__code"><Code code={entry.code} lang={entry.lang} theme="github-dark-default" /></div>
+      </>
+    )}
+
+    <nav class="lb__pn" aria-label="more experiments">
+      {prev ? <a href={`/lab/${prev.slug}/`}>← {prev.title}</a> : <span></span>}
+      {next ? <a href={`/lab/${next.slug}/`}>{next.title} →</a> : <a href="/lab/">all experiments →</a>}
+    </nav>
+  </article>
+</Lab>
+
+<style>
+  .lb__head { margin-bottom: 2.2rem; }
+  .lb__head .eyebrow { margin-bottom: 1rem; }
+  .lb__h { font: 700 clamp(1.7rem, 4vw, 2.6rem)/1.1 var(--mono); color: var(--fg); letter-spacing: -0.02em; margin-bottom: 0.8rem; }
+  .lb__sum { font-size: 1rem; color: var(--dim); }
+  .lb__links { display: flex; justify-content: space-between; gap: 1rem; margin: 1.3rem 0 2.8rem;
+    font: 500 0.68rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; }
+  .lb__links a { color: var(--fg); transition: color var(--t-hover) ease; }
+  .lb__links a:first-child { color: var(--accent); }
+  .lb__links a:hover, .lb__links a:focus-visible { color: var(--accent); outline: none; text-decoration: underline; text-underline-offset: 0.3em; }
+  .lb__h2 { font: 500 0.7rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted);
+    margin: 2.4rem 0 1rem; }
+  .lb__p { margin-bottom: 1.1rem; max-width: 68ch; }
+  .lb__code :global(pre) { padding: 1.1rem 1.2rem; border: 1px solid var(--line); background: #080808 !important;
+    font: 0.8rem/1.7 var(--mono); overflow-x: auto; }
+  .lb__pn { display: flex; justify-content: space-between; gap: 1rem; margin-top: 3.2rem; padding-top: 1.2rem;
+    border-top: 1px solid var(--line); font: 500 0.7rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
+  .lb__pn a { color: var(--fg); transition: color var(--t-hover) ease; }
+  .lb__pn a:hover, .lb__pn a:focus-visible { color: var(--accent); outline: none; }
+</style>

@@ -5,11 +5,11 @@ import { statusOf, mapProfile, mapProjects, mapSkills } from '../src/scripts/con
 describe('mapProfile', () => {
   it('maps a full profile', () => {
     const out = mapProfile({
-      name: 'nyhz', role: 'dev', location: 'earth',
+      name: 'nyhz', role: 'dev', tagline: 'hi', location: 'earth',
       socials: [{ label: 'github', url: 'https://x' }],
     });
     expect(out).toEqual({
-      name: 'nyhz', role: 'dev', location: 'earth',
+      name: 'nyhz', role: 'dev', tagline: 'hi', location: 'earth',
       socials: [{ label: 'github', url: 'https://x' }],
     });
   });
@@ -17,6 +17,7 @@ describe('mapProfile', () => {
     const out = mapProfile({});
     expect(out.name).toBe('');
     expect(out.role).toBe('');
+    expect(out.tagline).toBe('');
     expect(out.location).toBe('');
     expect(out.socials).toEqual([]);
   });

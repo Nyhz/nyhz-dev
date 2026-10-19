@@ -2,7 +2,7 @@
   --bg: #0b0b0b;
   --fg: #f1efe9;
   --dim: #b9b8b0;
-  --muted: #76766f;
+  --muted: #7c7c75; /* 4.6:1 on --bg: AA for the small print */
   --line: #232320;
   --particle: #f1efe9;
   --accent: #3ad29f;

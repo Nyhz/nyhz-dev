@@ -9,11 +9,13 @@
 // tunes to CH 00: the contact form, over static.
 // Phones: the screen goes full width; swipe it (or ◀ ▶) to change channels,
 // and the details sit under it.
+// The LAB band (the remote's "lab"): the same set tuned to the lab's
+// experiments instead, each one running live on the screen (scripts/lab).
 import Contact from './Contact.astro';
-import { statusOf, type ProjectProps, type ProfileProps, type SkillProps } from '../scripts/content';
+import { statusOf, type ProjectProps, type ProfileProps, type SkillProps, type LabProps } from '../scripts/content';
 import type { TxtContext } from '../scripts/tv';
 
-const { projects, profile, skills = [] } = Astro.props as { projects: ProjectProps[]; profile: ProfileProps; skills?: SkillProps[] };
+const { projects, profile, skills = [], lab = [] } = Astro.props as { projects: ProjectProps[]; profile: ProfileProps; skills?: SkillProps[]; lab?: LabProps[] };
 const shown = projects.slice(0, 10);
 const pad = (n: number) => String(n).padStart(2, '0');
 // what the teletext pages are made of
@@ -46,6 +48,8 @@ const txt: TxtContext = {
           <div class="tv__read" data-tv-read hidden><p data-tv-read-t></p><span class="tv__read-x">tap to close</span></div>
           <!-- the channels that aren't in the list: no signal, 42, 13, the ads -->
           <div class="tv__special" data-tv-special hidden></div>
+          <!-- the LAB band: the experiment running live -->
+          <div class="tv__lab" data-tv-lab hidden></div>
           <!-- teletext -->
           <div class="tv__ttx" data-tv-ttx hidden><div class="tv__ttx-in" data-tv-ttx-in></div></div>
           <p class="tv__vol" data-tv-vol aria-hidden="true"></p>
@@ -63,15 +67,16 @@ const txt: TxtContext = {
       <!-- phones only: change channels right under the picture -->
       <div data-nosnippet class="tv__nav" aria-label="channels">
         <button type="button" class="tv__navbtn" data-tv-prev aria-label="previous channel">◀</button>
-        <span class="tv__navn">CH <b data-tv-n>01</b> / {pad(shown.length)}</span>
+        <span class="tv__navn"><span data-tv-nk>CH</span> <b data-tv-n>01</b> / <span data-tv-nof>{pad(shown.length)}</span></span>
         <button type="button" class="tv__navbtn" data-tv-next aria-label="next channel">▶</button>
+        {lab.length > 0 && <button type="button" class="tv__navbtn tv__navbtn--sm" data-tv-band aria-pressed="false">lab</button>}
         <button type="button" class="tv__navbtn tv__navbtn--sm" data-tv-txt aria-pressed="false">txt</button>
         <button type="button" class="tv__navbtn tv__navbtn--sm" data-tv-power aria-label="power">⏻</button>
       </div>
 
       <!-- the lower third: over the picture on desktop, under it on phones -->
       <div class="tv__l3" data-tv-l3 aria-live="polite">
-        <h3 class="tv__title"><span data-tv-title></span><span class="tv__year" data-tv-year></span></h3>
+        <h2 class="tv__title"><span data-tv-title></span><span class="tv__year" data-tv-year></span></h2>
         <div class="tv__descwrap">
           <p class="tv__desc" data-tv-desc></p>
           <button type="button" class="tv__more" data-tv-more hidden>+ more</button>
@@ -81,6 +86,7 @@ const txt: TxtContext = {
           <nav class="tv__links" aria-label="project links">
             <a class="tv__btn tv__btn--go" data-tv-live target="_blank" rel="noopener noreferrer" hidden><span aria-hidden="true">↗</span> live</a>
             <a class="tv__btn tv__btn--go" data-tv-download target="_blank" rel="noopener noreferrer" hidden><span aria-hidden="true">↓</span> download</a>
+            <a class="tv__btn tv__btn--go" data-tv-how hidden><span aria-hidden="true">→</span> how it works</a>
             <a class="tv__btn" data-tv-repo target="_blank" rel="noopener noreferrer" hidden><span aria-hidden="true">↗</span> source</a>
           </nav>
         </div>
@@ -96,7 +102,9 @@ const txt: TxtContext = {
   </div>
 
   <div class="tv__side">
-    <p class="sec-label">— channels <span class="sec-count">[{pad(shown.length)}]</span></p>
+    <p class="sec-label"><span class="sec-tv">— channels <span class="sec-count">[{pad(shown.length)}]</span></span><span class="sec-lab">— lab <span class="sec-count">[{pad(lab.length)}]</span></span></p>
+    <!-- both bands' lists share one cell: switching keeps the column's height -->
+    <div class="tv__lists">
     <ul class="tv__list" data-tv-list>
       {shown.map((p, i) => (
         <li>
@@ -111,10 +119,26 @@ const txt: TxtContext = {
         </li>
       ))}
     </ul>
-    <!-- the remote: power, teletext, and what the keyboard does -->
+    {lab.length > 0 && (
+      <ul class="tv__list tv__lablist" data-tv-lablist>
+        {lab.map((l, i) => (
+          <li>
+            <button type="button" class="tv__chbtn" data-lab={i} data-slug={l.slug} data-title={l.title} data-summary={l.summary}
+              data-tags={l.tags.join(' · ')} data-source={l.source} aria-label={`Run the ${l.title} experiment`}>
+              <span class="tv__chn">{pad(i + 1)}</span>
+              <span class="tv__chname">{l.title}</span>
+            </button>
+          </li>
+        ))}
+        <li><a class="tv__labmore" href="/lab/">every experiment, with the code →</a></li>
+      </ul>
+    )}
+    </div>
+    <!-- the remote: power, teletext, the lab band, and what the keyboard does -->
     <div data-nosnippet class="tv__remote">
       <button type="button" class="tv__rbtn" data-tv-power aria-label="power">⏻</button>
       <button type="button" class="tv__rbtn" data-tv-txt aria-pressed="false">txt</button>
+      {lab.length > 0 && <button type="button" class="tv__rbtn" data-tv-band aria-pressed="false">lab</button>}
       <span class="tv__keys" aria-hidden="true">0–9 · + −</span>
     </div>
   </div>
@@ -134,6 +158,12 @@ const txt: TxtContext = {
         {p.repoUrl && <a href={p.repoUrl} tabindex="-1">{p.title} — source</a>}
       </article>
     ))}
+    {lab.length > 0 && (
+      <>
+        <h2>lab</h2>
+        <ul>{lab.map((l) => <li><a href={`/lab/${l.slug}/`} tabindex="-1">{l.title}</a> — {l.summary}</li>)}</ul>
+      </>
+    )}
   </section>
 </div>
 
@@ -157,7 +187,7 @@ const txt: TxtContext = {
   .tv__glass { box-shadow: -24px 0 64px -20px var(--amb-l, transparent), 0 -24px 64px -20px var(--amb-t, transparent),
       24px 0 64px -20px var(--amb-r, transparent), 0 24px 64px -20px var(--amb-b, transparent);
     transition: box-shadow 0.9s ease; }
-  .tv.is-off .tv__glass, .tv.is-contact .tv__glass, .tv.is-ttx .tv__glass, .tv.is-special .tv__glass {
+  .tv.is-off .tv__glass, .tv.is-contact .tv__glass, .tv.is-ttx .tv__glass, .tv.is-special .tv__glass, .tv.is-lab .tv__glass {
     --amb-l: transparent; --amb-t: transparent; --amb-r: transparent; --amb-b: transparent; }
   .tv__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%;
     opacity: 0; filter: saturate(0.85) contrast(1.05); }
@@ -219,7 +249,7 @@ const txt: TxtContext = {
   .tv__news::after { content: ''; position: absolute; inset: 0; pointer-events: none;
     background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px); }
   /* only on a channel: not in standby, the form, teletext or the special channels */
-  .tv.is-off .tv__news, .tv.is-contact .tv__news, .tv.is-ttx .tv__news, .tv.is-special .tv__news { opacity: 0; visibility: hidden; }
+  .tv.is-off .tv__news, .tv.is-contact .tv__news, .tv.is-ttx .tv__news, .tv.is-special .tv__news, .tv.is-lab .tv__news { opacity: 0; visibility: hidden; }
   .tv__news-tag { flex: none; display: flex; align-items: center; gap: 0.5em; padding: 0 0.75rem;
     background: var(--accent); color: #04140d; font-weight: 700; letter-spacing: 0.2em; }
   .tv__news-tag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor;
@@ -231,7 +261,7 @@ const txt: TxtContext = {
   /* the run is in the track twice: scrolling it by half loops it seamlessly */
   .tv__news-track { display: flex; flex: none; white-space: nowrap; animation: newsRun var(--news-dur, 40s) linear infinite; }
   .tv__news-run:hover .tv__news-track,
-  .tv.is-off .tv__news-track, .tv.is-contact .tv__news-track, .tv.is-ttx .tv__news-track, .tv.is-special .tv__news-track { animation-play-state: paused; }
+  .tv.is-off .tv__news-track, .tv.is-contact .tv__news-track, .tv.is-ttx .tv__news-track, .tv.is-special .tv__news-track, .tv.is-lab .tv__news-track { animation-play-state: paused; }
   @keyframes newsRun { to { transform: translateX(-50%); } }
   .tv__news-track :global(.ni) { position: relative; display: inline-flex; align-items: center; gap: 0.6em; padding-right: 2.6rem; }
   .tv__news-track :global(.ni)::after { content: '■'; position: absolute; right: 1.15rem; font-size: 0.5em; color: rgba(242, 241, 234, 0.3); }
@@ -306,6 +336,18 @@ const txt: TxtContext = {
 
   /* ---- channels ---- */
   .tv__side { align-self: center; }
+  /* the two bands' lists stacked in one cell; the other band's is kept (for
+     the height) but hidden — visibility also takes it out of the tab order */
+  .tv__lists { display: grid; }
+  .tv__lists > .tv__list { grid-area: 1 / 1; align-self: start; }
+  .tv.is-lab [data-tv-list], .tv:not(.is-lab) [data-tv-lablist] { visibility: hidden; }
+  .tv.is-lab .sec-tv, .tv:not(.is-lab) .sec-lab { display: none; }
+  .tv__labmore { display: block; padding: 0.75rem 0 0.7rem; font: 500 0.62rem var(--mono); letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted); transition: color var(--t-hover) ease; }
+  .tv__labmore:hover, .tv__labmore:focus-visible { color: var(--accent); outline: none; }
+  /* the experiment fills the picture; the scanlines and the top shade stay over it */
+  .tv__lab { position: absolute; inset: 0; z-index: 1; }
+  .tv__state[data-s="lab"]::before { content: '◆ '; color: var(--accent); }
   .tv__list { list-style: none; border-bottom: 1px solid var(--line); }
   .tv__chbtn { display: grid; grid-template-columns: 2.2ch minmax(0, 1fr) auto; align-items: center; gap: 0 0.8rem;
     width: 100%; padding: 0.52rem 0.2rem; background: none; border: 0; border-top: 1px solid var(--line);
@@ -445,6 +487,7 @@ const txt: TxtContext = {
   import { afterLoader } from '../scripts/loaded';
   import { edges, glow } from '../scripts/ambilight';
   import { timeIn, doing, hhmm, apart } from '../scripts/mytime';
+  import { mountDemo } from '../scripts/lab';
   import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextHTML, esc, TXT_HOME, type TxtContext } from '../scripts/tv';
 
   const root = document.querySelector<HTMLElement>('[data-tv]');
@@ -685,6 +728,7 @@ const txt: TxtContext = {
     function surf() {
       attract?.kill();
       if (!on || reduce || locked !== null || hovering || root!.classList.contains('is-contact') || root!.classList.contains('is-ttx')
+        || root!.classList.contains('is-lab')
         || (root!.classList.contains('is-special') && specialKind !== 'ad')) { gsap.set(bar, { scaleX: 0 }); return; }
       attract = gsap.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: ATTRACT, ease: 'none',
         onComplete: () => {
@@ -738,6 +782,7 @@ const txt: TxtContext = {
 
     // phones: ◀ ▶ and a swipe on the screen; picking a channel locks it
     const step = (dir: number) => {
+      if (root!.classList.contains('is-lab')) { labTune(labAt + dir); return; }
       closeContact();
       if (!on) { powerOn(dir > 0 ? 0 : chans.length - 1); lock(pending); return; }
       tune(shown + dir);
@@ -815,7 +860,7 @@ const txt: TxtContext = {
       if (!on) { paintStandby(); return; } // it was in standby before
       const i = shown;
       shown = -1;
-      tune(i);
+      tune(Math.max(0, i));
       surf();
     }
     avail?.addEventListener('click', () => (root.classList.contains('is-contact') ? closeContact() : openContact()));
@@ -834,7 +879,7 @@ const txt: TxtContext = {
       lock(i);
     });
     // the l33t minute rewrites static text; the screen's text is set here
-    addEventListener('nyhz:leet', () => setTimeout(() => { if (shown >= 0) paintDetails(shown); }, 300));
+    addEventListener('nyhz:leet', () => setTimeout(() => { if (shown >= 0 && !root.classList.contains('is-lab')) paintDetails(shown); }, 300));
     document.addEventListener('visibilitychange', () => { if (document.hidden) attract?.pause(); else attract?.resume(); });
 
     // covers are fetched as they're needed: the channel and its neighbours
@@ -861,9 +906,91 @@ const txt: TxtContext = {
     let specialKind: 'nosignal' | 'secret' | 'horror' | 'ad' | null = null;
     let specialRaf = 0;
 
+    // ---- the LAB band: the experiments, running live on the screen ----
+    const labHost = $('[data-tv-lab]');
+    const labs = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-lab]'));
+    const bandBtns = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-tv-band]'));
+    const howLink = $<HTMLAnchorElement>('[data-tv-how]');
+    const navK = $('[data-tv-nk]'), navOf = $('[data-tv-nof]');
+    const covers = chans.map((c) => c.dataset.cover || '').filter(Boolean);
+    let labAt = -1, labGen = 0;
+    let unmount: (() => void) | null = null;
+    const inLab = () => root!.classList.contains('is-lab');
+    function leaveLab() {
+      labGen++; // a demo still loading is dropped when it arrives
+      unmount?.(); unmount = null;
+      labAt = -1;
+      root!.classList.remove('is-lab');
+      labHost.hidden = true;
+      howLink.hidden = true;
+      labs.forEach((b) => b.classList.remove('is-on'));
+      bandBtns.forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      navK.textContent = 'CH'; navOf.textContent = pad(chans.length);
+    }
+    function labTune(i: number) {
+      if (!labs.length) return;
+      i = (i + labs.length) % labs.length;
+      if (!on) { powerOn(() => labTune(i)); return; }
+      if (!inLab()) {
+        closeContact();
+        clearOverlays();
+        lock(null);
+        root!.classList.add('is-lab');
+        labHost.hidden = false;
+        bandBtns.forEach((b) => b.setAttribute('aria-pressed', 'true'));
+        navK.textContent = 'LAB'; navOf.textContent = pad(labs.length);
+        attract?.kill();
+        gsap.set(bar, { scaleX: 0 });
+      }
+      if (i === labAt) return;
+      labAt = i;
+      const d = labs[i].dataset;
+      caption(`LAB ${pad(i + 1)}`, say(d.title || ''), say(d.summary || ''));
+      stateEl.textContent = 'lab';
+      stateEl.dataset.s = 'lab';
+      stackEl.textContent = d.tags || '';
+      live.hidden = true; download.hidden = true;
+      repo.hidden = !d.source;
+      if (d.source) repo.href = d.source;
+      howLink.href = `/lab/${d.slug}/`; howLink.hidden = false;
+      nEl.textContent = pad(i + 1);
+      labs.forEach((b, k) => b.classList.toggle('is-on', k === i));
+      // one demo at a time: whichever was running goes, a late one is dropped
+      const gen = ++labGen;
+      unmount?.(); unmount = null;
+      mountDemo(d.slug || '', labHost, { covers }).then((u) => { if (gen === labGen) unmount = u; else u(); });
+      burst(260);
+      sound.glitch();
+      if (!reduce) {
+        big.textContent = `LAB ${pad(i + 1)}`;
+        gsap.fromTo(big, { opacity: 1 }, { opacity: 0, duration: 0.5, delay: 0.25, ease: 'steps(3)' });
+      }
+    }
+    // the remote's "lab": in and out of the band
+    function toggleBand() {
+      if (!inLab()) { labTune(Math.max(0, labAt)); return; }
+      clearOverlays();
+      if (shown >= 0) restore(); else { tune(0); surf(); }
+    }
+    bandBtns.forEach((b) => b.addEventListener('click', toggleBand));
+    labs.forEach((b, i) => b.addEventListener('click', () => labTune(i)));
+    // ↑ ↓ walk the experiments, like the channels
+    root.querySelector('[data-tv-lablist]')?.addEventListener('keydown', (e) => {
+      const k = (e as KeyboardEvent).key;
+      if (k !== 'ArrowDown' && k !== 'ArrowUp') return;
+      e.preventDefault();
+      const n = (Math.max(0, labAt) + (labAt < 0 ? 0 : k === 'ArrowDown' ? 1 : -1) + labs.length) % labs.length;
+      labs[n].focus();
+      labTune(n);
+    });
+    // /?lab=<slug> (the lab pages' "watch it on the tv"): straight to that experiment
+    const wanted = new URLSearchParams(location.search).get('lab');
+    if (wanted !== null && labs.length) afterLoader(() => labTune(Math.max(0, labs.findIndex((b) => b.dataset.slug === wanted))));
+
     // put the screen back to the plain channel (or standby); true if anything was covering it
     function clearOverlays() {
       let had = false;
+      if (root!.classList.contains('is-lab')) { had = true; leaveLab(); }
       if (root!.classList.contains('is-special')) {
         had = true;
         root!.classList.remove('is-special');
@@ -938,7 +1065,7 @@ const txt: TxtContext = {
         } else {
           special$.innerHTML = '<div class="sp-ad" role="button" tabindex="0"><b>TIRED OF BORING<br/>WEBSITES?</b><span>☎ CALL NOW · OPERATORS STANDING BY</span></div>';
           special$.querySelector('.sp-ad')?.addEventListener('click', () => openContact());
-          caption('AD', 'commercial break', 'a word from our sponsor: nyhz is available for work. click to call.');
+          caption('AD', 'commercial break', 'a word from our sponsor: nyhz reads every message. click to call.');
         }
       };
       if (!on) powerOn(show); else show();
@@ -981,6 +1108,7 @@ const txt: TxtContext = {
     // ---- the number keys: type a channel (or a teletext page) ----
     let digits = '', digitT = 0;
     function tuneNumber(n: number) {
+      if (inLab() && n >= 1 && n <= labs.length) { labTune(n - 1); return; } // the lab's own numbers
       const c = channelFor(n, chans.length);
       // a clicked channel keeps focus, and once keys are typed :focus-visible
       // keeps it indented: focus follows the channel, or lets go of the list
@@ -1081,7 +1209,7 @@ const txt: TxtContext = {
         digits = r.buffer;
         clearTimeout(digitT);
         if (inTtx) { ttxHeader(`P${remoteLabel(digits, 3)}`); }
-        else chEl.textContent = `CH ${remoteLabel(digits)}`;
+        else chEl.textContent = `${inLab() ? 'LAB' : 'CH'} ${remoteLabel(digits)}`;
         const go = () => {
           const n = Number(digits);
           digits = '';

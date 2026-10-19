@@ -1,0 +1,21 @@
+title: Endless ticker
+summary: A news strip that scrolls forever and never jumps.
+how: |-
+  The headlines go into the track twice. The track slides exactly half its width, then starts again — and at that moment the second copy sits exactly where the first one began, so the jump back can't be seen.
+
+  The duration is half the width divided by the speed, so it always reads at the same pace however many headlines there are.
+
+  New headlines never cut in mid-sentence: while the strip is on screen they wait for the end of the lap, the one moment the loop is back at its start.
+tags:
+  - css
+code: |-
+  .track { display: flex; width: max-content;
+    animation: run var(--dur) linear infinite; }
+  @keyframes run { to { transform: translateX(-50%); } }
+
+  /* js: the run, twice — and the time it takes at a fixed speed */
+  /* track.innerHTML = run + run;
+     track.style.setProperty('--dur', track.scrollWidth / 2 / SPEED + 's'); */
+lang: css
+source: https://github.com/Nyhz/nyhz-dev/blob/main/src/scripts/lab/endless-ticker.ts
+order: 5

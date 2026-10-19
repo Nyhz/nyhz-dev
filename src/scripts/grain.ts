@@ -81,7 +81,9 @@ function program(gl: WebGLRenderingContext) {
 }
 
 /** null when there's no WebGL (or the shader won't build) — the page just goes without */
-export function createGrain(canvas: HTMLCanvasElement) {
+/** the grain over the whole viewport (the page's background), or inside `box`
+ *  (the lab's demo of it): sizes, the lamp and the ripples follow that box */
+export function createGrain(canvas: HTMLCanvasElement, box?: HTMLElement) {
   const gl = canvas.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: true });
   if (!gl) return null;
   let prog: WebGLProgram;
@@ -101,32 +103,38 @@ export function createGrain(canvas: HTMLCanvasElement) {
   const mouse = { x: 0.5, y: 0.5 };
   let time = 0, mouseAmt = 0;
 
+  const area = () => (box ? box.getBoundingClientRect() : { left: 0, top: 0, width: innerWidth, height: innerHeight });
+  // a viewport point (CSS px) as uv inside the area
+  const uv = (x: number, y: number) => { const a = area(); return { x: (x - a.left) / a.width, y: 1 - (y - a.top) / a.height }; };
   function resize() {
-    const pr = Math.min(devicePixelRatio, 2);
-    canvas.width = Math.round(innerWidth * pr); canvas.height = Math.round(innerHeight * pr);
+    const pr = Math.min(devicePixelRatio, 2), a = area();
+    canvas.width = Math.max(1, Math.round(a.width * pr)); canvas.height = Math.max(1, Math.round(a.height * pr));
     gl!.viewport(0, 0, canvas.width, canvas.height);
-    gl!.uniform1f(uAspect, innerWidth / Math.max(innerHeight, 1));
+    gl!.uniform1f(uAspect, a.width / Math.max(a.height, 1));
   }
   resize();
-  addEventListener('resize', resize);
+  const ro = box ? new ResizeObserver(resize) : null;
+  if (ro && box) ro.observe(box); else addEventListener('resize', resize);
 
   // Pointer is eased toward its target (the lamp lags the cursor a little)
   // and its strength decays after ~1.6s without movement.
   const target = { x: 0.5, y: 0.5 }; let lastMove = -1e9; let nextRipple = 0;
   function onMove(e: PointerEvent) {
     if (e.pointerType !== 'mouse') return;
-    target.x = e.clientX / innerWidth; target.y = 1 - e.clientY / innerHeight;
+    Object.assign(target, uv(e.clientX, e.clientY));
     lastMove = performance.now();
   }
   function onDown(e: PointerEvent) { ripple(e.clientX, e.clientY, 1); }
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function ripple(x: number, y: number, strength: number) {
     if (reduce) return;
-    ripples.set([x / innerWidth, 1 - y / innerHeight, 0, strength], nextRipple * 4);
+    const p = uv(x, y);
+    ripples.set([p.x, p.y, 0, strength], nextRipple * 4);
     nextRipple = (nextRipple + 1) % RIPPLES;
   }
-  addEventListener('pointermove', onMove, { passive: true });
-  addEventListener('pointerdown', onDown, { passive: true });
+  const events: EventTarget = box ?? window;
+  events.addEventListener('pointermove', onMove as EventListener, { passive: true });
+  events.addEventListener('pointerdown', onDown as EventListener, { passive: true });
 
   let raf = 0, last = performance.now();
   function frame() {
@@ -159,6 +167,15 @@ export function createGrain(canvas: HTMLCanvasElement) {
     /** a shockwave from a viewport point (CSS px) */
     ripple,
     /** points the lamp at a viewport point (CSS px), as if the pointer were there */
-    lamp(x: number, y: number) { target.x = x / innerWidth; target.y = 1 - y / innerHeight; lastMove = performance.now(); },
+    lamp(x: number, y: number) { Object.assign(target, uv(x, y)); lastMove = performance.now(); },
+    /** stops it for good: listeners, the frame loop and the GL context */
+    dispose() {
+      cancelAnimationFrame(raf); raf = 0;
+      ro?.disconnect(); removeEventListener('resize', resize);
+      events.removeEventListener('pointermove', onMove as EventListener);
+      events.removeEventListener('pointerdown', onDown as EventListener);
+      document.removeEventListener('visibilitychange', onVis);
+      gl!.getExtension('WEBGL_lose_context')?.loseContext();
+    },
   };
 }

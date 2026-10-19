@@ -2,6 +2,9 @@
 html, body { height: 100%; }
 html { background: var(--bg); color: var(--fg); font-family: var(--font); }
 body { overflow: hidden; }
+/* pages to read (the lab's) scroll like any page */
+html.is-doc body { overflow: auto; }
+html.is-doc .page { height: auto; min-height: 100vh; }
 a { color: inherit; text-decoration: none; }
 
 /* WebGL grain/vignette, clipped to inside the page frame. The canvas covers the

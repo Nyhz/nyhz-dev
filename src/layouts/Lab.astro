@@ -1,0 +1,31 @@
+---
+// The lab's pages: the site's frame and grain, a reading column, no loader
+// and no tv — they load at once and scroll.
+import Base from './Base.astro';
+import Field from '../components/Field.astro';
+import Frame from '../components/Frame.astro';
+
+const { title, description, schema, crumb } = Astro.props as {
+  title: string; description: string; schema?: object; crumb?: { href: string; label: string };
+};
+---
+<Base title={title} description={description} schema={schema} doc>
+  <Field slot="bg" />
+  <Frame slot="frame" />
+  <div class="lab">
+    <nav class="lab__crumbs" aria-label="breadcrumb">
+      <a href="/">nyhz</a><span aria-hidden="true">/</span><a href="/lab/">lab</a>
+      {crumb && <><span aria-hidden="true">/</span><span aria-current="page">{crumb.label}</span></>}
+    </nav>
+    <slot />
+  </div>
+</Base>
+
+<style>
+  .lab { width: min(46rem, 100%); margin: 0 auto; padding-bottom: 4rem; font: 0.92rem/1.75 var(--mono); color: var(--dim); }
+  .lab__crumbs { display: flex; gap: 0.6rem; margin-bottom: clamp(2.5rem, 7vh, 4rem);
+    font: 500 0.66rem var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+  .lab__crumbs a { color: var(--fg); transition: color var(--t-hover) ease; }
+  .lab__crumbs a:hover, .lab__crumbs a:focus-visible { color: var(--accent); outline: none; }
+  .lab__crumbs [aria-current] { color: var(--muted); }
+</style>
