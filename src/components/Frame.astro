@@ -8,7 +8,7 @@
   <span class="meta a act" data-activity hidden>
     <i class="act__dot"></i><span>last push</span><span class="act__k" data-act-when></span><b data-act-repo></b><span class="act__msg" data-act-msg></span>
   </span>
-  <span class="meta d" data-clock-wrap><span data-clock>--:--:--</span><span class="note" data-clock-note></span> · © 2026</span>
+  <span class="meta d" data-clock-wrap><span class="mine" data-mine></span><span class="yours">yours</span><span data-clock>--:--:--</span><span class="note" data-clock-note></span> · © 2026</span>
 </div>
 
 <style>
@@ -45,6 +45,11 @@
   :global(html.egg-sleep) .act, :global(html.egg-game) .act { opacity: 0; }
   /* special minutes (13:37, 03:33): the clock says something, in accent, and
      glitches as it starts */
+  /* my clock first (scripts/mytime.ts), then the visitor's */
+  .mine b { color: var(--fg); font-weight: 500; }
+  .mine:empty, .mine:empty + .yours { display: none; }
+  .yours::before { content: ' — '; }
+  .yours::after { content: ' '; }
   .note { color: var(--accent); }
   .note:not(:empty)::before { content: ' · '; color: var(--muted); }
   .meta.d.is-glitch { animation: clockGlitch 0.9s steps(2) 1; }
@@ -62,6 +67,7 @@
   import { relTime } from '../scripts/activity';
   import { activity } from '../scripts/feed';
   import { afterLoader } from '../scripts/loaded';
+  import { timeIn, doing, hhmm } from '../scripts/mytime';
 
   // last push: fetched once the loader is done (it never competes with the boot)
   const act = document.querySelector<HTMLElement>('[data-activity]');
@@ -90,12 +96,20 @@
   const el = document.querySelector('[data-clock]');
   const wrap = document.querySelector<HTMLElement>('[data-clock-wrap]');
   const noteEl = document.querySelector('[data-clock-note]');
+  const mineEl = document.querySelector('[data-mine]');
+  let mineAt = '';
   if (el) {
     let lastNote = '';
     const tick = () => {
       const d = new Date();
       const p = (n: number) => String(n).padStart(2, '0');
       el.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+      // my time, where I am: once a minute is plenty
+      if (mineEl && mineAt !== `${d.getHours()}:${d.getMinutes()}`) {
+        mineAt = `${d.getHours()}:${d.getMinutes()}`;
+        const t = timeIn(d);
+        mineEl.innerHTML = `my time <b>${hhmm(t)}</b> · ${doing(t.h, t.day)}`;
+      }
       const note = clockNote(d.getHours(), d.getMinutes());
       if (note !== lastNote) {
         lastNote = note;

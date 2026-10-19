@@ -595,47 +595,6 @@
     });
   }
 
-  // ---------- overheat: whip the mouse around for a couple of seconds ----------
-  if (!reduce && matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    let heat = 0, lx = 0, ly = 0, lt = 0, cool = 0;
-    addEventListener('pointermove', (e) => {
-      if (e.pointerType !== 'mouse') return;
-      const now = performance.now();
-      const gap = now - lt;
-      if (lt && gap < 300) {
-        const v = Math.hypot(e.clientX - lx, e.clientY - ly) / Math.max(1, gap);
-        heat = Math.max(0, heat + (v > 2.2 ? gap : -gap * 0.5));
-      } else heat = 0; // stopped: cooled down
-      lx = e.clientX; ly = e.clientY; lt = now;
-      if (heat > 2200 && now > cool) { heat = 0; cool = now + 15000; overheat(); }
-    }, { passive: true });
-
-    const overheat = () => {
-      dispatchEvent(new Event('nyhz:overheat')); // the cursor glitches out and dies (Cursor.astro)
-      sound.glitch();
-      shock(lx, ly, 1.4);
-      for (let i = 0; i < 16; i++) {
-        const sp = document.createElement('span');
-        sp.textContent = GLYPHS[(Math.random() * GLYPHS.length) | 0];
-        sp.style.cssText = `position:fixed;left:${lx}px;top:${ly}px;z-index:210;pointer-events:none;`
-          + `font:500 11px var(--mono);color:${['#ff2e63', '#2ee6ff', '#3ad29f', '#f5c542'][i % 4]}`;
-        document.body.append(sp);
-        gsap.to(sp, { x: (Math.random() - 0.5) * 160, y: 30 + Math.random() * 140, rotation: (Math.random() - 0.5) * 360,
-          opacity: 0, duration: 0.9 + Math.random() * 0.6, ease: 'power2.out', onComplete: () => sp.remove() });
-      }
-      // …and comes back with a tiny boot line where the pointer is
-      setTimeout(() => {
-        const b = document.createElement('span');
-        b.textContent = '› cursor.sys restarted';
-        b.style.cssText = `position:fixed;left:${lx + 14}px;top:${ly + 14}px;z-index:210;pointer-events:none;`
-          + 'font:500 0.62rem var(--mono);letter-spacing:0.12em;color:var(--accent)';
-        document.body.append(b);
-        gsap.to(b, { opacity: 0, delay: 1.2, duration: 0.6, onComplete: () => b.remove() });
-        achieve('overheat');
-      }, 2300);
-    };
-  }
-
   // ---------- the console api: nyhz.help() ----------
   const C = {
     h: 'font: 700 13px ui-monospace, monospace; color: #3ad29f',

@@ -66,6 +66,13 @@ describe('newsItems', () => {
     expect(at(17)).toBe('breaking all 17 secrets found — certificate issued');
   });
 
+  it('reads my clock, saying how far it is only when it differs', () => {
+    const at = (apart: string) => text(newsItems({ ...base, clock: { time: '02:14', doing: 'asleep, probably', apart } }).find((i) => i.segs[0][1] === 'my clock')!);
+    expect(at('7h ahead of you')).toBe('my clock 02:14 · asleep, probably · 7h ahead of you');
+    expect(at('')).toBe('my clock 02:14 · asleep, probably');
+    expect(newsItems(base).some((i) => i.segs[0][1] === 'my clock')).toBe(false);
+  });
+
   it('gives touch screens their own remote', () => {
     expect(text(newsItems({ ...base, touch: true }).find((i) => i.segs[0][1] === 'remote')!)).toContain('swipe');
     expect(text(newsItems(base).find((i) => i.segs[0][1] === 'remote')!)).toContain('t teletext');

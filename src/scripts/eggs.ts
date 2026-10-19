@@ -6,7 +6,6 @@
 export const EGGS = [
   { id: 'sleep', title: 'you left me here', hint: 'leave me alone for a bit' },
   { id: 'gravity', title: 'gravity works', hint: 'poke my name. a lot.' },
-  { id: 'overheat', title: 'overclocked', hint: 'move your mouse like crazy' },
   { id: 'wave', title: 'say my name', hint: 'type my name' },
   { id: 'konami', title: 'old habits', hint: 'an old cheat code: ↑↑↓↓…' },
   { id: 'return', title: 'you came back', hint: 'come back in a few hours' },
@@ -22,7 +21,6 @@ export const EGGS = [
   { id: 'root', title: 'root access', hint: 'terminal — become root. start with sudo' },
   { id: 'console', title: 'devtools dweller', hint: 'open the browser console' },
   { id: 'channel', title: 'off the air', hint: 'tune the tv to a channel that isn\'t listed (number keys)' },
-  { id: 'smack', title: 'percussive maintenance', hint: 'when the picture goes bad, smack the tv (double-click)' },
 ] as const;
 
 export type EggId = (typeof EGGS)[number]['id'];

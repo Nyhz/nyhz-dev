@@ -19,6 +19,8 @@ export type NewsInput = {
   location: string;
   touch: boolean;
   now: number;
+  /** my clock (scripts/mytime.ts): the time where I am, what I'm up to, how far from the visitor's */
+  clock?: { time: string; doing: string; apart: string };
 };
 
 const clip = (t: string, n = 64) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
@@ -49,6 +51,11 @@ export function newsItems(i: NewsInput): NewsItem[] {
   items.push(i.found === 0 ? { segs: [['hl', 'breaking'], ['d', `${i.total} secrets reported on this page`]] }
     : i.found < i.total ? { segs: [['hl', 'secrets'], ['d', `${i.found} of ${i.total} found so far`]] }
     : { segs: [['hl', 'breaking'], ['d', `all ${i.total} secrets found — certificate issued`]] });
+
+  if (i.clock) {
+    const c = i.clock;
+    items.push({ segs: [['k', 'my clock'], ['d', [c.time, c.doing, c.apart].filter(Boolean).join(' · ')]] });
+  }
 
   items.push(i.touch
     ? { segs: [['k', 'remote'], ['d', 'swipe to change channel · txt for teletext']] }

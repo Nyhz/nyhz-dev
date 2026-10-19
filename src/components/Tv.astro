@@ -152,6 +152,13 @@ const txt: TxtContext = {
   .tv__tick.br { bottom: -5px; right: -5px; border-left: 0; border-top: 0; }
   .tv__glass { position: absolute; inset: 0; overflow: hidden; background: #0c0c0b; border: 1px solid var(--line); }
   .tv__pic { position: absolute; inset: 0; }
+  /* ambilight (scripts/ambilight.ts): each edge of the picture glows its own
+     colour round the set; dark when there's no cover on screen */
+  .tv__glass { box-shadow: -24px 0 64px -20px var(--amb-l, transparent), 0 -24px 64px -20px var(--amb-t, transparent),
+      24px 0 64px -20px var(--amb-r, transparent), 0 24px 64px -20px var(--amb-b, transparent);
+    transition: box-shadow 0.9s ease; }
+  .tv.is-off .tv__glass, .tv.is-contact .tv__glass, .tv.is-ttx .tv__glass, .tv.is-special .tv__glass {
+    --amb-l: transparent; --amb-t: transparent; --amb-r: transparent; --amb-b: transparent; }
   .tv__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%;
     opacity: 0; filter: saturate(0.85) contrast(1.05); }
   .tv__img.is-top { opacity: 1; }
@@ -325,7 +332,7 @@ const txt: TxtContext = {
   .tv__rbtn:hover, .tv__rbtn:focus-visible, .tv__rbtn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); outline: none; }
   .tv__keys { margin-left: auto; font: 500 0.58rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 
-  .tv__glass { touch-action: manipulation; } /* a double-tap smacks it, it doesn't zoom */
+  .tv__glass { touch-action: manipulation; } /* a double-tap doesn't zoom */
 
   /* ---- the channels that aren't in the list ---- */
   .tv__special { position: absolute; inset: 0; z-index: 2; overflow: hidden; }
@@ -387,14 +394,6 @@ const txt: TxtContext = {
     background: rgba(0, 0, 0, 0.75); color: var(--accent); font: 700 0.9rem var(--mono); letter-spacing: 0.06em;
     opacity: 0; pointer-events: none; white-space: nowrap; }
 
-  /* bad reception: the picture rolls, ghosts and splits until it's smacked */
-  .tv__glass.is-bad .tv__img.is-top { animation: tvBad 1.3s steps(6) infinite; }
-  @keyframes tvBad {
-    0%, 100% { transform: none; }
-    30% { transform: translateY(-7%) skewX(2deg); filter: drop-shadow(16px 0 rgba(255, 255, 255, 0.35)); }
-    60% { transform: translateY(5%); filter: drop-shadow(-10px 0 rgba(255, 46, 99, 0.55)) drop-shadow(10px 0 rgba(46, 230, 255, 0.55)); }
-  }
-
   /* ---- phones: full-width screen, details under it, ◀ ▶ and swipe ---- */
   @media (max-width: 720px) {
     .tv { display: block; height: auto; }
@@ -428,6 +427,7 @@ const txt: TxtContext = {
   @media (max-width: 720px) and (max-height: 700px) { .tv__desc { max-height: calc(1.6em * 2); min-height: calc(1.6em * 2); } }
 
   @media (prefers-reduced-motion: reduce) {
+    .tv__glass { transition: none; }
     .tv__glass.is-roll .tv__img.is-top { animation: none; }
     .tv__chbtn, .tv__btn { transition: none; }
     .tv__news-track, .tv__news-tag::before { animation: none; } /* one headline at a time instead (script) */
@@ -443,6 +443,8 @@ const txt: TxtContext = {
   import type { Activity } from '../scripts/activity';
   import type { Ping } from '../scripts/status';
   import { afterLoader } from '../scripts/loaded';
+  import { edges, glow } from '../scripts/ambilight';
+  import { timeIn, doing, hhmm, apart } from '../scripts/mytime';
   import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextHTML, esc, TXT_HOME, type TxtContext } from '../scripts/tv';
 
   const root = document.querySelector<HTMLElement>('[data-tv]');
@@ -629,6 +631,18 @@ const txt: TxtContext = {
       }
     }
 
+    // ambilight: the cover, shrunk to a few pixels, gives each edge its glow
+    const ambCx = Object.assign(document.createElement('canvas'), { width: 32, height: 20 })
+      .getContext('2d', { willReadFrequently: true });
+    function ambient(img: HTMLImageElement) {
+      if (!ambCx || !img.naturalWidth) return;
+      try {
+        ambCx.drawImage(img, 0, 0, 32, 20);
+        const [l, t, r, b] = edges(ambCx.getImageData(0, 0, 32, 20).data, 32, 20).map((c) => glow(c));
+        Object.entries({ l, t, r, b }).forEach(([k, v]) => root!.style.setProperty(`--amb-${k}`, v));
+      } catch { /* an unreadable picture: the glow stays as it was */ }
+    }
+
     function tune(i: number, quiet = false) {
       i = (i + chans.length) % chans.length;
       const covered = clearOverlays();
@@ -646,6 +660,7 @@ const txt: TxtContext = {
         imgs[top].classList.remove('is-top');
         next.classList.add('is-top');
         top = 1 - top;
+        ambient(next);
         glass.classList.remove('is-roll');
         void glass.offsetWidth;
         glass.classList.add('is-roll');
@@ -729,15 +744,12 @@ const txt: TxtContext = {
       lock(shown);
     };
     // a click (or tap) on the switched-off screen turns it on
-    let openT = 0;
     hit.addEventListener('click', (e) => {
       e.preventDefault();
       if (!on) { powerOn(0); return; }
       const href = hit.getAttribute('href');
-      clearTimeout(openT);
-      if (href) openT = window.setTimeout(() => window.open(href, '_blank', 'noopener'), 260);
+      if (href && e.detail < 2) window.open(href, '_blank', 'noopener'); // a double-click opens it once
     });
-    hit.addEventListener('dblclick', (e) => { e.preventDefault(); clearTimeout(openT); smack(); });
     $('[data-tv-prev]').addEventListener('click', () => step(-1));
     $('[data-tv-next]').addEventListener('click', () => step(1));
     let tx = 0, ty = 0;
@@ -997,9 +1009,13 @@ const txt: TxtContext = {
       slug: c.dataset.slug || '', title: c.dataset.title || '', status: c.dataset.status || '', repo: c.dataset.repo || '',
     }));
     const NEWS_SPEED = isPhone() ? 42 : 55; // px per second
+    const myClock = () => {
+      const t = timeIn(new Date());
+      return { time: hhmm(t), doing: doing(t.h, t.day), apart: apart(t.offset, -new Date().getTimezoneOffset()) };
+    };
     const headlines = () => newsItems({
       projects: newsProjects, ...feed, found: achievements().count(), total: achievements().total,
-      location: txtCtx.location, touch: matchMedia('(hover: none)').matches, now: Date.now(),
+      location: txtCtx.location, touch: matchMedia('(hover: none)').matches, now: Date.now(), clock: myClock(),
     });
     const newsOnScreen = () => getComputedStyle(news).visibility === 'visible';
     let newsRz = 0;
@@ -1146,39 +1162,6 @@ const txt: TxtContext = {
     txtBtns.forEach((b) => b.addEventListener('click', () => toggleTtx()));
     addEventListener('resize', () => { if (root!.classList.contains('is-ttx')) fitTtx(); });
 
-    // ---- bad reception, and a smack to fix it ----
-    let shake = 0, lastMv = 0, lx = 0, ly = 0;
-    glass.addEventListener('pointermove', (e) => {
-      if (e.pointerType !== 'mouse' || !on || root!.classList.contains('is-ttx')) return;
-      const now = performance.now(), dt = Math.min(100, now - lastMv);
-      if (lastMv) {
-        const v = Math.hypot(e.clientX - lx, e.clientY - ly) / Math.max(1, dt);
-        shake = Math.max(0, shake + (v > 2.4 ? dt : -dt * 0.4));
-        if (shake > 900 && !glass.classList.contains('is-bad')) {
-          glass.classList.add('is-bad');
-          stateEl.textContent = 'weak signal';
-          staticCv.style.opacity = '0.35';
-          staticUntil = performance.now() + 60000;
-          if (!staticRaf) staticRaf = requestAnimationFrame(paintStatic);
-        }
-      }
-      lastMv = now; lx = e.clientX; ly = e.clientY;
-    });
-    function smack() {
-      if (!on) return;
-      const wasBad = glass.classList.contains('is-bad');
-      if (!reduce) gsap.fromTo(screen, { x: 0, rotation: 0 }, { keyframes: [{ x: -9, rotation: -0.8 }, { x: 7, rotation: 0.6 }, { x: -4, rotation: -0.3 }, { x: 0, rotation: 0 }], duration: 0.35, ease: 'power2.out' });
-      sound.glitch();
-      shake = 0;
-      if (wasBad) {
-        glass.classList.remove('is-bad');
-        staticUntil = 0;
-        burst(220, 0.9);
-        if (shown >= 0 && !root!.classList.contains('is-special')) paintDetails(shown);
-        achieve('smack');
-      }
-    }
-
     // ---- power ----
     function powerOff() {
       if (!on || powering) return;
@@ -1187,7 +1170,6 @@ const txt: TxtContext = {
       lock(null);
       attract?.kill();
       gsap.set(bar, { scaleX: 0 });
-      glass.classList.remove('is-bad');
       sound.glitch();
       const done = () => {
         on = false;
