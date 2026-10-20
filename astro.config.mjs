@@ -34,10 +34,24 @@ const vercelCacheHeaders = {
   },
 };
 
+// Each code line carries its own indent (--lead, in columns), so when a long
+// line wraps, what wraps can hang further in than the line it belongs to.
+const hang = {
+  name: 'hang',
+  line(node) {
+    const text = (n) => (n.type === 'text' ? n.value : (n.children ?? []).map(text).join(''));
+    const lead = text(node).match(/^ */)[0].length;
+    if (lead) node.properties.style = `--lead: ${lead}`;
+  },
+};
+
 export default defineConfig({
   site: 'https://www.nyhz.dev',
   integrations: [...(dev ? [react(), keystatic()] : []), sitemap(), vercelCacheHeaders],
-  adapter: vercel(),
-  // the lab's posts (src/content/lab/*.md): code in a dark theme that keeps AA contrast
-  markdown: { shikiConfig: { theme: 'github-dark-default' } },
+  // Vercel Web Analytics: cookieless, so no banner. Its script counts the
+  // client router's navigations too (it follows pushState and popstate)
+  adapter: vercel({ webAnalytics: { enabled: true } }),
+  // the lab's posts (src/content/lab/*.md): code in a dark theme that keeps AA
+  // contrast, and long lines wrap instead of scrolling sideways
+  markdown: { shikiConfig: { theme: 'github-dark-default', wrap: true, transformers: [hang] } },
 });

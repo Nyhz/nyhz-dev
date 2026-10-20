@@ -53,7 +53,13 @@ const schema = {
   .post__body :global(:not(pre) > code) { font: 0.85em var(--mono); color: var(--fg); background: #161614; border: 1px solid var(--line);
     padding: 0.08em 0.35em; overflow-wrap: anywhere; }
   .post__body :global(pre) { margin: 0.4rem 0 1.6rem; padding: 1.05rem 1.2rem; border: 1px solid var(--line);
-    background: #080808 !important; font: 0.8rem/1.7 var(--mono); overflow-x: auto; }
+    background: #080808 !important; font: 0.8rem/1.7 var(--mono); }
+  /* no sideways scroll: a long line wraps, and what wraps hangs four columns
+     past the line's own indent (--lead, set per line in astro.config), so it
+     still reads as the same line */
+  .post__body :global(pre .line) { --hang: calc((var(--lead, 0) + 4) * 1ch);
+    display: inline-block; width: 100%; padding-left: var(--hang); text-indent: calc(-1 * var(--hang)); }
+  @media (max-width: 520px) { .post__body :global(pre) { font-size: 0.74rem; padding: 0.9rem 0.85rem; } }
   .post__foot { margin-top: 3.4rem; padding-top: 1.3rem;
     border-top: 1px solid var(--line); font: 500 0.7rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
   .post__foot a { color: var(--fg); transition: color var(--t-hover) ease; }

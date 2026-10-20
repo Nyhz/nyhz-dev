@@ -36,6 +36,13 @@ export function doing(h: number, day: number): string {
 const pad = (n: number) => String(n).padStart(2, '0');
 export const hhmm = (t: MyTime) => `${pad(t.h)}:${pad(t.m)}`;
 
+/** the zone as its distance from UTC (minutes east): "UTC+2", "UTC+5:30", "UTC-3", "UTC" */
+export function utc(offset: number): string {
+  if (offset === 0) return 'UTC';
+  const n = Math.abs(offset);
+  return `UTC${offset > 0 ? '+' : '-'}${Math.floor(n / 60)}${n % 60 ? `:${pad(n % 60)}` : ''}`;
+}
+
 /** how far my clock is from the visitor's (offsets in minutes east of UTC): "7h ahead of you", "" when the same */
 export function apart(mine: number, theirs: number): string {
   const d = (mine - theirs) / 60;

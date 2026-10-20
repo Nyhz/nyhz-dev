@@ -23,7 +23,7 @@ The portfolio of a creative developer: one screen, a CRT television, and every p
 - **A grain field behind everything.** Raw WebGL with no library, plus an ambilight that tints the room with whatever the tv is showing.
 - **A terminal.** Press the key under <kbd>Esc</kbd> and type.
 - **15 secrets, plus one for phones.** The site counts them for you. No spoilers here.
-- **[The lab](https://www.nyhz.dev/lab/):** long reads on how the parts that took more than one try were built, step by step and with the code.
+- **[The lab](https://www.nyhz.dev/lab/):** under the hood of the things I build, step by step, with the code and the mistakes.
 
 Moving between the tv and the lab never reloads: the grain keeps drifting and the page crossfades underneath it.
 

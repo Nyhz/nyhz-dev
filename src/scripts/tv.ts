@@ -81,9 +81,12 @@ export function teletextPage(n: number, ctx: TxtContext): Row[] | null {
         { segs: [['c', dots('role')], ['w', ctx.role]] },
         { segs: [['c', dots('based')], ['w', ctx.location]] },
         { segs: [['c', dots('on air')], ['w', `${ctx.projects.length} channels, ${live} live`]] },
-        { segs: [['c', dots('status')], ['g', 'reading every message']] },
         blank,
-        { segs: [['y', ' channel 00 takes your messages']] },
+        { segs: [['w', 'senior developer who can\'t leave a']] },
+        { segs: [['w', 'good idea alone. i build the things']] },
+        { segs: [['w', 'i\'d want to use myself, start to']] },
+        { segs: [['w', 'finish, and keep polishing long']] },
+        { segs: [['w', 'after they work.']] },
       ];
     case 102:
       return [

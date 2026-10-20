@@ -39,6 +39,7 @@ describe('teletext', () => {
   });
   it('fills pages from the content', () => {
     expect(text(101)).toContain('2 channels, 1 live');
+    expect(text(101)).toContain('keep polishing long');
     expect(text(102)).toContain('astro · gsap');
     expect(text(103)).toContain('Relica Idle');
     expect(teletextPage(103, ctx)!.filter((r) => r.ch).map((r) => r.ch)).toEqual([1, 2]);

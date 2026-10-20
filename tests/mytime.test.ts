@@ -1,6 +1,6 @@
 // tests/mytime.test.ts
 import { describe, it, expect } from 'vitest';
-import { timeIn, doing, hhmm, apart } from '../src/scripts/mytime';
+import { timeIn, doing, hhmm, apart, utc } from '../src/scripts/mytime';
 
 describe('timeIn', () => {
   it('reads the wall clock in the zone, summer and winter', () => {
@@ -36,5 +36,16 @@ describe('apart', () => {
     expect(apart(120, 120)).toBe('');
     expect(apart(120, -300)).toBe('7h ahead of you');
     expect(apart(60, 330)).toBe('4.5h behind you');
+  });
+});
+
+describe('utc', () => {
+  it('names the zone by its offset', () => {
+    expect(utc(120)).toBe('UTC+2');
+    expect(utc(60)).toBe('UTC+1');
+    expect(utc(330)).toBe('UTC+5:30');
+    expect(utc(-300)).toBe('UTC-5');
+    expect(utc(-570)).toBe('UTC-9:30');
+    expect(utc(0)).toBe('UTC');
   });
 });
