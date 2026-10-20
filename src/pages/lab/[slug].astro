@@ -20,11 +20,14 @@ const schema = {
 };
 ---
 <Lab title={`${meta.title} — ${profile.name}`} description={meta.summary} schema={schema} image={meta.image} crumb={{ href: `/lab/${post.slug}/`, label: meta.title }}>
+  <!-- reading progress: the frame's top line fills as you read -->
+  <div class="post__progress" aria-hidden="true"><i data-read></i></div>
   <article class="post">
     <header class="post__head">
-      <p class="eyebrow"><time datetime={meta.date}>{meta.date}</time> · {post.minutes} min read{meta.tags?.length ? ` · ${meta.tags.join(' · ')}` : ''}</p>
+      <p class="eyebrow"><time datetime={meta.date}>{meta.date}</time> · {post.minutes} min read</p>
       <h1 class="post__h" style={`view-transition-name: title-${post.slug}`}>{meta.title}</h1>
       <p class="post__sum">{meta.summary}</p>
+      {meta.tags?.length && <p class="post__tags">{meta.tags.join(' · ')}</p>}
     </header>
     {meta.cover && <figure class="post__cover" style={`view-transition-name: cover-${post.slug}`}><img src={meta.cover} alt={`${meta.title}: the finished thing`} width="1600" height="840" decoding="async" fetchpriority="high" /></figure>}
     <div class="post__body"><Content /></div>
@@ -35,12 +38,34 @@ const schema = {
 </Lab>
 
 <style>
+  /* laid over the frame's top line (Frame.astro: same inset). The fill slides
+     in from the left (a transform per frame, never a layout), clipped at the
+     frame's corners but free to glow above and below the line */
+  .post__progress { --inset: clamp(14px, 1.6vw, 26px); position: fixed; z-index: 3; top: calc(var(--inset) - 0.5px);
+    left: var(--inset); right: var(--inset); height: 2px; pointer-events: none; clip-path: inset(-6px 0); }
+  .post__progress i { position: absolute; inset: 0; background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    transform: translateX(-100%); }
+  /* the leading edge: brighter, and every few seconds it skips, the hero's glitch */
+  .post__progress i::after { content: ''; position: absolute; right: 0; top: -1px; width: 7px; height: 4px; background: #eafff6;
+    box-shadow: 0 0 10px 1px var(--accent); animation: readHead 4.2s steps(1) infinite; }
+  @keyframes readHead {
+    0%, 92%, 100% { transform: none; box-shadow: 0 0 10px 1px var(--accent); }
+    94% { transform: translateX(3px); box-shadow: -3px 0 #ff2e63, 3px 0 #2ee6ff; }
+    97% { transform: translateX(-2px); box-shadow: 2px 0 #ff2e63, -2px 0 #2ee6ff; }
+  }
+  /* while you scroll the line splits, red over cyan, and settles when you stop */
+  .post__progress.is-moving i { filter: drop-shadow(0 -1px #ff2e63) drop-shadow(0 1px #2ee6ff); }
+  @media (prefers-reduced-motion: reduce) {
+    .post__progress i::after { animation: none; }
+    .post__progress.is-moving i { filter: none; }
+  }
   .post__head { margin-bottom: 2rem; }
   .post__cover { margin: 0 0 2.6rem; border: 1px solid var(--line); background: #0c0c0b; }
   .post__cover img { display: block; width: 100%; height: auto; }
   .post__head .eyebrow { margin-bottom: 1rem; }
   .post__h { font: 700 clamp(1.8rem, 4.4vw, 2.8rem)/1.1 var(--mono); color: var(--fg); letter-spacing: -0.02em; margin-bottom: 0.9rem; }
   .post__sum { font-size: 1rem; line-height: 1.7; }
+  .post__tags { margin-top: 1rem; font: 500 0.6rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 
   /* the markdown */
   .post__body :global(p) { margin-bottom: 1.15rem; }
@@ -65,3 +90,33 @@ const schema = {
   .post__foot a { color: var(--fg); transition: color var(--t-hover) ease; }
   .post__foot a:hover, .post__foot a:focus-visible { color: var(--accent); outline: none; }
 </style>
+
+<script>
+  import { onPage } from '../../scripts/page';
+
+  // how far through the post you are: 0 at the top, 1 once its end is in view
+  onPage((signal) => {
+    const line = document.querySelector<HTMLElement>('.post__progress');
+    const bar = line?.querySelector<HTMLElement>('[data-read]');
+    const post = document.querySelector<HTMLElement>('.post');
+    if (!line || !bar || !post) return;
+    let raf = 0, still = 0;
+    const paint = () => {
+      raf = 0;
+      const end = post.offsetTop + post.offsetHeight - innerHeight;
+      const read = end > 0 ? Math.min(1, Math.max(0, scrollY / end)) : 1;
+      bar.style.transform = `translateX(${(read - 1) * 100}%)`;
+    };
+    const ask = () => { raf ||= requestAnimationFrame(paint); };
+    const moving = () => {
+      ask();
+      line.classList.add('is-moving');
+      clearTimeout(still);
+      still = window.setTimeout(() => line.classList.remove('is-moving'), 160);
+    };
+    addEventListener('scroll', moving, { passive: true, signal });
+    addEventListener('resize', ask, { signal });
+    signal.addEventListener('abort', () => { cancelAnimationFrame(raf); clearTimeout(still); });
+    paint();
+  });
+</script>
