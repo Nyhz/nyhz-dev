@@ -5,6 +5,8 @@ body { overflow: hidden; }
 /* pages to read (the lab's) scroll like any page */
 html.is-doc body { overflow: auto; }
 html.is-doc .page { height: auto; min-height: 100vh; }
+/* …starting clear of the frame's faded top edge (Lab.astro: the inset + 3rem) */
+html.is-doc .page { padding-top: calc(clamp(14px, 1.6vw, 26px) + 3.75rem); }
 a { color: inherit; text-decoration: none; }
 
 /* Navigating between pages (the tv, the lab, a post) never reloads: Astro's

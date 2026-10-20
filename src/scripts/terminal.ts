@@ -8,6 +8,8 @@ export type TermContext = {
   location: string;
   projects: { slug: string; title: string; status: string; description?: string; tags?: string[] }[];
   socials: { label: string; url: string }[];
+  /** the lab's posts, newest first */
+  posts?: { slug: string; title: string; date: string; minutes: number }[];
 };
 
 export type TermAction =
@@ -15,6 +17,7 @@ export type TermAction =
   | { type: 'open'; slug: string }
   | { type: 'contact' }
   | { type: 'url'; url: string }
+  | { type: 'go'; url: string }
   | { type: 'clear' }
   | { type: 'exit' }
   | { type: 'glitch' }
@@ -39,7 +42,7 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 
 export type TermResult = { lines: string[]; action: TermAction };
 
-export const COMMANDS = ['help', 'ls', 'open', 'contact', 'whoami', 'socials', 'status', 'snake', 'glitch', 'date', 'echo', 'clear', 'exit'];
+export const COMMANDS = ['help', 'ls', 'open', 'lab', 'read', 'rss', 'contact', 'whoami', 'socials', 'status', 'snake', 'glitch', 'date', 'echo', 'clear', 'exit'];
 
 const none: TermAction = { type: 'none' };
 
@@ -82,6 +85,38 @@ export function findProject(ctx: TermContext, query: string) {
   return ctx.projects.find((p) => p.slug === s || slugify(p.title) === s)
     ?? ctx.projects.find((p) => p.slug.startsWith(s) || slugify(p.title).startsWith(s));
 }
+
+// the lab's posts are numbered like on /lab: the oldest is 01
+const postNo = (ctx: TermContext, i: number) => pad2((ctx.posts?.length ?? 0) - i);
+
+/** a post by its number, its slug or the start of either (with or without lab/ in front) */
+export function findPost(ctx: TermContext, query: string) {
+  const posts = ctx.posts ?? [];
+  const q = query.trim().toLowerCase().replace(/^(\.\/)?lab\//, '').replace(/\/$/, '');
+  if (!q) return undefined;
+  const n = Number(q);
+  if (Number.isInteger(n) && n >= 1 && n <= posts.length) return posts[posts.length - n];
+  const s = slugify(q);
+  if (!s) return undefined;
+  return posts.find((p) => p.slug === s || slugify(p.title) === s)
+    ?? posts.find((p) => p.slug.startsWith(s) || slugify(p.title).startsWith(s));
+}
+
+function labList(ctx: TermContext): TermResult {
+  const posts = ctx.posts ?? [];
+  if (!posts.length) return { lines: ['lab: empty. nothing written yet.'], action: none };
+  return {
+    lines: [...posts.map((p, i) => `${postNo(ctx, i)}  ${p.title}  ${p.date}`), '» read <n> to open one'],
+    action: none,
+  };
+}
+
+function readPost(ctx: TermContext, cmd: string, arg: string): TermResult {
+  const p = findPost(ctx, arg);
+  if (!p) return { lines: [`${cmd}: no such post: ${arg} — try ls lab`], action: none };
+  return { lines: [`→ ${p.title}`, `${p.date} · ${p.minutes} min read`], action: { type: 'go', url: `/lab/${p.slug}/` } };
+}
+const isLab = (arg: string) => /^(\.\/|~\/)?lab\/?$/i.test(arg.trim());
 
 // fortune: a random line, every time
 export const FORTUNES = [
@@ -181,6 +216,7 @@ export function runCommand(input: string, ctx: TermContext, now: Date = new Date
         lines: [
           'ls              list projects',
           'open <n|name>   inspect a project',
+          'lab · read <n>  the lab\'s posts',
           'contact         write to me',
           'socials         where else i am',
           'status          are the live ones up?',
@@ -191,9 +227,21 @@ export function runCommand(input: string, ctx: TermContext, now: Date = new Date
         ],
         action: none,
       };
+    case 'lab':
+    case 'blog':
+    case 'posts':
+      return labList(ctx);
+    case 'read':
+      if (!arg) return { lines: ['usage: read <n|name> — ls lab lists them'], action: none };
+      return readPost(ctx, cmd, arg);
+    case 'rss':
+      return { lines: ['→ nyhz.dev/lab/rss.xml'], action: { type: 'url', url: '/lab/rss.xml' } };
     case 'ls':
     case 'projects': {
+      if (isLab(rest.filter((a) => !a.startsWith('-')).join(' '))) return labList(ctx);
       const rows = ctx.projects.map((p, i) => `${String(i + 1).padStart(2, '0')}  ${p.slug.padEnd(16)}  ${p.status}`);
+      // the lab sits next to the projects, like a folder
+      if (ctx.posts?.length) rows.push(pre(' '), `lab/      ${ctx.posts.length} posts · ls lab`);
       if (!/(^|\s)-\w*a/.test(arg)) return { lines: rows, action: none };
       // the hidden files first, one per row with what they are, then the projects
       const dots = Object.entries(DOTFILE_INFO).map(([f, what]) => `${f.padEnd(8)}  ${what}`);
@@ -204,6 +252,10 @@ export function runCommand(input: string, ctx: TermContext, now: Date = new Date
     case 'cat': {
       if (!arg) return { lines: [`usage: ${cmd} <n|name>`], action: none };
       if (cmd === 'cd' && ['..', '/', '~', '-'].includes(arg)) return { lines: ['nice try. this is as far up as it goes.'], action: none };
+      if (isLab(arg)) {
+        return cmd === 'cd' ? { lines: ['→ the lab'], action: { type: 'go', url: '/lab/' } } : { lines: [`${cmd}: lab: is a directory — try ls lab`], action: none };
+      }
+      if (/^(\.\/|~\/)?lab\//i.test(arg)) return readPost(ctx, cmd, arg.replace(/^(\.\/|~\/)/, ''));
       const file = DOTFILES[arg.toLowerCase()];
       if (file) {
         if (cmd !== 'cat') return { lines: [`${cmd}: ${arg}: not a project — try cat`], action: none };
@@ -376,7 +428,15 @@ export function complete(input: string, ctx: TermContext): string {
     const hits = [...COMMANDS, ...ctx.socials.map((s) => s.label.toLowerCase())].filter((x) => x.startsWith(c));
     return hits.length === 1 ? `${lead}${hits[0]} ` : input;
   }
-  if (['open', 'cd', 'cat'].includes(cmd.toLowerCase())) {
+  const c = cmd.toLowerCase();
+  // posts: by slug after `read`, as lab/<slug> after cd/cat/open
+  const lab = c === 'read' ? '' : /^lab\//i.test(arg) ? 'lab/' : null;
+  if (lab !== null) {
+    const a = slugify(arg.slice(lab.length));
+    const hits = (ctx.posts ?? []).filter((p) => p.slug.startsWith(a));
+    return hits.length === 1 ? `${lead}${cmd} ${lab}${hits[0].slug}` : input;
+  }
+  if (['open', 'cd', 'cat'].includes(c)) {
     const a = slugify(arg);
     const hits = ctx.projects.filter((p) => p.slug.startsWith(a));
     return hits.length === 1 ? `${lead}${cmd} ${hits[0].slug}` : input;

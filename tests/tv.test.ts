@@ -1,6 +1,6 @@
 // tests/tv.test.ts
 import { describe, it, expect } from 'vitest';
-import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextPage, teletextHTML, type TxtContext } from '../src/scripts/tv';
+import { channelFor, remoteDigit, remoteLabel, volumeBar, clampVolume, teletextPage, teletextHTML, wrapWords, type TxtContext } from '../src/scripts/tv';
 
 const ctx: TxtContext = {
   name: 'nyhz', role: 'creative developer', location: 'somewhere on earth',
@@ -35,7 +35,7 @@ describe('teletext', () => {
   const text = (n: number) => teletextPage(n, ctx)?.map((r) => r.segs.map((s) => s[1]).join('')).join('\n') ?? null;
   it('has an index that links to its pages', () => {
     const p = teletextPage(100, ctx)!;
-    expect(p.filter((r) => r.link).map((r) => r.link)).toEqual([101, 102, 103, 104, 105, 888]);
+    expect(p.filter((r) => r.link).map((r) => r.link)).toEqual([101, 102, 103, 104, 105, 106, 888]);
   });
   it('fills pages from the content', () => {
     expect(text(101)).toContain('2 channels, 1 live');
@@ -63,5 +63,21 @@ describe('teletext markup', () => {
   });
   it('links the making-of page off the tv, to the post', () => {
     expect(teletextHTML(105, ctx)).toContain('data-go="u/lab/tv/"');
+  });
+  it('lists the newest three posts on 106, each opening its post', () => {
+    const posts = [4, 3, 2, 1].map((n) => ({ slug: `p${n}`, title: `Post number ${n} with a title long enough to wrap twice`, date: `2026-0${n}-01`, minutes: n }));
+    const p = teletextPage(106, { ...ctx, posts })!;
+    const rows = p.map((r) => r.segs.map((s) => s[1]).join(''));
+    expect(rows.every((r) => r.length <= 40)).toBe(true);
+    expect(rows.filter((r) => /^ \d\d {2}/.test(r)).map((r) => r.slice(1, 3))).toEqual(['04', '03', '02']);
+    expect(rows).toContain('     2026-04-01 · 4 min');
+    expect(p.filter((r) => r.href === '/lab/p4/')).toHaveLength(3); // two title rows and the date
+    expect(p.some((r) => r.href === '/lab/p1/')).toBe(false);
+    expect(p.at(-1)!.href).toBe('/lab/');
+    expect(teletextPage(106, ctx)!.flatMap((r) => r.segs.map((g) => g[1]))).toContain(' nothing on the air yet.');
+  });
+  it('wraps words into lines of a width', () => {
+    expect(wrapWords('how relica idle keeps fighting with the tab closed', 20)).toEqual(['how relica idle', 'keeps fighting with', 'the tab closed']);
+    expect(wrapWords('  ', 10)).toEqual([]);
   });
 });

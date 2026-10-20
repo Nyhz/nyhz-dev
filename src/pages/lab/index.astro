@@ -11,7 +11,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 ---
 <Lab title={`lab — ${profile.name}`} description={`Under the hood: how the things ${profile.name} builds actually work, step by step, with the code and the mistakes.`}>
   <header class="lx__head">
-    <p class="eyebrow">lab <span class="lx__count">[{pad(posts.length)}]</span></p>
+    <p class="eyebrow">lab <span class="lx__count">[{pad(posts.length)}]</span> · <a class="lx__rss" href="/lab/rss.xml">rss</a></p>
     <h1 class="lx__h">Under the hood.</h1>
     <p class="lx__lead">How the things I build actually work, step by step, with the code and the mistakes.</p>
   </header>
@@ -38,6 +38,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
   .lx__head { margin-bottom: clamp(2rem, 5vh, 3rem); }
   .lx__head .eyebrow { margin-bottom: 1rem; }
   .lx__count { color: var(--fg); }
+  .lx__rss { color: var(--muted); text-decoration: underline; text-underline-offset: 0.3em; text-decoration-color: var(--line);
+    transition: color var(--t-hover) ease; }
+  .lx__rss:hover, .lx__rss:focus-visible { color: var(--accent); outline: none; }
   .lx__h { font: 700 clamp(1.5rem, 3.4vw, 2.2rem)/1.2 var(--mono); color: var(--fg); letter-spacing: -0.015em; margin-bottom: 0.9rem; }
   .lx__lead { max-width: 52ch; }
 

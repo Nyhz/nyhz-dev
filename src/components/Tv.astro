@@ -12,6 +12,7 @@
 import Contact from './Contact.astro';
 import { statusOf, type ProjectProps, type ProfileProps, type SkillProps } from '../scripts/content';
 import type { TxtContext } from '../scripts/tv';
+import { getPosts } from '../scripts/posts';
 
 const { projects, profile, skills = [] } = Astro.props as { projects: ProjectProps[]; profile: ProfileProps; skills?: SkillProps[] };
 const shown = projects.slice(0, 10);
@@ -21,6 +22,7 @@ const txt: TxtContext = {
   name: profile.name, role: profile.role, location: profile.location, socials: profile.socials,
   projects: shown.map((p) => ({ title: p.title, status: statusOf(p) })),
   skills: skills.map((s) => ({ title: s.title, items: s.items })),
+  posts: getPosts().map((p) => ({ slug: p.slug, title: p.meta.title, date: p.meta.date, minutes: p.minutes })),
 };
 ---
 <div class="tv is-off" data-tv data-anim data-txt={JSON.stringify(txt)}>

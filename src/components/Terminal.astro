@@ -4,6 +4,7 @@
 // on touch screens there is no keyboard to invite.
 import { statusOf, type ProfileProps, type ProjectProps } from '../scripts/content';
 import type { TermContext } from '../scripts/terminal';
+import { getPosts } from '../scripts/posts';
 
 const { profile, projects } = Astro.props as { profile: ProfileProps; projects: ProjectProps[] };
 const ctx: TermContext = {
@@ -14,6 +15,7 @@ const ctx: TermContext = {
     slug: p.slug, title: p.title, status: statusOf(p), description: p.description, tags: p.tags,
   })),
   socials: profile.socials,
+  posts: getPosts().map((p) => ({ slug: p.slug, title: p.meta.title, date: p.meta.date, minutes: p.minutes })),
 };
 ---
 <div data-nosnippet class="term" data-term data-ctx={JSON.stringify(ctx)}>
@@ -130,6 +132,7 @@ const ctx: TermContext = {
   import { statusLine, type Ping } from '../scripts/status';
   import { sound } from '../scripts/sound';
   import { onPage } from '../scripts/page';
+  import { navigate } from 'astro:transitions/client';
 
   const UNDER_ESC = ['`', 'º', '²', '§'];
 
@@ -357,6 +360,8 @@ const ctx: TermContext = {
         case 'open': dispatchEvent(new CustomEvent('nyhz:open', { detail: { slug: action.slug } })); break;
         case 'contact': dispatchEvent(new Event('nyhz:contact')); break;
         case 'url': window.open(action.url, '_blank', 'noopener'); break;
+        // a page of the site (the lab): through the router, once the window has shut
+        case 'go': { const url = action.url; setTimeout(() => { close(); navigate(url); }, 350); break; }
         case 'glitch': dispatchEvent(new Event('nyhz:glitch')); break;
         case 'matrix': dispatchEvent(new Event('nyhz:matrix')); break;
         case 'achieve': dispatchEvent(new CustomEvent('nyhz:achieve', { detail: { id: action.id } })); break;

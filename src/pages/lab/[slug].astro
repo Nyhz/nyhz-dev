@@ -22,6 +22,17 @@ const schema = {
 <Lab title={`${meta.title} — ${profile.name}`} description={meta.summary} schema={schema} image={meta.image} crumb={{ href: `/lab/${post.slug}/`, label: meta.title }}>
   <!-- reading progress: the frame's top line fills as you read -->
   <div class="post__progress" aria-hidden="true"><i data-read><b></b></i></div>
+  <!-- the sections, in the margin on wide screens; the one you're in lights up -->
+  {post.sections.length > 2 && (
+    <nav class="toc" aria-label="contents">
+      <p class="toc__h">— contents</p>
+      <ol>
+        {post.sections.map((s) => (
+          <li><a href={`#${s.id}`} data-toc={s.id}><span class="toc__n">{s.n || '··'}</span><span class="toc__t">{s.text}</span></a></li>
+        ))}
+      </ol>
+    </nav>
+  )}
   <article class="post">
     <header class="post__head">
       <p class="eyebrow"><time datetime={meta.date}>{meta.date}</time> · {post.minutes} min read</p>
@@ -55,6 +66,37 @@ const schema = {
   @media (prefers-reduced-motion: reduce) {
     .post__progress.is-moving b { box-shadow: 0 0 6px 1px var(--accent), 0 0 16px var(--accent); }
   }
+  /* the contents: fixed in the left margin, clear of the column (46rem wide,
+     centred) — only where the margin has room for it, and the screen the
+     height for a dozen sections */
+  .toc { display: none; }
+  @media (min-width: 1300px) and (min-height: 640px) {
+    .toc { display: block; position: fixed; z-index: 2; top: clamp(7rem, 22vh, 11rem); width: 12rem;
+      left: calc(50% - 23rem - 2.5rem - 12rem); }
+  }
+  .toc__h { margin-bottom: 0.9rem; font: 500 0.6rem var(--mono); letter-spacing: 0.24em; text-transform: uppercase; color: var(--muted); }
+  .toc ol { list-style: none; display: grid; gap: 0.15rem; }
+  .toc a { position: relative; display: grid; grid-template-columns: 2.4ch minmax(0, 1fr); gap: 0 0.7rem; padding: 0.22rem 0;
+    font: 500 0.68rem/1.45 var(--mono); color: var(--muted); transition: color var(--t-hover) ease; }
+  .toc a::before { content: ''; position: absolute; left: -0.8rem; top: 0.38rem; width: 2px; height: 0.8rem;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent); transform: scaleY(0); transition: transform 0.25s var(--ease-out); }
+  .toc__n { font-size: 0.6rem; padding-top: 0.08rem; font-variant-numeric: tabular-nums; }
+  .toc__t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .toc a:hover, .toc a:focus-visible { color: var(--fg); outline: none; }
+  .toc a.is-here { color: var(--fg); }
+  .toc a.is-here .toc__n { color: var(--accent); }
+  .toc a.is-here::before { transform: scaleY(1); }
+  .toc a.is-here .toc__t { animation: tocGlitch 0.36s steps(2) 1; }
+  @keyframes tocGlitch {
+    0% { text-shadow: -2px 0 #ff2e63, 2px 0 #2ee6ff; }
+    50% { text-shadow: 2px 0 #ff2e63, -2px 0 #2ee6ff; }
+    100% { text-shadow: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toc a::before { transition: none; }
+    .toc a.is-here .toc__t { animation: none; }
+  }
+
   .post__head { margin-bottom: 2rem; }
   .post__cover { margin: 0 0 2.6rem; border: 1px solid var(--line); background: #0c0c0b; }
   .post__cover img { display: block; width: 100%; height: auto; }
@@ -65,7 +107,8 @@ const schema = {
 
   /* the markdown */
   .post__body :global(p) { margin-bottom: 1.15rem; }
-  .post__body :global(h2) { font: 700 1.15rem/1.35 var(--mono); color: var(--fg); margin: 3rem 0 1rem; letter-spacing: -0.01em; }
+  .post__body :global(h2) { font: 700 1.15rem/1.35 var(--mono); color: var(--fg); margin: 3rem 0 1rem; letter-spacing: -0.01em;
+    scroll-margin-top: 4.5rem; }
   .post__body :global(strong) { color: var(--fg); font-weight: 700; }
   .post__body :global(a) { color: var(--accent); text-decoration: underline; text-underline-offset: 0.25em; }
   .post__body :global(ul) { margin: 0 0 1.2rem 1.2rem; }
@@ -81,6 +124,21 @@ const schema = {
   .post__body :global(pre .line) { --hang: calc((var(--lead, 0) + 4) * 1ch);
     display: inline-block; width: 100%; padding-left: var(--hang); text-indent: calc(-1 * var(--hang)); }
   @media (max-width: 520px) { .post__body :global(pre) { font-size: 0.74rem; padding: 0.9rem 0.85rem; } }
+  /* selecting code (Cursor.astro turns into an I-beam over it): teal, not the system's blue */
+  .post__body :global(pre ::selection) { background: color-mix(in srgb, var(--accent) 32%, transparent); color: #fff; }
+  /* copy: a tab sitting on the block's top border (so it never covers code),
+     shown on hover — always, where there's no hover */
+  .post__body :global(.code) { position: relative; }
+  .post__body :global(.code__copy) { position: absolute; top: 0.4rem; right: 0.9rem; transform: translateY(-50%);
+    padding: 0.18rem 0.55rem; background: #080808; border: 1px solid var(--line); cursor: pointer;
+    font: 500 0.56rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+    opacity: 0; transition: opacity var(--t-hover) ease, color var(--t-hover) ease, border-color var(--t-hover) ease; }
+  .post__body :global(.code:hover .code__copy), .post__body :global(.code__copy:focus-visible) { opacity: 1; }
+  .post__body :global(.code__copy:hover), .post__body :global(.code__copy:focus-visible) { color: var(--fg); border-color: var(--muted); outline: none; }
+  .post__body :global(.code__copy.is-done) { opacity: 1; color: var(--accent); border-color: var(--accent);
+    animation: tocGlitch 0.36s steps(2) 1; }
+  @media (hover: none) { .post__body :global(.code__copy) { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .post__body :global(.code__copy.is-done) { animation: none; } }
   .post__foot { margin-top: 3.4rem; padding-top: 1.3rem;
     border-top: 1px solid var(--line); font: 500 0.7rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; }
   .post__foot a { color: var(--fg); transition: color var(--t-hover) ease; }
@@ -114,5 +172,69 @@ const schema = {
     addEventListener('resize', ask, { signal });
     signal.addEventListener('abort', () => { cancelAnimationFrame(raf); clearTimeout(still); });
     paint();
+  });
+
+  // the contents: the section you're in is the last one whose heading has
+  // passed a third of the way down the screen. A click scrolls there
+  onPage((signal) => {
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-toc]'));
+    const heads = links.map((a) => document.getElementById(a.dataset.toc!)).filter((h): h is HTMLElement => !!h);
+    if (!links.length || heads.length !== links.length) return;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let raf = 0, here = -2;
+    const paint = () => {
+      raf = 0;
+      const line = innerHeight / 3;
+      let i = -1;
+      heads.forEach((h, j) => { if (h.getBoundingClientRect().top <= line) i = j; });
+      if (i === here) return;
+      here = i;
+      links.forEach((a, j) => a.classList.toggle('is-here', j === i));
+    };
+    const ask = () => { raf ||= requestAnimationFrame(paint); };
+    addEventListener('scroll', ask, { passive: true, signal });
+    addEventListener('resize', ask, { signal });
+    links.forEach((a, j) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      heads[j].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      history.replaceState(history.state, '', `#${heads[j].id}`);
+    }, { signal }));
+    signal.addEventListener('abort', () => cancelAnimationFrame(raf));
+    paint();
+  });
+
+  // a copy button on every code block
+  onPage((signal) => {
+    document.querySelectorAll<HTMLPreElement>('.post__body pre').forEach((pre) => {
+      if (pre.parentElement?.classList.contains('code')) return;
+      const box = document.createElement('div');
+      box.className = 'code';
+      pre.before(box);
+      box.append(pre);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'code__copy';
+      btn.textContent = 'copy';
+      btn.setAttribute('aria-label', 'copy this code');
+      box.append(btn);
+      let t = 0;
+      const say = (text: string) => {
+        btn.textContent = text;
+        btn.classList.add('is-done');
+        clearTimeout(t);
+        t = window.setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('is-done'); }, 1600);
+      };
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(pre.textContent ?? '');
+          say('copied');
+        } catch {
+          // no clipboard (an old browser, an insecure page): select it instead
+          getSelection()?.selectAllChildren(pre);
+          say('selected');
+        }
+      }, { signal });
+      signal.addEventListener('abort', () => clearTimeout(t));
+    });
   });
 </script>

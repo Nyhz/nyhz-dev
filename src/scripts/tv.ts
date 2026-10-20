@@ -45,6 +45,7 @@ export type TxtContext = {
   projects: { title: string; status: string }[];
   skills: { title: string; items: string[] }[];
   socials: { label: string; url: string }[];
+  posts?: { slug: string; title: string; date: string; minutes: number }[];
 };
 
 export const TXT_HOME = 100;
@@ -52,6 +53,17 @@ export const FASTEXT: [string, string, number][] = [['r', 'ABOUT', 101], ['g', '
 
 const dots = (k: string, w = 12) => `${k} ${'.'.repeat(Math.max(1, w - k.length))} `;
 const strip = (url: string) => url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+
+/** words into lines of at most `w` columns (a word longer than that gets its own line) */
+export function wrapWords(text: string, w: number): string[] {
+  const out: string[] = [];
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    const last = out.length - 1;
+    if (last >= 0 && out[last].length + 1 + word.length <= w) out[last] += ` ${word}`;
+    else out.push(word);
+  }
+  return out;
+}
 
 /** the page's rows, or null when there's no such page */
 export function teletextPage(n: number, ctx: TxtContext): Row[] | null {
@@ -68,6 +80,7 @@ export function teletextPage(n: number, ctx: TxtContext): Row[] | null {
         { segs: [['y', ' 103  '], ['w', 'projects · the guide']], link: 103 },
         { segs: [['y', ' 104  '], ['w', 'contact']], link: 104 },
         { segs: [['y', ' 105  '], ['w', 'making of · how this tv was built']], link: 105 },
+        { segs: [['y', ' 106  '], ['w', 'the lab · how things work']], link: 106 },
         blank,
         { segs: [['c', ' 888  '], ['c', 'subtitles']], link: 888 },
         blank,
@@ -127,6 +140,26 @@ export function teletextPage(n: number, ctx: TxtContext): Row[] | null {
         blank,
         { segs: [['y', ' read it '], ['c', '› nyhz.dev/lab/tv']], href: '/lab/tv/' },
       ];
+    case 106: {
+      // the newest three (a page holds no more): number and title (wrapped),
+      // then the date; any of a post's rows opens it
+      const all = ctx.posts ?? [];
+      return [
+        title('THE LAB'),
+        blank,
+        ...(all.length ? [] : [{ segs: [['w', ' nothing on the air yet.']] } as Row]),
+        ...all.slice(0, 3).flatMap((p, i): Row[] => {
+          const href = `/lab/${p.slug}/`;
+          const lines = wrapWords(p.title.toLowerCase(), 33);
+          return [
+            ...lines.map((l, j): Row => ({ segs: [['y', j ? '     ' : ` ${String(all.length - i).padStart(2, '0')}  `], ['w', l]], href })),
+            { segs: [['c', `     ${p.date} · ${p.minutes} min`]], href },
+            blank,
+          ];
+        }),
+        { segs: [['y', ' all of it '], ['c', '› nyhz.dev/lab']], href: '/lab/' },
+      ];
+    }
     case 888:
       return [
         title('SUBTITLES', 'y'),

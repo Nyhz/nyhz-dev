@@ -96,6 +96,7 @@ const jsonLd = {
     <meta name="twitter:image:alt" content="nyhz — creative developer" />
 
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="nyhz — lab" href="/lab/rss.xml" />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline />
     {schema && <script type="application/ld+json" set:html={JSON.stringify(schema)} is:inline />}
     <!-- moving around the site swaps the page inside a view transition, no reload (scripts/page.ts) -->

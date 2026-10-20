@@ -1,6 +1,6 @@
 // tests/terminal.test.ts
 import { describe, it, expect } from 'vitest';
-import { runCommand, complete, findProject, vimReply, sshReply, cowsay, FORTUNES, PRE, type TermContext } from '../src/scripts/terminal';
+import { runCommand, complete, findProject, findPost, vimReply, sshReply, cowsay, FORTUNES, PRE, type TermContext } from '../src/scripts/terminal';
 
 const ctx: TermContext = {
   name: 'nyhz', role: 'creative developer', location: 'somewhere on earth',
@@ -160,6 +160,46 @@ describe('coffee', () => {
     for (const l of ['coffee', 'make coffee', 'sudo make coffee', 'brew']) {
       expect(runCommand(l, ctx).lines[0], l).toBe("HTTP/1.1 418 I'm a teapot");
     }
+  });
+});
+
+describe('the lab', () => {
+  const lab: TermContext = { ...ctx, posts: [
+    { slug: 'relica-idle', title: 'How Relica Idle keeps fighting', date: '2026-10-20', minutes: 9 },
+    { slug: 'tv', title: 'How the TV was built', date: '2026-10-01', minutes: 12 },
+  ] };
+  it('finds a post by its number (the oldest is 01), slug or title, with or without lab/', () => {
+    expect(findPost(lab, '1')?.slug).toBe('tv');
+    expect(findPost(lab, '02')?.slug).toBe('relica-idle');
+    expect(findPost(lab, 'lab/relica')?.slug).toBe('relica-idle');
+    expect(findPost(lab, 'How the TV')?.slug).toBe('tv');
+    expect(findPost(lab, '3')).toBeUndefined();
+  });
+  it('lists the posts with lab, ls lab and ls ./lab/', () => {
+    const list = ['02  How Relica Idle keeps fighting  2026-10-20', '01  How the TV was built  2026-10-01', '» read <n> to open one'];
+    for (const c of ['lab', 'ls lab', 'ls -l ./lab/', 'blog']) expect(runCommand(c, lab).lines).toEqual(list);
+    expect(runCommand('lab', ctx).lines).toEqual(['lab: empty. nothing written yet.']);
+  });
+  it('shows the lab as a folder in ls, only when it has posts', () => {
+    expect(runCommand('ls', lab).lines.at(-1)).toBe('lab/      2 posts · ls lab');
+    expect(runCommand('ls', ctx).lines).toHaveLength(3);
+  });
+  it('reads a post by going to its page', () => {
+    expect(runCommand('read 1', lab)).toEqual({ lines: ['→ How the TV was built', '2026-10-01 · 12 min read'], action: { type: 'go', url: '/lab/tv/' } });
+    expect(runCommand('cat lab/relica-idle', lab).action).toEqual({ type: 'go', url: '/lab/relica-idle/' });
+    expect(runCommand('read nope', lab).lines).toEqual(['read: no such post: nope — try ls lab']);
+    expect(runCommand('read', lab).action).toEqual({ type: 'none' });
+  });
+  it('goes to the lab with cd, and says it is a folder to cat', () => {
+    expect(runCommand('cd lab', lab).action).toEqual({ type: 'go', url: '/lab/' });
+    expect(runCommand('cat lab', lab).lines).toEqual(['cat: lab: is a directory — try ls lab']);
+  });
+  it('points at the feed', () => {
+    expect(runCommand('rss', lab).action).toEqual({ type: 'url', url: '/lab/rss.xml' });
+  });
+  it('completes post slugs after read and lab/', () => {
+    expect(complete('read rel', lab)).toBe('read relica-idle');
+    expect(complete('cat lab/t', lab)).toBe('cat lab/tv');
   });
 });
 

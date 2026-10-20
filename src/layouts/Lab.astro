@@ -19,6 +19,10 @@ const { title, description, schema, crumb, image } = Astro.props as {
     </nav>
     <slot />
   </div>
+  <!-- the frame's top and bottom edges: nothing shows past the frame's line,
+       and what scrolls up to it blurs and fades on the way in and out -->
+  <div class="lab__edge is-top" aria-hidden="true"></div>
+  <div class="lab__edge is-bottom" aria-hidden="true"></div>
 </Base>
 
 <style>
@@ -32,4 +36,18 @@ const { title, description, schema, crumb, image } = Astro.props as {
   .lab__crumbs a { color: var(--fg); transition: color var(--t-hover) ease; }
   .lab__crumbs a:hover, .lab__crumbs a:focus-visible { color: var(--accent); outline: none; }
   .lab__crumbs [aria-current] { color: var(--muted); }
+
+  /* solid bg out to the frame's line (Frame.astro, same inset; there's no
+     grain out there, so it doesn't show), then a fade 3rem in: a background
+     that thins out and a blur, both masked away towards the middle. Above the
+     text, under the frame, the reading line and the contents */
+  .lab__edge { --inset: clamp(14px, 1.6vw, 26px); position: fixed; z-index: 1; left: 0; right: 0;
+    height: calc(var(--inset) + 3rem); pointer-events: none;
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+  .lab__edge.is-top { top: 0;
+    background: linear-gradient(180deg, var(--bg) var(--inset), color-mix(in srgb, var(--bg) 80%, transparent) var(--inset), transparent);
+    -webkit-mask-image: linear-gradient(180deg, #000 var(--inset), transparent); mask-image: linear-gradient(180deg, #000 var(--inset), transparent); }
+  .lab__edge.is-bottom { bottom: 0;
+    background: linear-gradient(0deg, var(--bg) var(--inset), color-mix(in srgb, var(--bg) 80%, transparent) var(--inset), transparent);
+    -webkit-mask-image: linear-gradient(0deg, #000 var(--inset), transparent); mask-image: linear-gradient(0deg, #000 var(--inset), transparent); }
 </style>

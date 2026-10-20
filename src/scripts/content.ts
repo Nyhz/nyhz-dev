@@ -23,6 +23,13 @@ export const statusOf = (p: { deployUrl: string; downloadUrl: string; status?: s
 /** reading time at ~220 words a minute, code included (the lab's posts) */
 export const minutesToRead = (text: string) => Math.max(1, Math.round(text.split(/\s+/).filter(Boolean).length / 220));
 
+/** a lab post's section (an h2): its anchor, its number when the heading has one ("3. Same seed" → "03"), and its name */
+export type Section = { id: string; n: string; text: string };
+export function section(id: string, heading: string): Section {
+  const m = heading.match(/^(\d+)\.\s+(.*)$/);
+  return m ? { id, n: m[1].padStart(2, '0'), text: m[2] } : { id, n: '', text: heading };
+}
+
 const str = (v: unknown): string => (typeof v === 'string' ? v : '');
 const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
 const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);

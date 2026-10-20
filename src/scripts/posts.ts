@@ -1,12 +1,11 @@
 // src/scripts/posts.ts — the lab's posts: markdown files in src/content/lab,
 // newest first. The slug is the file name.
 import type { MarkdownInstance } from 'astro';
-import { minutesToRead } from './content';
+import { minutesToRead, section, type Section } from './content';
 
 /** cover: the picture on the list and atop the post (webp); image: the same for link previews (jpg, 1200×630) */
 export type PostMeta = { title: string; summary: string; date: string; tags?: string[]; cover?: string; image?: string };
-export type Post = { slug: string; meta: PostMeta; minutes: number; Content: MarkdownInstance<PostMeta>['Content'] };
-
+export type Post = { slug: string; meta: PostMeta; minutes: number; sections: Section[]; Content: MarkdownInstance<PostMeta>['Content'] };
 
 export function getPosts(): Post[] {
   const files = import.meta.glob<MarkdownInstance<PostMeta>>('../content/lab/*.md', { eager: true });
@@ -16,6 +15,7 @@ export function getPosts(): Post[] {
       // yaml reads an unquoted date as a Date: back to yyyy-mm-dd
       meta: { ...md.frontmatter, date: new Date(md.frontmatter.date).toISOString().slice(0, 10) },
       minutes: minutesToRead(md.rawContent()),
+      sections: md.getHeadings().filter((h) => h.depth === 2).map((h) => section(h.slug, h.text)),
       Content: md.Content,
     }))
     .sort((a, b) => b.meta.date.localeCompare(a.meta.date));
