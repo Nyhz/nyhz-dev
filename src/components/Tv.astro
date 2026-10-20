@@ -308,9 +308,9 @@ const txt: TxtContext = {
   .tv__side { align-self: center; }
   .tv__list { list-style: none; border-bottom: 1px solid var(--line); }
   .tv__chbtn { display: grid; grid-template-columns: 2.2ch minmax(0, 1fr) auto; align-items: center; gap: 0 0.8rem;
-    width: 100%; padding: 0.52rem 0.2rem; background: none; border: 0; border-top: 1px solid var(--line);
+    width: 100%; padding: var(--ch-pad, 0.52rem) 0.2rem; background: none; border: 0; border-top: 1px solid var(--line);
     cursor: pointer; text-align: left; font: 500 0.8rem var(--mono); color: var(--dim);
-    transition: color var(--t-hover) ease, padding var(--t-hover) var(--ease-out); }
+    transition: color var(--t-hover) ease, padding-left var(--t-hover) var(--ease-out); }
   .tv__chn { font-size: 0.66rem; color: var(--muted); }
   .tv__chname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tv__dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
@@ -326,6 +326,7 @@ const txt: TxtContext = {
 
   /* the remote under the channels */
   .tv__remote { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.9rem; }
+  @media (min-width: 721px) and (max-height: 620px) { .tv__remote { margin-top: 0.55rem; } }
   .tv__rbtn { background: none; border: 1px solid var(--line); padding: 0.32rem 0.6rem; cursor: pointer; color: var(--fg);
     font: 500 0.62rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
     transition: color var(--t-hover) ease, border-color var(--t-hover) ease; }
@@ -488,10 +489,40 @@ const txt: TxtContext = {
 
     // ---- size: as big as the room allows, always 16:10 ----
     function fit() {
-      if (isPhone()) { screen.style.removeProperty('--tv-w'); screen.style.removeProperty('--tv-h'); fitPhone(); return; }
+      if (isPhone()) {
+        screen.style.removeProperty('--tv-w'); screen.style.removeProperty('--tv-h');
+        const page = root!.closest<HTMLElement>('.page');
+        ['--hero-gap', '--hero-after'].forEach((v) => page?.style.removeProperty(v));
+        fitPhone(); return;
+      }
       screen.style.removeProperty('--tv-gh');
       const side = root!.querySelector<HTMLElement>('.tv__side')!;
       const gap = parseFloat(getComputedStyle(root!).columnGap) || 32;
+      // short screens: the channels' column must fit beside the set (or it
+      // grows the row and pushes both out). The hero gives up its air first —
+      // the gaps between its lines and the one under it, in proportion, down
+      // to 1rem each — and only then do the channels give up row height
+      const page = root!.closest<HTMLElement>('.page')!;
+      const block = page.querySelector<HTMLElement>('.hero-block');
+      const hero = page.querySelector<HTMLElement>('.hero');
+      ['--hero-gap', '--hero-after'].forEach((v) => page.style.removeProperty(v));
+      side.style.removeProperty('--ch-pad');
+      let over = side.offsetHeight - root!.clientHeight;
+      if (over > 0 && block && hero) {
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const gaps = block.children.length - 1;
+        const between = parseFloat(getComputedStyle(block).rowGap);
+        const after = parseFloat(getComputedStyle(hero).marginBottom);
+        const spare = { gap: Math.max(0, between - rem), after: Math.max(0, after - rem) };
+        const k = Math.min(1, over / (spare.gap * gaps + spare.after || 1));
+        page.style.setProperty('--hero-gap', `${(between - k * spare.gap).toFixed(2)}px`);
+        page.style.setProperty('--hero-after', `${(after - k * spare.after).toFixed(2)}px`);
+        over -= k * (spare.gap * gaps + spare.after);
+      }
+      if (over > 0) {
+        const pad = parseFloat(getComputedStyle(chans[0]).paddingTop);
+        side.style.setProperty('--ch-pad', `${Math.max(2, pad - over / (2 * chans.length)).toFixed(2)}px`);
+      }
       const w = root!.clientWidth - side.offsetWidth - gap;
       const h = root!.clientHeight - 12;
       const W = Math.max(240, Math.min(w, h * 1.6));
@@ -522,6 +553,11 @@ const txt: TxtContext = {
     let fitT = 0;
     addEventListener('resize', () => { clearTimeout(fitT); fitT = window.setTimeout(fit, 80); }, { signal });
     document.fonts.ready.then(fit);
+    // the room also changes after a resize settles (the name eases to its new
+    // size), so the desktop fit follows the tv's own box too
+    const roomRO = new ResizeObserver(() => { if (!isPhone()) fit(); });
+    roomRO.observe(root);
+    signal.addEventListener('abort', () => roomRO.disconnect());
 
     // ---- static: noise painted into a tiny canvas, scaled up ----
     const sx = staticCv.getContext('2d')!;
