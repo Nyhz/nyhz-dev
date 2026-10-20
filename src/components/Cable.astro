@@ -117,19 +117,19 @@
 
     let plugged = false;
     let held: { x: number; y: number } | null = null;
-    // plugging itself in (quiet: on arrival, before the page may make a sound)
-    let fly: { t: number; x: number; y: number; quiet?: boolean } | null = null;
+    let fly: { t: number; x: number; y: number } | null = null; // plugging itself in
     const paint = () => {
       root.classList.toggle('is-plugged', plugged);
       jack.setAttribute('aria-pressed', String(plugged));
       jack.setAttribute('aria-label', plugged ? 'sound: unplug' : 'sound: plug in');
       jack.dataset.grabHint = plugged ? 'pull out' : 'plug in'; // the cursor's word for it
     };
-    const plugIn = (quiet = false) => {
+    const plugIn = () => {
       plugged = true;
       fly = null;
       paint();
-      if (!quiet) { sound.set(true, true); sound.plugIn(); }
+      sound.set(true, true);
+      sound.plugIn();
       dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x: sx, y: sy, strength: 0.8 } }));
     };
     const unplug = () => {
@@ -216,7 +216,7 @@
         fly.t = Math.min(1, fly.t + dt / 0.32);
         const k = backOut(fly.t);
         pin = { x: fly.x + (P.x - fly.x) * k, y: fly.y + (P.y - fly.y) * k };
-        if (fly.t >= 1) plugIn(fly.quiet);
+        if (fly.t >= 1) plugIn();
       } else if (plugged) {
         pin = P;
         if (held && Math.hypot(held.x - off.x - P.x, held.y - off.y - P.y) > GRIP) { unplug(); pin = fromHand(); }
@@ -263,26 +263,28 @@
       jack.style.transform = `translate(${(end.x - 7).toFixed(1)}px, ${end.y.toFixed(1)}px) rotate(${th.toFixed(3)}rad)`;
     };
 
-    // Its entrance, once the loader's done: stowed straight up from the
-    // anchor, out over the top of the screen, it's let go — the jack drops
-    // past the frame, snaps taut at the cord's length, bounces and swings.
-    // If the sound's on, it then goes into the socket. Without motion: it's
-    // simply there, hanging (or plugged in).
+    // Its entrance, once the loader's done. With the sound on (it was left on
+    // last time) it's simply there, plugged in. Off, it drops in: stowed
+    // straight up from the anchor, out over the top of the screen, it's let
+    // go — the jack falls past the frame, snaps taut at the cord's length,
+    // bounces and swings. Without motion it's simply there, hanging.
     let live = false;
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const arrive = () => {
       if (signal.aborted) return;
       root.classList.add('is-in');
-      if (still) {
+      if (still || sound.on) {
         hang();
         plugged = sound.on;
         paint();
         for (let i = 0; i < 240; i++) step(STEP);
+        draw(0);
         ready = true;
       } else {
+        // switched on mid-fall: it goes in once it's down
         setTimeout(() => {
           const end = pts[N - 1];
-          if (!signal.aborted && sound.on && !plugged && !fly && !held) fly = { t: 0, x: end.x, y: end.y, quiet: true };
+          if (!signal.aborted && sound.on && !plugged && !fly && !held) fly = { t: 0, x: end.x, y: end.y };
           ready = true;
         }, 1100);
       }
