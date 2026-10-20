@@ -1,0 +1,125 @@
+---
+// Overclock, in the frame's right margin (scripts/overclock.ts): a fader with
+// a VU meter beside it that jitters harder as it climbs, and an overheat
+// warning at the top. Drag it, click the track, or the arrow keys / Home /
+// End. Big desktop screens only: it needs the margin.
+---
+<div data-nosnippet class="ocx" data-oc>
+  <span class="ocx__k">overclock</span>
+  <div class="fader">
+    <div class="fader__track" data-fader data-grab="y" data-grab-lock=".fader__thumb" role="slider" tabindex="0" aria-label="overclock"
+      aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <i class="fader__fill"></i>
+      <span class="fader__thumb"></span>
+    </div>
+    <span class="vu" data-vu aria-hidden="true">{Array.from({ length: 12 }, () => <i></i>)}</span>
+  </div>
+  <span class="ocx__v" data-fader-v>0%</span>
+</div>
+<!-- the scanlines, over the page and under the overlays -->
+<div class="oc-scan" aria-hidden="true"></div>
+
+<style>
+  .ocx { position: fixed; z-index: 8; right: calc(clamp(26px, 2.6vw, 42px) + 4px); top: 50%; transform: translateY(-50%);
+    display: none; flex-direction: column; align-items: center; gap: 0.55rem; width: 100px;
+    font: 500 0.56rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+  @media (min-width: 1280px) and (min-height: 720px) and (hover: hover) { .ocx { display: flex; } }
+  :global(html.egg-sleep) .ocx, :global(html.egg-game) .ocx { opacity: 0.15; }
+  .ocx__v { color: var(--fg); font-variant-numeric: tabular-nums; min-height: 1em; }
+  .ocx__v.is-hot { color: #ff2e63; animation: hotBlink 0.5s steps(1) infinite; }
+  @keyframes hotBlink { 50% { opacity: 0.25; } }
+
+  /* the fader: a slot, the lit run below the cap, and the meter beside it */
+  .fader { display: flex; gap: 12px; height: 124px; }
+  .fader__track { --v: 0; position: relative; width: 24px; touch-action: none; cursor: ns-resize; outline: none; }
+  .fader__track::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--line); }
+  .fader__fill { position: absolute; left: 50%; bottom: 0; width: 2px; margin-left: -1px; height: calc(var(--v) * 100%);
+    background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .fader__thumb { position: absolute; left: 0; width: 24px; height: 12px; bottom: calc(var(--v) * (100% - 12px)); border-radius: 2px;
+    background: linear-gradient(#30302c, #151514); border: 1px solid #3c3c37; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6); }
+  .fader__thumb::after { content: ''; position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: var(--fg); opacity: 0.6; }
+  .fader__track:focus-visible .fader__thumb { border-color: var(--accent); }
+  .vu { display: flex; flex-direction: column-reverse; gap: 3px; width: 8px; }
+  .vu i { flex: 1; background: #1a1a18; }
+  .vu i.is-on, .vu i.is-peak { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+  .vu i:nth-child(n + 8).is-on, .vu i:nth-child(n + 8).is-peak { background: #f5c542; box-shadow: 0 0 5px #f5c542; }
+  .vu i:nth-child(n + 11).is-on, .vu i:nth-child(n + 11).is-peak { background: #ff2e63; box-shadow: 0 0 5px #ff2e63; }
+</style>
+
+<style is:global>
+  /* the text splits into red and cyan with --oc, harder on a jolt; scanlines
+     and a rolling band come up; past 94% the frame flashes */
+  html.oc .page { text-shadow: calc(var(--oc) * -2px) 0 rgb(255 46 99 / calc(var(--oc) * 0.7)),
+    calc(var(--oc) * 2px) 0 rgb(46 230 255 / calc(var(--oc) * 0.7)); }
+  html.oc-jolt .page { text-shadow: calc(var(--oc) * -6px) 0 rgb(255 46 99 / 0.8), calc(var(--oc) * 6px) 0 rgb(46 230 255 / 0.8); }
+  .oc-scan { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: calc(var(--oc, 0) * 0.55); overflow: hidden;
+    background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.55) 0 1px, transparent 1px 3px); }
+  .oc-scan::after { content: ''; position: absolute; left: 0; right: 0; top: -20vh; height: 20vh;
+    background: linear-gradient(transparent, rgb(255 255 255 / 0.06), transparent); animation: ocRoll 4.5s linear infinite; }
+  @keyframes ocRoll { to { transform: translateY(140vh); } }
+  html.oc-hot .frame__border { border-color: #ff2e63; animation: ocHot 0.5s steps(1) infinite; }
+  @keyframes ocHot { 50% { border-color: var(--line); } }
+  @media (prefers-reduced-motion: reduce) { .oc-scan::after { animation: none; } html.oc-hot .frame__border { animation: none; } }
+</style>
+
+<script>
+  import { onPage, every } from '../scripts/page';
+  import { sound } from '../scripts/sound';
+  import { setOverclock, overclock } from '../scripts/overclock';
+
+  const clamp = (v: number) => Math.max(0, Math.min(1, v));
+
+  onPage((signal) => {
+    const root = document.querySelector<HTMLElement>('[data-oc]');
+    if (!root) return;
+    const opts = { signal };
+    const track = root.querySelector<HTMLElement>('[data-fader]')!;
+    const label = root.querySelector<HTMLElement>('[data-fader-v]')!;
+    const vu = [...root.querySelectorAll<HTMLElement>('[data-vu] i')];
+
+    // the fader follows the value, wherever it's set from; it ticks every 10%
+    let fv = overclock();
+    const paint = () => {
+      track.style.setProperty('--v', fv.toFixed(3));
+      track.setAttribute('aria-valuenow', String(Math.round(fv * 100)));
+      label.textContent = fv > 0.94 ? 'overheat' : `${Math.round(fv * 100)}%`;
+      label.classList.toggle('is-hot', fv > 0.94);
+    };
+    addEventListener('nyhz:overclock', (e) => {
+      const v = (e as CustomEvent<number>).detail;
+      if (Math.floor(v * 10) !== Math.floor(fv * 10)) sound.tick();
+      fv = v;
+      paint();
+    }, opts);
+    paint();
+
+    const at = (e: PointerEvent) => {
+      const r = track.getBoundingClientRect();
+      return clamp(1 - (e.clientY - r.top - 6) / (r.height - 12));
+    };
+    let sliding = false;
+    track.addEventListener('pointerdown', (e) => { sliding = true; track.setPointerCapture(e.pointerId); setOverclock(at(e)); }, opts);
+    track.addEventListener('pointermove', (e) => { if (sliding) setOverclock(at(e)); }, opts);
+    track.addEventListener('pointerup', () => { sliding = false; }, opts);
+    track.addEventListener('pointercancel', () => { sliding = false; }, opts);
+    track.addEventListener('keydown', (e) => {
+      const to = { ArrowUp: fv + 0.05, ArrowRight: fv + 0.05, ArrowDown: fv - 0.05, ArrowLeft: fv - 0.05, Home: 0, End: 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault();
+      setOverclock(clamp(to));
+    }, opts);
+
+    // the meter: the level, shaking more the harder it's driven, and a peak
+    // that hangs a moment and falls back
+    let peak = 0;
+    every(80, () => {
+      const lvl = fv * 12 + (Math.random() - 0.5) * 3.2 * fv;
+      peak = Math.max(lvl, peak - 0.35);
+      const top = Math.floor(peak);
+      vu.forEach((s, i) => {
+        s.classList.toggle('is-on', i < lvl);
+        s.classList.toggle('is-peak', fv > 0.01 && i === top && i >= lvl);
+      });
+    }, signal);
+  });
+</script>

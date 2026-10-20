@@ -9,6 +9,8 @@
 // off: the box squeezes sideways into a slit, flares, and settles into an
 // I-beam with the dot at its heart. Left still it blinks like a terminal's;
 // leaving, it switches back on into the box.
+// Over something to drag (a fader, the cable's jack) it locks on and grows
+// arrows for the ways it moves.
 // It's on every page and outlives navigation (transition:persist): one cursor
 // for the whole site, never swapped for the system's on the way to a post.
 ---
@@ -17,6 +19,8 @@
   <i class="cur__tick bl"></i><i class="cur__tick br"></i>
   <i class="cur__beam"></i>
   <i class="cur__dot"></i>
+  <i class="cur__arr up"></i><i class="cur__arr down"></i>
+  <span class="cur__hint"></span>
 </div>
 
 <style>
@@ -56,6 +60,24 @@
   @keyframes curBlink { 50% { opacity: 0.1; } }
   .cur.is-glitch .cur__beam { box-shadow: -2px 0 rgba(255, 46, 99, 0.9), 2px 0 rgba(46, 230, 255, 0.9); }
 
+  /* ---- something to drag ([data-grab]) ---- */
+  /* a fader: arrows above and below the box, breathing; held, they burn
+     teal and push out */
+  .cur__arr { position: absolute; left: 0; top: 0; width: 0; height: 0; opacity: 0; border: 0 solid transparent;
+    transition: opacity 0.18s ease, border-color 0.15s ease; }
+  .cur__arr.up { border-width: 0 4px 5px; border-bottom-color: var(--fg); }
+  .cur__arr.down { border-width: 5px 4px 0; border-top-color: var(--fg); }
+  .cur.is-grab-y .cur__arr { opacity: 1; }
+  .cur.is-down .cur__arr.up { border-bottom-color: var(--accent); }
+  .cur.is-down .cur__arr.down { border-top-color: var(--accent); }
+  /* something to take hold of (the jack): the box pinches its body, and a
+     word beside it says what pulling it does */
+  .cur__hint { position: absolute; left: 0; top: 0; opacity: 0; white-space: nowrap; transition: opacity 0.18s ease, color 0.15s ease;
+    font: 500 0.56rem var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg); }
+  .cur.is-grab-hold .cur__hint { opacity: 1; }
+  .cur.is-grab-hold .cur__dot { opacity: 0; }
+  .cur.is-down .cur__hint { color: var(--accent); }
+
   :global(html.has-cursor), :global(html.has-cursor *) { cursor: none !important; }
   :global(html.has-cursor input), :global(html.has-cursor textarea) { cursor: text !important; }
 </style>
@@ -72,6 +94,14 @@
     const ticks = [tl, tr, bl, br];
     const dot = root.querySelector<HTMLElement>('.cur__dot')!;
     const line = root.querySelector<HTMLElement>('.cur__beam')!;
+    const [aUp, aDown] = (['up', 'down'] as const).map((c) => root.querySelector<HTMLElement>(`.cur__arr.${c}`)!);
+    const hint = root.querySelector<HTMLElement>('.cur__hint')!;
+    // something to drag: data-grab="y" (a fader) or "hold" (the cable's jack,
+    // with data-grab-hint for the word beside it); data-grab-lock names the
+    // part the box locks onto (the fader's cap, the jack's body)
+    const GRAB = '[data-grab]';
+    let grab = '';
+    let grabEl: HTMLElement | null = null;
     const TICK = 9, REST = 22, PAD = 6;
     const CODE = '.post__body pre';
     const INTERACTIVE = 'a[href], button:not(:disabled), [role="button"], summary';
@@ -90,7 +120,7 @@
     const ptr = { x: innerWidth / 2, y: innerHeight / 2 };
     const box = { x: ptr.x - REST / 2, y: ptr.y - REST / 2, w: REST, h: REST };
     const press = { v: 0 };
-    let target: HTMLElement | null = null;
+    let target: Element | null = null;
     let locking = false;   // a lock tween is running: don't snap to the rect yet
     let releaseUntil = 0;  // just unlocked: ease back down to the pointer
     let caret = false;
@@ -110,12 +140,13 @@
       root!.classList.add('is-glitch');
     }
 
-    const lockRect = (el: HTMLElement) => {
+    const lockRect = (el: Element) => {
       const r = el.getBoundingClientRect();
-      return { x: r.left - PAD, y: r.top - PAD, w: r.width + PAD * 2, h: r.height + PAD * 2 };
+      const pad = grab === 'hold' ? 3 : PAD; // a pinch, not a frame
+      return { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 };
     };
 
-    function lock(el: HTMLElement | null) {
+    function lock(el: Element | null) {
       if (el === target) return;
       target = el;
       root!.classList.toggle('is-locked', !!el);
@@ -199,6 +230,20 @@
         line.style.opacity = String(shape.lo);
         line.style.transform = `translate(${at(ptr.x)}px, ${at(ptr.y - shape.lh / 2)}px)`;
       } else line.style.opacity = '0';
+      if (grab === 'y') {
+        const g = 4 + (reduce ? 0 : Math.sin(now / 260) * 1.5) + p * 1.4;
+        const cx = box.x + box.w / 2;
+        aUp.style.transform = `translate(${cx - 4}px, ${box.y - 5 - g}px)`;
+        aDown.style.transform = `translate(${cx - 4}px, ${box.y + box.h + g}px)`;
+      } else if (grab === 'hold') {
+        const word = grabEl?.dataset.grabHint ?? '';
+        if (hint.textContent !== word) hint.textContent = word;
+        // beside it while it hangs; under it lying flat (plugged in, its
+        // neighbours are to the right)
+        hint.style.transform = box.w > box.h
+          ? `translate(${box.x}px, ${box.y + box.h + 6}px)`
+          : `translate(${box.x + box.w + 8}px, ${box.y + box.h / 2 - 5}px)`;
+      }
       raf = requestAnimationFrame(frame);
     }
 
@@ -217,7 +262,13 @@
     addEventListener('pointerover', (e) => {
       const el = e.target as Element;
       root.classList.toggle('is-text', !!el.closest(TEXT));
-      const hit = el.closest<HTMLElement>(INTERACTIVE);
+      const drag = el.closest<HTMLElement>(GRAB);
+      const part = drag?.dataset.grabLock ? drag.querySelector(drag.dataset.grabLock) : null;
+      const hit = drag ? part ?? drag : el.closest(INTERACTIVE);
+      grab = drag?.dataset.grab ?? '';
+      grabEl = drag;
+      root.classList.toggle('is-grab-y', grab === 'y');
+      root.classList.toggle('is-grab-hold', grab === 'hold');
       lock(hit);
       setCaret(!hit && !!el.closest(CODE));
     }, { passive: true });

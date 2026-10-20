@@ -69,10 +69,11 @@ function noise(dur: number, vol: number, hp: number, at = 0) {
 export const sound = {
   get on() { return on; },
   get level() { return on ? level : 0; },
-  set(v: boolean) {
+  /** quiet: no chime (the audio cable makes its own noise going in) */
+  set(v: boolean, quiet = false) {
     on = v;
     try { localStorage.setItem(KEY, v ? '1' : '0'); } catch { /* session only */ }
-    if (v) { audio(); tone('square', 660, 660, 0.06, 0.05); tone('square', 990, 990, 0.08, 0.05, 0.07); }
+    if (v) { audio(); if (!quiet) { tone('square', 660, 660, 0.06, 0.05); tone('square', 990, 990, 0.08, 0.05, 0.07); } }
     changed();
   },
   /** the remote's volume: 0 is off; anything above switches sound on */
@@ -102,6 +103,21 @@ export const sound = {
   /** snake */
   blip() { if (on) tone('square', 520 + Math.random() * 80, 760, 0.05, 0.04); },
   die() { if (on) { tone('sawtooth', 420, 55, 0.45, 0.06); noise(0.3, 0.05, 300); } },
+  /** a jack going in: a thump, the contacts crackling, and a burst of mains hum that dies away */
+  plugIn() {
+    if (!on) return;
+    tone('sine', 110, 38, 0.14, 0.12);
+    noise(0.05, 0.14, 1800);
+    noise(0.03, 0.08, 3000, 0.06);
+    tone('sawtooth', 50, 50, 0.55, 0.035, 0.03);
+    tone('square', 100, 100, 0.35, 0.012, 0.03);
+  },
+  /** …and pulled out: a scrape and a pop */
+  plugOut() {
+    if (!on) return;
+    noise(0.07, 0.12, 1200);
+    tone('sine', 160, 55, 0.08, 0.1, 0.05);
+  },
   /** the transmission packet */
   send() { if (on) tone('sine', 300, 1600, 0.5, 0.05); },
 };

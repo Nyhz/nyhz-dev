@@ -1,0 +1,312 @@
+---
+// The site's audio cable. It hangs from the frame's top edge, and the jack on
+// its end plugs into the socket beside the sound toggle: plugged in, the
+// sound is on; pull it out, it's off (scripts/sound.ts). Drag the jack near
+// the socket and it's pulled in; tug it out past the socket's grip and it
+// pops free and swings. Switching the sound any other way (the toggle, the
+// tv's volume) plugs or unplugs it on its own.
+// A verlet rope — 15 points, pinned at the frame — that sways a little and is
+// brushed aside by the pointer. Big desktop screens only.
+---
+<div data-nosnippet class="cable" data-cable>
+  <svg class="cable__svg" aria-hidden="true">
+    <rect class="cable__mount" data-cable-mount width="12" height="5" rx="1" />
+    <path class="cable__cord" data-cable-cord />
+  </svg>
+  <button class="cable__jack" type="button" data-cable-jack data-grab="hold" data-grab-lock=".j-body" data-grab-hint="plug in" aria-pressed="false" aria-label="sound: plug in">
+    <svg viewBox="0 0 14 42" width="14" height="42" aria-hidden="true">
+      <rect class="j-relief" x="4.5" y="0" width="5" height="7" rx="1.5" />
+      <rect class="j-body" x="2" y="6" width="10" height="20" rx="2" />
+      <rect class="j-grip" x="2" y="11" width="10" height="1" />
+      <rect class="j-grip" x="2" y="14" width="10" height="1" />
+      <rect class="j-grip" x="2" y="17" width="10" height="1" />
+      <rect class="j-collar" x="3" y="26" width="8" height="3" />
+      <rect class="j-shaft" x="5" y="29" width="4" height="10" />
+      <rect class="j-ring" x="5" y="33" width="4" height="1.4" />
+      <path class="j-tip" d="M5 39h4l-.6 1.6a1.4 1.4 0 0 1-2.8 0z" />
+    </svg>
+  </button>
+  <!-- the socket, side on, its mouth facing the cable; over the jack, so a
+       plugged-in shaft disappears into it -->
+  <svg class="cable__svg is-top" aria-hidden="true">
+    <g data-cable-socket>
+      <rect class="s-body" x="5" y="-4.5" width="10" height="9" rx="1" />
+      <rect class="s-nut" x="0" y="-6.5" width="5" height="13" rx="1" />
+      <rect class="s-mouth" x="-0.5" y="-2.2" width="1.5" height="4.4" />
+    </g>
+  </svg>
+</div>
+
+<style>
+  .cable { display: none; }
+  @media (min-width: 1280px) and (min-height: 720px) and (hover: hover) { .cable { display: block; } }
+  :global(html.egg-sleep) .cable, :global(html.egg-game) .cable { opacity: 0.15; }
+  .cable__svg { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 8; pointer-events: none; overflow: visible; }
+  .cable__svg.is-top { z-index: 9; }
+  /* stowed up out of sight until it drops in (after the loader) */
+  .cable:not(.is-in) .cable__cord, .cable:not(.is-in) .cable__jack { opacity: 0; }
+  .cable__mount { fill: #1c1c1a; stroke: var(--line); }
+  .cable__cord { fill: none; stroke: #3e3e3a; stroke-width: 2.4; stroke-linecap: round; transition: stroke 0.25s ease; }
+  /* live: signal in the cord */
+  .cable.is-plugged .cable__cord { stroke: color-mix(in srgb, var(--accent) 55%, #3e3e3a); }
+
+  .cable__jack { position: fixed; left: 0; top: 0; z-index: 8; width: 14px; height: 42px; padding: 0; border: 0; background: none;
+    cursor: grab; touch-action: none; transform-origin: 7px 0; }
+  .cable__jack::before { content: ''; position: absolute; inset: -10px -12px; } /* a bigger grip than the plug */
+  .cable__jack svg { display: block; overflow: visible; }
+  .cable__jack:focus-visible { outline: 1px solid var(--muted); outline-offset: 3px; }
+  .j-relief { fill: #2a2a27; }
+  .j-body { fill: #1d1d1b; stroke: #3c3c37; stroke-width: 0.8; }
+  .j-grip { fill: #2f2f2b; }
+  .j-collar { fill: #77776f; }
+  .j-shaft { fill: #bdbdb5; }
+  .j-tip { fill: #e2e2db; }
+  .j-ring { fill: var(--accent); }
+
+  .s-body { fill: #151514; stroke: #34342f; stroke-width: 0.8; }
+  .s-nut { fill: #5f5f59; stroke: #2a2a27; stroke-width: 0.8; }
+  .s-mouth { fill: #050505; }
+  /* the jack's near: the socket lights up to take it */
+  .s-nut, .s-mouth { transition: fill 0.15s ease; }
+  .cable.is-near .s-nut { fill: var(--accent); filter: drop-shadow(0 0 4px var(--accent)); }
+  .cable.is-plugged .s-mouth { fill: var(--accent); }
+</style>
+
+<script>
+  import { onPage } from '../scripts/page';
+  import { sound } from '../scripts/sound';
+  import { afterLoader } from '../scripts/loaded';
+
+  const N = 15, SEG = 7, L = (N - 1) * SEG;
+  // held, the cord is calmed (it would otherwise whip about under the hand)
+  const G = 1800, DAMP = 0.985, DAMP_HELD = 0.965, STEP = 1 / 120, ITER = 16;
+  // the socket's pull: within SNAP it takes the jack; plugged, the jack comes
+  // out once the hand is GRIP away; NEAR lights the socket up
+  const SNAP = 26, GRIP = 42, NEAR = 90;
+  const IN = -Math.PI / 2; // plugged: the jack lies flat, tip into the socket
+  const SHAFT = 29;        // the jack's length to its collar: the rest goes in
+  const clamp = (v: number, m: number) => Math.max(-m, Math.min(m, v));
+  const backOut = (t: number) => 1 + 2.7 * (t - 1) ** 3 + 1.7 * (t - 1) ** 2;
+  const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a)); // to -π..π
+
+  onPage((signal) => {
+    const root = document.querySelector<HTMLElement>('[data-cable]');
+    const snd = document.querySelector<HTMLElement>('[data-sound]');
+    if (!root || !snd || getComputedStyle(root).display === 'none') return;
+    const cord = root.querySelector<SVGPathElement>('[data-cable-cord]')!;
+    const mount = root.querySelector<SVGRectElement>('[data-cable-mount]')!;
+    const socket = root.querySelector<SVGGElement>('[data-cable-socket]')!;
+    const jack = root.querySelector<HTMLButtonElement>('[data-cable-jack]')!;
+    const opts = { signal };
+
+    // the socket sits just left of the sound toggle; the cable hangs from
+    // the frame's line a little further left, with slack to reach it
+    let ax = 0, ay = 0, sx = 0, sy = 0;
+    const pts = Array.from({ length: N }, () => ({ x: 0, y: 0, px: 0, py: 0 }));
+    const plugPoint = () => ({ x: sx - SHAFT, y: sy });
+    const place = () => {
+      const r = snd.getBoundingClientRect();
+      sx = r.left - 24; sy = r.top + r.height / 2; // the socket ends 9px clear of the toggle
+      ax = sx - 95;
+      ay = document.querySelector('.frame__border')?.getBoundingClientRect().top ?? 20;
+      mount.setAttribute('x', String(ax - 6));
+      mount.setAttribute('y', String(ay - 1));
+      socket.setAttribute('transform', `translate(${sx} ${sy})`);
+    };
+    const hang = () => { place(); pts.forEach((p, i) => { p.x = p.px = ax; p.y = p.py = ay + i * SEG; }); };
+
+    let plugged = false;
+    let held: { x: number; y: number } | null = null;
+    // plugging itself in (quiet: on arrival, before the page may make a sound)
+    let fly: { t: number; x: number; y: number; quiet?: boolean } | null = null;
+    const paint = () => {
+      root.classList.toggle('is-plugged', plugged);
+      jack.setAttribute('aria-pressed', String(plugged));
+      jack.setAttribute('aria-label', plugged ? 'sound: unplug' : 'sound: plug in');
+      jack.dataset.grabHint = plugged ? 'pull out' : 'plug in'; // the cursor's word for it
+    };
+    const plugIn = (quiet = false) => {
+      plugged = true;
+      fly = null;
+      paint();
+      if (!quiet) { sound.set(true, true); sound.plugIn(); }
+      dispatchEvent(new CustomEvent('nyhz:shock', { detail: { x: sx, y: sy, strength: 0.8 } }));
+    };
+    const unplug = () => {
+      plugged = false;
+      paint();
+      sound.plugOut();
+      sound.set(false);
+      // it springs out of the socket
+      const end = pts[N - 1];
+      end.px = end.x + 6; end.py = end.y + 3;
+    };
+
+    // switched some other way: the cable follows (once it's made its
+    // entrance — that settles the state it starts in)
+    let ready = false;
+    addEventListener('nyhz:sound', () => {
+      if (!ready) return;
+      const end = pts[N - 1];
+      if (sound.on && !plugged && !fly) fly = { t: 0, x: end.x, y: end.y };
+      else if (!sound.on && plugged) unplug();
+    }, opts);
+
+    // the hand: where the jack's end is carried to. It keeps the offset it was
+    // taken at (the jack doesn't jump onto the pointer), and trails the
+    // pointer by a hair, so the jack has some weight to it
+    let mx = -1e4, my = -1e4, mvx = 0, mvy = 0;
+    const off = { x: 0, y: 0 }, hand = { x: 0, y: 0 };
+    jack.addEventListener('pointerdown', (e) => {
+      const end = pts[N - 1];
+      held = { x: e.clientX, y: e.clientY };
+      off.x = e.clientX - end.x; off.y = e.clientY - end.y;
+      hand.x = end.x; hand.y = end.y;
+      jack.setPointerCapture(e.pointerId);
+    }, opts);
+    addEventListener('pointermove', (e) => {
+      if (mx > -1e3) { mvx = clamp(e.clientX - mx, 12); mvy = clamp(e.clientY - my, 12); }
+      mx = e.clientX; my = e.clientY;
+      if (held) { held.x = e.clientX; held.y = e.clientY; }
+    }, { ...opts, passive: true });
+    const letGo = () => { held = null; root.classList.remove('is-near'); };
+    jack.addEventListener('pointerup', letGo, opts);
+    jack.addEventListener('pointercancel', letGo, opts);
+    // the keyboard: in or out
+    jack.addEventListener('click', (e) => {
+      if (e.detail !== 0) return;
+      const end = pts[N - 1];
+      if (plugged) unplug(); else if (!fly) fly = { t: 0, x: end.x, y: end.y };
+    }, opts);
+
+    let t = 0;
+    const step = (dt: number) => {
+      t += dt;
+      const damp = held ? DAMP_HELD : DAMP;
+      for (let i = 1; i < N; i++) {
+        const p = pts[i];
+        const vx = (p.x - p.px) * damp, vy = (p.y - p.py) * damp;
+        p.px = p.x; p.py = p.y;
+        // a draught, barely
+        p.x += vx + Math.sin(t * 0.8 + i * 0.35) * 14 * dt * dt;
+        p.y += vy + G * dt * dt;
+        // the pointer brushes the cord aside on its way past — gently, and
+        // never the jack's end of it, which has to stay there to be grabbed
+        const dx = p.x - mx, dy = p.y - my;
+        if (!held && i < N - 3 && dx * dx + dy * dy < 400) { p.x += mvx * 0.2; p.y += mvy * 0.2; }
+      }
+      mvx *= 0.6; mvy *= 0.6;
+
+      // where the jack's end is held, if anywhere: in the socket, on its way
+      // there, or in the hand (up to half again the cable's length away)
+      const end = pts[N - 1], P = plugPoint();
+      if (held) {
+        const k = 1 - Math.exp(-dt * 35);
+        hand.x += (held.x - off.x - hand.x) * k;
+        hand.y += (held.y - off.y - hand.y) * k;
+      }
+      const fromHand = () => {
+        let dx = hand.x - ax, dy = hand.y - ay;
+        const d = Math.hypot(dx, dy), max = L * 1.55;
+        if (d > max) { dx *= max / d; dy *= max / d; }
+        return { x: ax + dx, y: ay + dy };
+      };
+      let pin: { x: number; y: number } | null = null;
+      if (fly) {
+        fly.t = Math.min(1, fly.t + dt / 0.32);
+        const k = backOut(fly.t);
+        pin = { x: fly.x + (P.x - fly.x) * k, y: fly.y + (P.y - fly.y) * k };
+        if (fly.t >= 1) plugIn(fly.quiet);
+      } else if (plugged) {
+        pin = P;
+        if (held && Math.hypot(held.x - off.x - P.x, held.y - off.y - P.y) > GRIP) { unplug(); pin = fromHand(); }
+      } else if (held) {
+        pin = fromHand();
+        const d = Math.hypot(pin.x - P.x, pin.y - P.y);
+        root.classList.toggle('is-near', d < NEAR);
+        if (d < SNAP) { plugIn(); pin = P; root.classList.remove('is-near'); }
+      }
+
+      for (let k = 0; k < ITER; k++) {
+        pts[0].x = ax; pts[0].y = ay;
+        if (pin) { end.x = pin.x; end.y = pin.y; }
+        for (let i = 0; i < N - 1; i++) {
+          const a = pts[i], b = pts[i + 1];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const d = Math.hypot(dx, dy) || 1e-4, diff = (d - SEG) / d;
+          const aFixed = i === 0, bFixed = !!pin && i + 1 === N - 1;
+          if (aFixed && bFixed) continue;
+          if (aFixed) { b.x -= dx * diff; b.y -= dy * diff; }
+          else if (bFixed) { a.x += dx * diff; a.y += dy * diff; }
+          else { a.x += dx * diff * 0.5; a.y += dy * diff * 0.5; b.x -= dx * diff * 0.5; b.y -= dy * diff * 0.5; }
+        }
+      }
+      if (pin) { end.x = end.px = pin.x; end.y = end.py = pin.y; }
+    };
+
+    // drawn through the midpoints, so the cord curves instead of kinking. The
+    // jack lines up with the cord's last few points (one segment flickers as
+    // the slack bunches up under it) and turns there smoothly — or lies flat,
+    // going into the socket
+    let th = 0;
+    const draw = (dt: number) => {
+      let d = `M${ax},${ay}`;
+      for (let i = 1; i < N - 1; i++) {
+        const p = pts[i], q = pts[i + 1];
+        d += `Q${p.x.toFixed(1)},${p.y.toFixed(1)} ${((p.x + q.x) / 2).toFixed(1)},${((p.y + q.y) / 2).toFixed(1)}`;
+      }
+      const end = pts[N - 1], back = pts[N - 4];
+      d += `L${end.x.toFixed(1)},${end.y.toFixed(1)}`;
+      cord.setAttribute('d', d);
+      const aim = plugged || fly ? IN : Math.atan2(-(end.x - back.x), end.y - back.y);
+      th = plugged || fly || !dt ? aim : th + wrap(aim - th) * (1 - Math.exp(-dt * (held ? 9 : 18)));
+      jack.style.transform = `translate(${(end.x - 7).toFixed(1)}px, ${end.y.toFixed(1)}px) rotate(${th.toFixed(3)}rad)`;
+    };
+
+    // Its entrance, once the loader's done: stowed straight up from the
+    // anchor, out over the top of the screen, it's let go — the jack drops
+    // past the frame, snaps taut at the cord's length, bounces and swings.
+    // If the sound's on, it then goes into the socket. Without motion: it's
+    // simply there, hanging (or plugged in).
+    let live = false;
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const arrive = () => {
+      if (signal.aborted) return;
+      root.classList.add('is-in');
+      if (still) {
+        hang();
+        plugged = sound.on;
+        paint();
+        for (let i = 0; i < 240; i++) step(STEP);
+        ready = true;
+      } else {
+        setTimeout(() => {
+          const end = pts[N - 1];
+          if (!signal.aborted && sound.on && !plugged && !fly && !held) fly = { t: 0, x: end.x, y: end.y, quiet: true };
+          ready = true;
+        }, 1100);
+      }
+      live = true;
+    };
+    place();
+    pts.forEach((p, i) => { p.x = p.px = ax + i * 1.2; p.y = p.py = ay - i * SEG; });
+    paint();
+    draw(0);
+    afterLoader(arrive);
+    addEventListener('resize', () => { place(); }, opts);
+    document.fonts.ready.then(() => { if (!signal.aborted) place(); }); // the toggle's width settles with its font
+
+    let acc = 0, last = performance.now(), raf = 0;
+    const frame = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      acc += dt;
+      last = now;
+      if (!live) acc = 0;
+      while (acc >= STEP) { step(STEP); acc -= STEP; }
+      draw(dt);
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    signal.addEventListener('abort', () => cancelAnimationFrame(raf));
+  });
+</script>
