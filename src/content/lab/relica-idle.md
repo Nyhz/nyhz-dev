@@ -225,11 +225,11 @@ You come back to the fight as it is now, not to a fast-forward of the last ten m
 
 The pitch says the engine is shared by the client and the server, and it is, just not for the live hunt. The browser runs the same package for things that only make sense with a real simulation:
 
-- **Raid rehearsals.** Guild raids resolve on the server 24 hours after launch, in a worker thread, with up to 15 fighters. The browser can rehearse one: it plays the raid itself in a Web Worker against 10 fixed seeds and shows the share of wins: a forecast made by the real engine, not a formula.
-- **The landing page.** The fight behind "watch a hunt" is a real engine room running locally on a timer, feeding the same Phaser scene the server's events feed.
+- **The landing page.** The fight behind "watch a hunt" is a real engine room running locally on a timer, feeding the same Phaser scene the server's events feed. The demo isn't a recording or a mock: it's the game, playing itself.
 - **Item and zone maths** in the UI, which can never disagree with what the server will do.
+- **The determinism probe** from section 4, which is just the engine playing a reference fight in whatever browser opens it.
 
-That's also why the cross-browser test exists. The server only ever runs in Node, but the engine runs on everyone's machine.
+The server only ever runs in Node, but the engine runs on everyone's machine. That's why the bit-exact rules of section 4 matter at all.
 
 ## 9. Balance by simulation
 
