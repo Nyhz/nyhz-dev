@@ -123,8 +123,8 @@
           void wrap.offsetWidth;
           wrap.classList.add('is-glitch');
         }
-        // the page goes l33t for the minute (Eggs.astro). Next task: the
-        // eggs' listener may not be up yet on the first tick.
+        // the page goes l33t for the minute (Eggs.astro, which also checks
+        // the time itself when it starts, in case it missed this)
         setTimeout(() => dispatchEvent(new CustomEvent('nyhz:leet', { detail: { on: !!note } })));
       }
     };

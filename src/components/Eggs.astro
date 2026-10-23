@@ -212,7 +212,7 @@
 
 <script>
   import { gsap } from 'gsap';
-  import { achievements, isEgg, isBonus, konamiStep, KONAMI, EGGS, REQUIRED, leet } from '../scripts/eggs';
+  import { achievements, isEgg, isBonus, konamiStep, KONAMI, EGGS, REQUIRED, leet, clockNote } from '../scripts/eggs';
   import { sound } from '../scripts/sound';
   import { afterLoader } from '../scripts/loaded';
   import { onPage } from '../scripts/page';
@@ -534,6 +534,11 @@
       setTimeout(() => html.classList.remove('egg-broken'), 1150);
       if (on) shock(innerWidth / 2, innerHeight / 2, 2);
     }, { signal });
+    // the clock's word can come before this script does (it's a separate one
+    // and may still be loading), or before this page: arriving mid-minute,
+    // ask the time ourselves
+    const now = new Date();
+    if (clockNote(now.getHours(), now.getMinutes())) dispatchEvent(new CustomEvent('nyhz:leet', { detail: { on: true } }));
 
     // ---------- crashes: the terminal's rm -rf / (kernel panic) or format c: (blue screen) ----------
     // the page breaks, a crash screen counts down, and the site really reboots
