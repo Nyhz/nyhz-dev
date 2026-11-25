@@ -1,0 +1,14 @@
+title: Numo
+description: "A desktop wealth tracker for macOS and Windows that keeps everything on your machine: multi-broker portfolio, an investment plan, your home and mortgage, and reports for Spanish tax."
+tags:
+  - tauri
+  - rust
+  - react
+repoUrl: https://github.com/Nyhz/numo-desktop
+deployUrl: ''
+downloadUrl: https://github.com/Nyhz/numo-desktop/releases/latest
+coverUrl: /projects/numo.webp
+order: 5
+year: '2026'
+role: ''
+status: ''
