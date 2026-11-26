@@ -1,11 +1,11 @@
 title: Relica Idle
-description: "Semi-idle browser MMORPG: your party keeps hunting portals server-side even with the tab closed. Raids, bosses and loot on a deterministic engine shared by client and server."
+description: "Free semi-idle browser MMORPG: your party keeps fighting at the portal on the server with the tab closed. Six classes and twelve specs, guild raids and delves, on one deterministic engine."
 tags:
   - phaser
   - colyseus
   - fastify
 repoUrl: ''
-deployUrl: https://relica.nyhz.dev
+deployUrl: https://www.relica-idle.com
 downloadUrl: ''
 coverUrl: /projects/relica-idle.webp
 order: 1

@@ -7,7 +7,7 @@ cover: /lab/relica-idle.webp
 image: /lab/relica-idle.jpg
 ---
 
-[Relica Idle](https://relica.nyhz.dev) is a semi-idle browser MMORPG. You build a hero, open a portal and walk away. Up to four adventurers share a portal, monsters come out of it one at a time, and the fight goes on after you close the tab, until your hero runs out of stamina and makes camp on the spoils.
+[Relica Idle](https://www.relica-idle.com) is a semi-idle browser MMORPG. You build a hero, open a portal and walk away. Up to four adventurers share a portal, monsters come out of it one at a time, and the fight goes on after you close the tab, until your hero runs out of stamina and makes camp on the spoils.
 
 That one promise, *walk away*, decided most of the architecture. A fight that keeps going without you has to be played by the server, and a server that plays thousands of fights nobody is watching has to be cheap and correct. It also has to be exactly reproducible, because the same engine runs in the browser too.
 
