@@ -1,4 +1,7 @@
 // src/scripts/content.ts
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 
@@ -75,6 +78,21 @@ export function mapSkills(items: { slug: string; entry: any }[]): SkillProps[] {
     .sort((a, b) => a.order - b.order);
 }
 
+/**
+ * a /public picture with its content's hash on the end (`?v=…`): /projects/* is cached for a day
+ * and served stale for a week after, so a new picture under the same name would otherwise keep
+ * showing the old one — the tv loads covers from script, which even a hard reload doesn't redo
+ */
+export function versioned(url: string): string {
+  if (!url.startsWith('/')) return url;
+  try {
+    const bytes = readFileSync(join(process.cwd(), 'public', url));
+    return `${url}?v=${createHash('sha1').update(bytes).digest('hex').slice(0, 8)}`;
+  } catch {
+    return url;
+  }
+}
+
 export async function getContent(): Promise<{
   profile: ProfileProps; projects: ProjectProps[]; skills: SkillProps[];
 }> {
@@ -82,9 +100,10 @@ export async function getContent(): Promise<{
   const profileRaw = await reader.singletons.profile.read();
   const projectRaw = await reader.collections.projects.all();
   const skillRaw = await reader.collections.skills.all();
+  const projects = mapProjects(projectRaw.map((p) => ({ slug: p.slug, entry: p.entry })));
   return {
     profile: mapProfile(profileRaw),
-    projects: mapProjects(projectRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
+    projects: projects.map((p) => ({ ...p, coverUrl: versioned(p.coverUrl) })),
     skills: mapSkills(skillRaw.map((p) => ({ slug: p.slug, entry: p.entry }))),
   };
 }

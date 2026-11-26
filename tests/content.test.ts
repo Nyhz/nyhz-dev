@@ -1,6 +1,6 @@
 // tests/content.test.ts
 import { describe, it, expect } from 'vitest';
-import { statusOf, mapProfile, mapProjects, mapSkills } from '../src/scripts/content';
+import { statusOf, mapProfile, mapProjects, mapSkills, versioned } from '../src/scripts/content';
 
 describe('mapProfile', () => {
   it('maps a full profile', () => {
@@ -64,5 +64,16 @@ describe('statusOf', () => {
     expect(statusOf({ deployUrl: '', downloadUrl: 'x' })).toBe('download');
     expect(statusOf({ deployUrl: '', downloadUrl: '' })).toBe('personal');
     expect(statusOf({ deployUrl: '', downloadUrl: '', status: 'in progress' })).toBe('in progress');
+  });
+});
+
+describe('versioned', () => {
+  it('puts the picture\'s content hash on a /public path, so a new picture gets a new url', () => {
+    expect(versioned('/projects/numo.webp')).toMatch(/^\/projects\/numo\.webp\?v=[0-9a-f]{8}$/);
+  });
+  it('leaves outside urls, missing files and empty values alone', () => {
+    expect(versioned('https://x.dev/a.png')).toBe('https://x.dev/a.png');
+    expect(versioned('/projects/nope.webp')).toBe('/projects/nope.webp');
+    expect(versioned('')).toBe('');
   });
 });
